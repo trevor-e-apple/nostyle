@@ -34,7 +34,6 @@ pub enum Token {
     EndStatement,
     Comma,
     Dot,
-    DoubleColon,
     Symbol(String),
     IntLiteral(i64),
     FloatLiteral(f64),
@@ -43,6 +42,7 @@ pub enum Token {
 
 #[derive(Clone, Debug)]
 pub enum TokenizeErrorType {
+    General,
     IntParse,
     FloatParse,
     StringParse,
@@ -83,10 +83,12 @@ impl Tokens {
         *index = set_to;
     }
 
+    #[cfg(test)]
     pub fn get(&self, index: usize) -> Option<&Token> {
         self.data.get(index)
     }
 
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.data.len()
     }

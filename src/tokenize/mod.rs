@@ -71,7 +71,7 @@ fn get_int_literal_token(
     match i64::from_str_radix(&num_literal_string, base) {
         Ok(value) => Ok((Token::IntLiteral(value), num_literal_string.len())),
         Err(_) => Err(TokenizeError {
-            line_number: line_number,
+            line_number,
             type_data: TokenizeErrorType::IntParse,
         }),
     }
@@ -111,7 +111,7 @@ fn get_num_token(
                 Ok((Token::FloatLiteral(value), num_literal_string.len()))
             }
             Err(_) => Err(TokenizeError {
-                line_number: line_number,
+                line_number,
                 type_data: TokenizeErrorType::FloatParse,
             }),
         }
@@ -121,7 +121,7 @@ fn get_num_token(
                 Ok((Token::IntLiteral(value), num_literal_string.len()))
             }
             Err(_) => Err(TokenizeError {
-                line_number: line_number,
+                line_number,
                 type_data: TokenizeErrorType::IntParse,
             }),
         }
@@ -138,12 +138,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
 
     let chars: Vec<char> = data.chars().collect();
     let mut index = 0;
-    loop {
-        let c = match chars.get(index) {
-            Some(c) => c,
-            None => break,
-        };
-
+    while let Some(c) = chars.get(index) {
         if *c == 'i' {
             let word = get_word(&chars, index);
             if word == "if" {
@@ -174,6 +169,10 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 tokens.add_token(&mut index, Token::Function, 2);
             } else if word == "for" {
                 tokens.add_token(&mut index, Token::For, 3);
+            } else if word == "float32" {
+                tokens.add_token(&mut index, Token::Float32, 4);
+            } else if word == "float64" {
+                tokens.add_token(&mut index, Token::Float64, 5);
             } else {
                 let word_len = word.len();
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
@@ -196,16 +195,6 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 tokens.add_token(&mut index, Token::UInt32, 5);
             } else if word == "uint64" {
                 tokens.add_token(&mut index, Token::UInt64, 5);
-            } else {
-                let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
-            }
-        } else if *c == 'f' {
-            let word = get_word(&chars, index);
-            if word == "float32" {
-                tokens.add_token(&mut index, Token::UInt8, 4);
-            } else if word == "float64" {
-                tokens.add_token(&mut index, Token::UInt16, 5);
             } else {
                 let word_len = word.len();
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
@@ -248,11 +237,11 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
             tokens.add_token(&mut index, Token::LParen, 1);
         } else if *c == ')' {
             tokens.add_token(&mut index, Token::RParen, 1);
-        } else if ALPHABET_CHARS.contains(&c) {
+        } else if ALPHABET_CHARS.contains(c) {
             let word = get_word(&chars, index);
             let word_len = word.len();
             tokens.add_token(&mut index, Token::Symbol(word), word_len);
-        } else if DIGIT_CHARS.contains(&c) {
+        } else if DIGIT_CHARS.contains(c) {
             if *c == '0' {
                 match chars.get(index + 1) {
                     Some(next_char) => {
@@ -282,7 +271,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                                 Err(error) => {
                                     tokenize_errors.push(error);
                                     index += 1;
-                                },
+                                }
                             };
                         } else {
                             match get_num_token(&chars, index, line_number) {
@@ -303,7 +292,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                     Err(err) => {
                         tokenize_errors.push(err);
                         index += 1;
-                    },
+                    }
                 }
             }
         } else if *c == '"' {
@@ -340,13 +329,47 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 );
             } else {
                 tokenize_errors.push(TokenizeError {
-                    line_number: line_number,
+                    line_number,
                     type_data: TokenizeErrorType::StringParse,
                 });
                 index = end;
             }
         } else if *c == ';' {
             tokens.add_token(&mut index, Token::EndStatement, 1);
+        } else if *c == ',' {
+            tokens.add_token(&mut index, Token::Comma, 1);
+        } else if *c == '<' {
+            match chars.get(index + 1) {
+                Some(next_char) => {
+                    if *next_char == '=' {
+                        tokens.add_token(&mut index, Token::LessThanOrEqual, 2);
+                    } else {
+                        tokens.add_token(&mut index, Token::LessThan, 1);
+                    }
+                }
+                None => {
+                    tokens.add_token(&mut index, Token::LessThan, 1);
+                }
+            };
+        } else if *c == '>' {
+            match chars.get(index + 1) {
+                Some(next_char) => {
+                    if *next_char == '=' {
+                        tokens.add_token(
+                            &mut index,
+                            Token::GreaterThanOrEqual,
+                            2,
+                        );
+                    } else {
+                        tokens.add_token(&mut index, Token::GreaterThan, 1);
+                    }
+                }
+                None => {
+                    tokens.add_token(&mut index, Token::GreaterThan, 1);
+                }
+            };
+        } else if *c == '.' {
+            tokens.add_token(&mut index, Token::Dot, 1);
         } else if *c == '\n' {
             line_number += 1;
             index += 1;
@@ -357,7 +380,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
         }
     }
 
-    if tokenize_errors.len() == 0 {
+    if tokenize_errors.is_empty() {
         Ok(tokens)
     } else {
         Err(tokenize_errors)
