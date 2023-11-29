@@ -11,8 +11,8 @@ operator -> "+" | "-" | "*" | "/" | "==" | "!=" | "<" | "<=" | ">"" | ">=";
 grouping -> "(" expression ")"
 
 expression -> brace_expression | if_else | for_loop | equality;
-brace_expression -> "{" brace_contents "}";
-brace_contents -> statement brace_contents | expression;
+brace_expression -> "{" brace_statements expression "}";
+brace_statements -> brace_statements (statement | if_else | for_loop);
 statement -> SYMBOL "=" expression ";" | expression ";";
 if_else -> "if" expression brace_expression "else" expression brace_expression;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
