@@ -3,6 +3,7 @@ use std::todo;
 use crate::tokenize::tokenize;
 
 mod tokenize;
+mod parse;
 
 fn main() {
     todo!("CLI");

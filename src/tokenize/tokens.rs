@@ -83,7 +83,6 @@ impl Tokens {
         *index = set_to;
     }
 
-    #[cfg(test)]
     pub fn get(&self, index: usize) -> Option<&Token> {
         self.data.get(index)
     }
