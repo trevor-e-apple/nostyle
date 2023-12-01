@@ -87,7 +87,6 @@ impl Tokens {
         self.data.get(index)
     }
 
-    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.data.len()
     }
