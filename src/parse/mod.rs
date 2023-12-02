@@ -191,11 +191,76 @@ fn parse_expression_rule(
             }),
         }
     } else if *start_token == Token::For {
-        todo!()
+        expand_for_expression_rule(stack, tokens, search_data, end_token);
     } else {
         // try to parse as expression
     }
     todo!()
+}
+
+/// helper function for expanding an expression rule that seems to match a for
+/// loop
+fn expand_for_expression_rule(
+    stack: &mut Vec<SearchData>,
+    tokens: &Tokens,
+    search_data: &SearchData,
+    end_token: &Token,
+) {
+    if *end_token != Token::RBrace {
+        todo!("Syntax error");
+    }
+
+    let expected_lparen_index = search_data.start + 1;
+    
+    // check for leading lparen
+    match tokens.get(expected_lparen_index) {
+        Some(expected_lparen) => {
+            if *expected_lparen != Token::LParen {
+                todo!("Syntax error")
+            }
+        },
+        None => todo!("Syntax error"),
+    }
+
+    let rparen_index = match find_matching_group_indices(
+        tokens,
+        &Token::LParen,
+        &Token::RParen,
+        expected_lparen_index,
+    ) {
+        Some(rparen_index) => rparen_index,
+        None => todo!("Syntax error"),
+    };
+
+    // set up brace expression
+    {
+        let lbrace_index = rparen_index + 1;
+        match tokens.get(lbrace_index) {
+            Some(expected_lbrace) => {
+                if *expected_lbrace != Token::LBrace {
+                    todo!("Syntax error");
+                }
+            }
+            None => todo!("Syntax error"),
+        }
+
+        let rbrace_index = match find_matching_group_indices(
+            tokens,
+            &Token::LBrace,
+            &Token::RBrace,
+            lbrace_index,
+        ) {
+            Some(rbrace_index) => rbrace_index,
+            None => todo!("Syntax error"),
+        };
+
+        stack.push(SearchData { start: lbrace_index, end: rbrace_index, rule: Rule::BraceExpression });
+    }
+
+    // set up init, condition, increment statements
+    {
+        todo!();
+    }
 }
 
 /// finds the indices of the matching rtoken for the first ltoken found at
@@ -205,7 +270,7 @@ fn find_matching_group_indices(
     ltoken: &Token,
     rtoken: &Token,
     starts_at: usize,
-) -> usize {
+) -> Option<usize> {
     let mut ltokens_found = 1;
     let mut rtokens_found = 0;
 
@@ -218,13 +283,13 @@ fn find_matching_group_indices(
         }
 
         if ltokens_found == rtokens_found {
-            break;
+            return Some(index);
         } else {
             index += 1;
         }
     }
 
-    index
+    None
 }
 
 /// finds the index of the final token between starts_at and ends_at

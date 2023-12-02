@@ -63,6 +63,8 @@ impl Tokens {
         Self { data: vec![] }
     }
 
+    /// for use in the tokenizer. makes sure that developers can't add new
+    /// tokens w/o considering the new index
     pub fn add_token(
         &mut self,
         index: &mut usize,
@@ -73,6 +75,8 @@ impl Tokens {
         *index += advance_by;
     }
 
+    /// for use in the tokenizer. makes sure that developers can't add new
+    /// tokens w/o considering the new index
     pub fn add_token_set_index(
         &mut self,
         index: &mut usize,
