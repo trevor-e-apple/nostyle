@@ -11,8 +11,8 @@ operator -> "+" | "-" | "*" | "/" | "==" | "!=" | "<" | "<=" | ">"" | ">=";
 grouping -> "(" expression ")"
 
 expression -> brace_expression | if | if_else | for_loop | equality;
-brace_expression -> "{" brace_statements expression "}";
-brace_statements -> brace_statements (brace_expression | statement | if_else | for_loop);
+brace_expression -> "{" brace_statements? expression "}";
+brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> SYMBOL "=" expression ";" | expression ";";
 if -> "if" expression brace_expression;
 if_else -> "if" expression brace_expression "else" expression;
@@ -37,6 +37,7 @@ named loops?
 function calls?
 */
 
+use core::panic;
 use std::todo;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -79,7 +80,9 @@ pub fn parse(tokens: &Tokens) -> Ast {
             Rule::BraceExpression => {
                 parse_brace_expression_rule(tokens, &search_data, &mut stack);
             }
-            Rule::BraceStatements => todo!(),
+            Rule::BraceStatements => {
+                parse_brace_statements_rule(tokens, &search_data, &mut stack);
+            }
             Rule::Statement => todo!(),
             Rule::IfElse => todo!(),
             Rule::ForLoop => todo!(),
@@ -343,9 +346,11 @@ fn parse_brace_expression_rule(
     let end_brace_statements_index: Option<usize> = {
         match find_final_matching_level_token(
             tokens,
-            &Token::EndStatement,
+            &[Token::EndStatement],
             brace_contents_start,
             brace_contents_end,
+            &Token::LBrace,
+            &Token::RBrace,
         ) {
             Some(final_semicolon_index) => Some(final_semicolon_index),
             None => {
@@ -399,6 +404,87 @@ fn parse_brace_expression_rule(
             });
         }
     }
+}
+
+/// parse brace_statements rule
+fn parse_brace_statements_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    stack: &mut Vec<SearchData>,
+) {
+    // brace_statements? (brace_expression | statement | if_else)
+
+    // find brace_statement terminal
+    let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
+        let mut non_recursive_end_index: Option<usize> = None;
+        for index in (search_data.start..search_data.end).rev() {
+            match tokens.get(index) {
+                Some(check_token) => {
+                    if *check_token == Token::RBrace
+                        || *check_token == Token::EndStatement
+                    {
+                        non_recursive_end_index = Some(index);
+                        break;
+                    }
+                }
+                None => todo!("Syntax error"),
+            }
+        }
+
+        let non_recursive_end_index = match non_recursive_end_index {
+            Some(non_recursive_end_index) => non_recursive_end_index,
+            None => todo!("Syntax error"),
+        };
+
+        // find the previous RBrace or EndStatement at the same level as the
+        // end of the terminal
+        match find_prev_matching_level_token(
+            tokens,
+            &[Token::RBrace, Token::EndStatement],
+            search_data.start,
+            non_recursive_end_index,
+            &Token::LBrace,
+            &Token::RBrace,
+        ) {
+            Some(non_recursive_start_index) => {
+                (non_recursive_start_index + 1, non_recursive_end_index)
+            }
+            None => todo!("Syntax error"),
+        }
+    };
+
+    // push the preceding statements for a recursive expansion
+    stack.push(SearchData {
+        start: search_data.start,
+        end: non_recursive_start_index - 1,
+        rule: Rule::BraceStatements,
+    });
+
+    let non_recursive_start_token = match tokens.get(non_recursive_start_index)
+    {
+        Some(non_recursive_start_token) => non_recursive_start_token,
+        None => todo!("Syntax error"),
+    };
+    let non_recursive_end_token = match tokens.get(non_recursive_end_index) {
+        Some(non_recursive_end_token) => non_recursive_end_token,
+        None => todo!("Syntax error"),
+    };
+
+    let non_recursive_rule = if *non_recursive_start_token == Token::If {
+        Rule::IfElse
+    } else if *non_recursive_end_token == Token::EndStatement {
+        Rule::Statement
+    } else if *non_recursive_end_token == Token::RBrace {
+        Rule::BraceExpression
+    } else {
+        todo!("Syntax error")
+    };
+
+    stack.push(SearchData {
+        start: non_recursive_start_index,
+        end: non_recursive_end_index,
+        rule: non_recursive_rule,
+    })
 }
 
 /// finds the indices of the matching rtoken for the first ltoken found at
@@ -459,24 +545,61 @@ fn find_final_token(
 /// Returns None if not found
 fn find_final_matching_level_token(
     tokens: &Tokens,
-    token: &Token,
+    matching_tokens: &[Token],
     starts_at: usize,
     ends_at: usize,
+    group_start_token: &Token,
+    group_end_token: &Token,
 ) -> Option<usize> {
+    let mut result: Option<usize> = None;
+
     let mut current_level = 0;
     for index in starts_at..ends_at {
         if let Some(check_token) = tokens.get(index) {
-            if *check_token == Token::LBrace {
+            if *check_token == *group_start_token {
                 current_level += 1;
-            } else if *check_token == Token::RBrace {
+            } else if *check_token == *group_end_token {
                 current_level -= 1;
-            } else if current_level == 0 && *check_token == *token {
-                return Some(index);
+            } else if current_level == 0
+                && matching_tokens.contains(check_token)
+            {
+                result = Some(index);
             }
 
             if current_level < 0 {
                 // we have moved outside of the grouping that starts_at was in
                 return None;
+            }
+        } else {
+            return None;
+        }
+    }
+
+    result
+}
+
+/// finds the index of the token previous token between starts_at and ends_at
+/// (starts_at <= index < ends_at) that is at the same grouping level as ends_at
+///
+/// returns None if not found
+fn find_prev_matching_level_token(
+    tokens: &Tokens,
+    matching_tokens: &[Token],
+    starts_at: usize,
+    ends_at: usize,
+    group_start_token: &Token,
+    group_end_token: &Token,
+) -> Option<usize> {
+    let mut current_level = 0;
+
+    for index in (starts_at..ends_at).rev() {
+        if let Some(check_token) = tokens.get(index) {
+            if current_level == 0 && matching_tokens.contains(check_token) {
+                return Some(index);
+            } else if *check_token == *group_start_token {
+                current_level -= 1;
+            } else if *check_token == *group_end_token {
+                current_level += 1;
             }
         } else {
             return None;
