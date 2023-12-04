@@ -16,7 +16,7 @@ brace_statements -> brace_statements (brace_expression | statement | if_else | f
 statement -> SYMBOL "=" expression ";" | expression ";";
 if -> "if" expression brace_expression;
 if_else -> "if" expression brace_expression "else" expression;
-for_loop -> "for" "(" statement statement statement ")" brace_expression;
+for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
 comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
 plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
@@ -60,7 +60,7 @@ pub enum Rule {
 
 struct SearchData {
     start: usize,
-    end: usize,
+    end: usize, // end is one-past the final included element in the search data
     rule: Rule,
 }
 
@@ -210,15 +210,15 @@ fn expand_for_expression_rule(
         todo!("Syntax error");
     }
 
-    let expected_lparen_index = search_data.start + 1;
-    
+    let lparen_index = search_data.start + 1;
+
     // check for leading lparen
-    match tokens.get(expected_lparen_index) {
+    match tokens.get(lparen_index) {
         Some(expected_lparen) => {
             if *expected_lparen != Token::LParen {
                 todo!("Syntax error")
             }
-        },
+        }
         None => todo!("Syntax error"),
     }
 
@@ -226,7 +226,7 @@ fn expand_for_expression_rule(
         tokens,
         &Token::LParen,
         &Token::RParen,
-        expected_lparen_index,
+        lparen_index,
     ) {
         Some(rparen_index) => rparen_index,
         None => todo!("Syntax error"),
@@ -254,12 +254,58 @@ fn expand_for_expression_rule(
             None => todo!("Syntax error"),
         };
 
-        stack.push(SearchData { start: lbrace_index, end: rbrace_index, rule: Rule::BraceExpression });
+        stack.push(SearchData {
+            start: lbrace_index,
+            end: rbrace_index,
+            rule: Rule::BraceExpression,
+        });
     }
 
     // set up init, condition, increment statements
     {
-        todo!();
+        let init_semicolon_index = match find_next_token(
+            tokens,
+            &Token::EndStatement,
+            lparen_index,
+            rparen_index,
+        ) {
+            Some(index) => index,
+            None => todo!("Syntax error"),
+        };
+        let condition_semicolon_index = match find_next_token(
+            tokens,
+            &Token::EndStatement,
+            init_semicolon_index,
+            rparen_index,
+        ) {
+            Some(index) => index,
+            None => todo!("Syntax error"),
+        };
+        let increment_semicolon_index = match find_next_token(
+            tokens,
+            &Token::EndStatement,
+            condition_semicolon_index,
+            rparen_index,
+        ) {
+            Some(index) => index,
+            None => todo!("Syntax error"),
+        };
+
+        stack.push(SearchData {
+            start: lparen_index,
+            end: init_semicolon_index,
+            rule: Rule::Expression,
+        });
+        stack.push(SearchData {
+            start: init_semicolon_index + 1,
+            end: condition_semicolon_index,
+            rule: Rule::Expression,
+        });
+        stack.push(SearchData {
+            start: condition_semicolon_index + 1,
+            end: increment_semicolon_index,
+            rule: Rule::Expression,
+        });
     }
 }
 
@@ -308,6 +354,24 @@ fn find_final_token(
             }
         } else {
             return None;
+        }
+    }
+
+    None
+}
+
+/// finds the index of the next token of a certain type
+fn find_next_token(
+    tokens: &Tokens,
+    token: &Token,
+    starts_at: usize,
+    ends_at: usize,
+) -> Option<usize> {
+    for index in starts_at..ends_at {
+        if let Some(check_token) = tokens.get(index) {
+            if *check_token == *token {
+                return Some(index);
+            }
         }
     }
 
