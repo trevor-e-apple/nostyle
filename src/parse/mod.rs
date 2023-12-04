@@ -76,7 +76,9 @@ pub fn parse(tokens: &Tokens) -> Ast {
             Rule::Expression => {
                 parse_expression_rule(tokens, &search_data, &mut stack);
             }
-            Rule::BraceExpression => todo!(),
+            Rule::BraceExpression => {
+                parse_brace_expression_rule(tokens, &search_data, &mut stack);
+            }
             Rule::BraceStatements => todo!(),
             Rule::Statement => todo!(),
             Rule::IfElse => todo!(),
@@ -309,6 +311,96 @@ fn expand_for_expression_rule(
     }
 }
 
+/// parses the brace expression rule
+fn parse_brace_expression_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    stack: &mut Vec<SearchData>,
+) {
+    let first_token = match tokens.get(search_data.start) {
+        Some(token) => token,
+        None => todo!("Syntax error"),
+    };
+
+    if *first_token != Token::LBrace {
+        todo!("Syntax error");
+    }
+
+    let final_token = match tokens.get(search_data.end) {
+        Some(token) => token,
+        None => todo!("Syntax error"),
+    };
+
+    if *final_token != Token::RBrace {
+        todo!("Syntax error");
+    }
+
+    let brace_contents_start = search_data.start + 1;
+    let brace_contents_end = search_data.end - 1;
+
+    // there are two ways for a group of brace statements to terminate, either
+    // a semicolon or an rbrace
+    let end_brace_statements_index: Option<usize> = {
+        match find_final_matching_level_token(
+            tokens,
+            &Token::EndStatement,
+            brace_contents_start,
+            brace_contents_end,
+        ) {
+            Some(final_semicolon_index) => Some(final_semicolon_index),
+            None => {
+                // find final rbrace
+                match find_final_token(
+                    tokens,
+                    &Token::RBrace,
+                    brace_contents_start,
+                    brace_contents_end,
+                ) {
+                    Some(final_rbrace_index) => {
+                        if final_rbrace_index == search_data.end - 1 {
+                            // this rbrace is for the trailing expression
+                            find_final_token(
+                                tokens,
+                                &Token::RBrace,
+                                brace_contents_start + 1,
+                                brace_contents_end - 1,
+                            )
+                        } else {
+                            // this rbrace is for the brace statements
+                            Some(final_rbrace_index)
+                        }
+                    }
+                    None => None, // no semicolon or rbrace
+                }
+            }
+        }
+    };
+
+    match end_brace_statements_index {
+        Some(end_brace_statements_index) => {
+            // brace statements followed by expression
+            stack.push(SearchData {
+                start: brace_contents_start,
+                end: end_brace_statements_index,
+                rule: Rule::BraceStatements,
+            });
+            stack.push(SearchData {
+                start: end_brace_statements_index + 1,
+                end: brace_contents_end,
+                rule: Rule::Expression,
+            });
+        }
+        None => {
+            // expression only
+            stack.push(SearchData {
+                start: brace_contents_start,
+                end: brace_contents_end,
+                rule: Rule::Expression,
+            });
+        }
+    }
+}
+
 /// finds the indices of the matching rtoken for the first ltoken found at
 /// starts_at
 fn find_matching_group_indices(
@@ -351,6 +443,40 @@ fn find_final_token(
         if let Some(check_token) = tokens.get(index) {
             if *check_token == *token {
                 return Some(index);
+            }
+        } else {
+            return None;
+        }
+    }
+
+    None
+}
+
+/// finds the index of the final token between starts_at and ends_at
+/// (starts_at <= index < ends_at) that is at the same grouping level as
+/// starts_at
+///
+/// Returns None if not found
+fn find_final_matching_level_token(
+    tokens: &Tokens,
+    token: &Token,
+    starts_at: usize,
+    ends_at: usize,
+) -> Option<usize> {
+    let mut current_level = 0;
+    for index in starts_at..ends_at {
+        if let Some(check_token) = tokens.get(index) {
+            if *check_token == Token::LBrace {
+                current_level += 1;
+            } else if *check_token == Token::RBrace {
+                current_level -= 1;
+            } else if current_level == 0 && *check_token == *token {
+                return Some(index);
+            }
+
+            if current_level < 0 {
+                // we have moved outside of the grouping that starts_at was in
+                return None;
             }
         } else {
             return None;
