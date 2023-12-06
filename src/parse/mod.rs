@@ -14,8 +14,7 @@ expression -> brace_expression | if | if_else | for_loop | equality;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> SYMBOL "=" expression ";" | expression ";";
-if -> "if" expression brace_expression;
-if_else -> "if" expression brace_expression "else" expression;
+if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
 comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
@@ -37,7 +36,6 @@ named loops?
 function calls?
 */
 
-use core::panic;
 use std::todo;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -83,8 +81,12 @@ pub fn parse(tokens: &Tokens) -> Ast {
             Rule::BraceStatements => {
                 parse_brace_statements_rule(tokens, &search_data, &mut stack);
             }
-            Rule::Statement => todo!(),
-            Rule::IfElse => todo!(),
+            Rule::Statement => {
+                parse_statement_rule(tokens, &search_data, &mut stack);
+            }
+            Rule::IfElse => {
+                parse_if_else_rule(tokens, &search_data, &mut stack);
+            }
             Rule::ForLoop => todo!(),
             Rule::Equality => todo!(),
             Rule::Comparison => todo!(),
@@ -232,6 +234,7 @@ fn expand_for_expression_rule(
         &Token::LParen,
         &Token::RParen,
         lparen_index,
+        search_data.end,
     ) {
         Some(rparen_index) => rparen_index,
         None => todo!("Syntax error"),
@@ -254,6 +257,7 @@ fn expand_for_expression_rule(
             &Token::LBrace,
             &Token::RBrace,
             lbrace_index,
+            search_data.end,
         ) {
             Some(rbrace_index) => rbrace_index,
             None => todo!("Syntax error"),
@@ -412,8 +416,6 @@ fn parse_brace_statements_rule(
     search_data: &SearchData,
     stack: &mut Vec<SearchData>,
 ) {
-    // brace_statements? (brace_expression | statement | if_else)
-
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
         let mut non_recursive_end_index: Option<usize> = None;
@@ -487,6 +489,142 @@ fn parse_brace_statements_rule(
     })
 }
 
+/// parse statement rule
+fn parse_statement_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    stack: &mut Vec<SearchData>,
+) {
+    match find_next_token(
+        tokens,
+        &Token::Assign,
+        search_data.start,
+        search_data.end,
+    ) {
+        Some(assign_index) => match tokens.get(search_data.end - 1) {
+            Some(expected_end_statement) => {
+                if *expected_end_statement == Token::EndStatement {
+                    stack.push(SearchData {
+                        start: assign_index + 1,
+                        end: search_data.end - 1,
+                        rule: Rule::Expression,
+                    });
+                    todo!("Modify AST for assigning to the symbol at search_data.start -> assign_index");
+                } else {
+                    todo!("Syntax error");
+                }
+            }
+            None => todo!(),
+        },
+        None => match tokens.get(search_data.end - 1) {
+            Some(expected_end_statement) => {
+                if *expected_end_statement != Token::EndStatement {
+                    stack.push(SearchData {
+                        start: search_data.start,
+                        end: search_data.end - 1,
+                        rule: Rule::Expression,
+                    });
+                } else {
+                    todo!("Syntax error");
+                }
+            }
+            None => todo!("Syntax error"),
+        },
+    }
+}
+
+///
+fn parse_if_else_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    stack: &mut Vec<SearchData>,
+) {
+    // if_else -> "if" expression brace_expression ("else" expression)?;
+
+    match tokens.get(search_data.start) {
+        Some(expected_if) => {
+            if *expected_if != Token::If {
+                todo!("Syntax error");
+            }
+        }
+        None => todo!("Syntax error"),
+    }
+
+    // check if we have an if-else or just an if
+    match find_next_matching_level_token(
+        tokens,
+        &[Token::Else],
+        search_data.start + 1,
+        search_data.end,
+        &Token::LBrace,
+        &Token::RBrace,
+    ) {
+        Some(else_index) => {
+            stack.push(SearchData {
+                start: else_index + 1,
+                end: search_data.end,
+                rule: Rule::BraceExpression,
+            });
+
+            let if_lbrace_index = match find_matching_group_indices_end(
+                tokens,
+                &Token::LBrace,
+                &Token::RBrace,
+                search_data.start,
+                else_index - 1,
+            ) {
+                Some(lbrace_index) => lbrace_index,
+                None => todo!("Syntax error"),
+            };
+            stack.push(SearchData {
+                start: if_lbrace_index,
+                end: else_index - 1,
+                rule: Rule::BraceExpression,
+            });
+            stack.push(SearchData {
+                start: search_data.start + 1,
+                end: if_lbrace_index - 1,
+                rule: Rule::Expression,
+            });
+        }
+        None => {
+            // find the final rbrace to find the end of the if brace_expression
+            let rbrace_index = match find_final_token(
+                tokens,
+                &Token::RBrace,
+                search_data.start + 1,
+                search_data.end,
+            ) {
+                Some(rbrace_index) => rbrace_index,
+                None => todo!("Syntax error"),
+            };
+
+            // find the matching lbrace for this rbrace
+            let lbrace_index = match find_matching_group_indices_end(
+                tokens,
+                &Token::LBrace,
+                &Token::RBrace,
+                search_data.start,
+                rbrace_index,
+            ) {
+                Some(lbrace_index) => lbrace_index,
+                None => todo!("Syntax error"),
+            };
+
+            stack.push(SearchData {
+                start: search_data.start + 1,
+                end: lbrace_index - 1,
+                rule: Rule::Expression,
+            });
+            stack.push(SearchData {
+                start: lbrace_index + 1,
+                end: rbrace_index - 1,
+                rule: Rule::BraceExpression,
+            });
+        }
+    }
+}
+
 /// finds the indices of the matching rtoken for the first ltoken found at
 /// starts_at
 fn find_matching_group_indices(
@@ -494,22 +632,55 @@ fn find_matching_group_indices(
     ltoken: &Token,
     rtoken: &Token,
     starts_at: usize,
+    ends_at: usize,
 ) -> Option<usize> {
     let mut ltokens_found = 1;
     let mut rtokens_found = 0;
 
-    let mut index = starts_at + 1;
-    while let Some(token) = tokens.get(index) {
-        if *token == *ltoken {
-            ltokens_found += 1;
-        } else if *token == *rtoken {
-            rtokens_found += 1;
-        }
+    for index in (starts_at + 1)..ends_at {
+        if let Some(token) = tokens.get(index) {
+            if *token == *ltoken {
+                ltokens_found += 1;
+            } else if *token == *rtoken {
+                rtokens_found += 1;
+            }
 
-        if ltokens_found == rtokens_found {
-            return Some(index);
+            if ltokens_found == rtokens_found {
+                return Some(index);
+            }
         } else {
-            index += 1;
+            break;
+        }
+    }
+
+    None
+}
+
+/// finds the indices of the matching ltoken for the rtoken found at
+/// ends_at
+fn find_matching_group_indices_end(
+    tokens: &Tokens,
+    ltoken: &Token,
+    rtoken: &Token,
+    starts_at: usize,
+    ends_at: usize,
+) -> Option<usize> {
+    let mut ltokens_found = 0;
+    let mut rtokens_found = 1;
+
+    for index in (starts_at..(ends_at - 1)).rev() {
+        if let Some(token) = tokens.get(index) {
+            if *token == *ltoken {
+                ltokens_found += 1;
+            } else if *token == *rtoken {
+                rtokens_found += 1;
+            }
+
+            if ltokens_found == rtokens_found {
+                return Some(index);
+            }
+        } else {
+            break;
         }
     }
 
@@ -578,8 +749,41 @@ fn find_final_matching_level_token(
     result
 }
 
-/// finds the index of the token previous token between starts_at and ends_at
-/// (starts_at <= index < ends_at) that is at the same grouping level as ends_at
+/// finds the index of the next token after starts_at and before ends_at
+/// (starts_at <= index < ends_at) that is at the same grouping level as
+/// starts_at
+///
+/// returns None if not found
+fn find_next_matching_level_token(
+    tokens: &Tokens,
+    matching_tokens: &[Token],
+    starts_at: usize,
+    ends_at: usize,
+    group_start_token: &Token,
+    group_end_token: &Token,
+) -> Option<usize> {
+    let mut current_level = 0;
+
+    for index in starts_at..ends_at {
+        if let Some(check_token) = tokens.get(index) {
+            if current_level == 0 && matching_tokens.contains(check_token) {
+                return Some(index);
+            } else if *check_token == *group_start_token {
+                current_level += 1;
+            } else if *check_token == *group_end_token {
+                current_level -= 1;
+            }
+        } else {
+            return None;
+        }
+    }
+
+    None
+}
+
+/// finds the index of the token previous token before ends_at and after
+/// starts_at (starts_at <= index < ends_at) that is at the same grouping level
+/// as ends_at
 ///
 /// returns None if not found
 fn find_prev_matching_level_token(
