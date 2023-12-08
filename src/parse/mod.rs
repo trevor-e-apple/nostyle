@@ -37,56 +37,59 @@ function calls?
 data structures
 */
 
+pub mod ast;
+pub mod rule;
 mod token_search;
 
 use std::todo;
 
 use crate::tokenize::tokens::{Token, Tokens};
 
-use self::token_search::{
-    find_final_matching_level_token, find_final_token,
-    find_matching_group_indices, find_matching_group_indices_end,
-    find_next_matching_level_token, find_next_token,
-    find_prev_matching_level_token,
+use self::{
+    ast::{Ast, AstNodeHandle},
+    rule::Rule,
+    token_search::{
+        find_final_matching_level_token, find_final_token,
+        find_matching_group_indices, find_matching_group_indices_end,
+        find_next_matching_level_token, find_next_token,
+        find_prev_matching_level_token,
+    },
 };
-
-pub struct Ast {}
-
-pub enum Rule {
-    Expression,
-    BraceExpression,
-    BraceStatements,
-    Statement,
-    IfElse,
-    ForLoop,
-    Equality,
-    Comparison,
-    PlusMinus,
-    MultDiv,
-    Unary,
-    Primary,
-}
 
 struct SearchData {
     start: usize,
     end: usize, // end is one-past the final included element in the search data
-    rule: Rule,
+    node_handle: AstNodeHandle,
 }
 
 /// parses tokens and returns an abstract syntax tree
 pub fn parse(tokens: &Tokens) -> Ast {
+    let mut result = Ast::new();
+
+    let root_handle = result.add_root(Rule::Expression);
+
     let mut stack: Vec<SearchData> = vec![SearchData {
         start: 0,
         end: tokens.len(),
-        rule: Rule::Expression,
+        node_handle: root_handle,
     }];
     while let Some(search_data) = stack.pop() {
-        match search_data.rule {
+        let rule = match result.get_node(search_data.node_handle) {
+            Some(node) => node.rule,
+            None => todo!("Panic?"),
+        };
+
+        match rule {
             Rule::Expression => {
-                parse_expression_rule(tokens, &search_data, &mut stack);
+                parse_expression_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::BraceExpression => {
-                parse_brace_expression_rule(tokens, &search_data, &mut stack);
+                parse_brace_expression_rule(tokens, &search_data, &mut result, &mut stack);
             }
             Rule::BraceStatements => {
                 parse_brace_statements_rule(tokens, &search_data, &mut stack);
@@ -125,6 +128,7 @@ pub fn parse(tokens: &Tokens) -> Ast {
 fn parse_expression_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     let start_token = match tokens.get(search_data.start) {
@@ -145,10 +149,12 @@ fn parse_expression_rule(
         Rule::Equality
     };
 
+    let child_handle = ast.add_child(search_data.node_handle, rule);
+
     stack.push(SearchData {
         start: search_data.start,
         end: search_data.end,
-        rule,
+        node_handle: child_handle,
     });
 }
 
@@ -271,6 +277,7 @@ fn parse_for_rule(
 /// parses the brace expression rule
 fn parse_brace_expression_rule(
     tokens: &Tokens,
+    ast: &mut Ast,
     search_data: &SearchData,
     stack: &mut Vec<SearchData>,
 ) {
@@ -350,11 +357,12 @@ fn parse_brace_expression_rule(
             });
         }
         None => {
+            let child_handle = ast.add_child(search_data.node_handle, Rule::Expression);
             // expression only
             stack.push(SearchData {
                 start: brace_contents_start,
                 end: brace_contents_end,
-                rule: Rule::Expression,
+                node_handle: child_handle,
             });
         }
     }
@@ -719,7 +727,6 @@ fn parse_unary_rule(
     search_data: &SearchData,
     stack: &mut Vec<SearchData>,
 ) {
-    // unary -> (("!" | "-") unary) | primary;
     match tokens.get(search_data.start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
