@@ -89,34 +89,74 @@ pub fn parse(tokens: &Tokens) -> Ast {
                 );
             }
             Rule::BraceExpression => {
-                parse_brace_expression_rule(tokens, &search_data, &mut result, &mut stack);
+                parse_brace_expression_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::BraceStatements => {
-                parse_brace_statements_rule(tokens, &search_data, &mut stack);
+                parse_brace_statements_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::Statement => {
-                parse_statement_rule(tokens, &search_data, &mut stack);
+                parse_statement_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::IfElse => {
-                parse_if_else_rule(tokens, &search_data, &mut stack);
+                parse_if_else_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::ForLoop => {
-                parse_for_rule(tokens, &search_data, &mut stack);
+                parse_for_rule(tokens, &search_data, &mut result, &mut stack);
             }
             Rule::Equality => {
-                parse_equality_rule(tokens, &search_data, &mut stack);
+                parse_equality_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::Comparison => {
-                parse_comparison_rule(tokens, &search_data, &mut stack);
+                parse_comparison_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::PlusMinus => {
-                parse_plus_minus_rule(tokens, &search_data, &mut stack);
+                parse_plus_minus_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::MultDiv => {
-                parse_mult_div_rule(tokens, &search_data, &mut stack);
+                parse_mult_div_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::Unary => {
-                parse_unary_rule(tokens, &search_data, &mut stack);
+                parse_unary_rule(tokens, &search_data, &mut result, &mut stack);
             }
             Rule::Primary => todo!(),
         }
@@ -162,6 +202,7 @@ fn parse_expression_rule(
 fn parse_for_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match tokens.get(search_data.end) {
@@ -219,10 +260,12 @@ fn parse_for_rule(
             None => todo!("Syntax error"),
         };
 
+        let child_handle =
+            ast.add_child(search_data.node_handle, Rule::BraceExpression);
         stack.push(SearchData {
             start: lbrace_index,
             end: rbrace_index,
-            rule: Rule::BraceExpression,
+            node_handle: child_handle,
         });
     }
 
@@ -256,20 +299,28 @@ fn parse_for_rule(
             None => todo!("Syntax error"),
         };
 
+        let init_expression_handle =
+            ast.add_child(search_data.node_handle, Rule::Expression);
         stack.push(SearchData {
             start: lparen_index,
             end: init_semicolon_index,
-            rule: Rule::Expression,
+            node_handle: init_expression_handle,
         });
+
+        let condition_expression_handle =
+            ast.add_child(search_data.node_handle, Rule::Expression);
         stack.push(SearchData {
             start: init_semicolon_index + 1,
             end: condition_semicolon_index,
-            rule: Rule::Expression,
+            node_handle: condition_expression_handle,
         });
+
+        let increment_expression_handle =
+            ast.add_child(search_data.node_handle, Rule::Expression);
         stack.push(SearchData {
             start: condition_semicolon_index + 1,
             end: increment_semicolon_index,
-            rule: Rule::Expression,
+            node_handle: increment_expression_handle,
         });
     }
 }
@@ -277,8 +328,8 @@ fn parse_for_rule(
 /// parses the brace expression rule
 fn parse_brace_expression_rule(
     tokens: &Tokens,
-    ast: &mut Ast,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     let first_token = match tokens.get(search_data.start) {
@@ -345,19 +396,24 @@ fn parse_brace_expression_rule(
     match end_brace_statements_index {
         Some(end_brace_statements_index) => {
             // brace statements followed by expression
+            let brace_statements_handle =
+                ast.add_child(search_data.node_handle, Rule::BraceStatements);
             stack.push(SearchData {
                 start: brace_contents_start,
                 end: end_brace_statements_index,
-                rule: Rule::BraceStatements,
+                node_handle: brace_statements_handle,
             });
+            let expression_handle =
+                ast.add_child(search_data.node_handle, Rule::Expression);
             stack.push(SearchData {
                 start: end_brace_statements_index + 1,
                 end: brace_contents_end,
-                rule: Rule::Expression,
+                node_handle: expression_handle,
             });
         }
         None => {
-            let child_handle = ast.add_child(search_data.node_handle, Rule::Expression);
+            let child_handle =
+                ast.add_child(search_data.node_handle, Rule::Expression);
             // expression only
             stack.push(SearchData {
                 start: brace_contents_start,
@@ -372,6 +428,7 @@ fn parse_brace_expression_rule(
 fn parse_brace_statements_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     // find brace_statement terminal
@@ -414,10 +471,11 @@ fn parse_brace_statements_rule(
     };
 
     // push the preceding statements for a recursive expansion
+    let recursive_handle = ast.add_child(search_data.node_handle, Rule::BraceStatements);
     stack.push(SearchData {
         start: search_data.start,
         end: non_recursive_start_index - 1,
-        rule: Rule::BraceStatements,
+        node_handle: recursive_handle,
     });
 
     let non_recursive_start_token = match tokens.get(non_recursive_start_index)
@@ -440,10 +498,11 @@ fn parse_brace_statements_rule(
         todo!("Syntax error")
     };
 
+    let non_recursive_handle = ast.add_child(search_data.node_handle, non_recursive_rule);
     stack.push(SearchData {
         start: non_recursive_start_index,
         end: non_recursive_end_index,
-        rule: non_recursive_rule,
+        node_handle: non_recursive_handle,
     })
 }
 
@@ -451,6 +510,7 @@ fn parse_brace_statements_rule(
 fn parse_statement_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match find_next_token(
@@ -495,6 +555,7 @@ fn parse_statement_rule(
 fn parse_if_else_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match tokens.get(search_data.start) {
@@ -585,6 +646,7 @@ fn parse_if_else_rule(
 fn parse_equality_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match find_final_matching_level_token(
@@ -619,6 +681,7 @@ fn parse_equality_rule(
 fn parse_comparison_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match find_final_matching_level_token(
@@ -658,6 +721,7 @@ fn parse_comparison_rule(
 fn parse_plus_minus_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match find_final_matching_level_token(
@@ -692,6 +756,7 @@ fn parse_plus_minus_rule(
 fn parse_mult_div_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match find_final_matching_level_token(
@@ -725,6 +790,7 @@ fn parse_mult_div_rule(
 fn parse_unary_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match tokens.get(search_data.start) {
