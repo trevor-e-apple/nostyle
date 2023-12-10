@@ -10,9 +10,9 @@ impl Ast {
     }
 
     pub fn add_root(&mut self, rule: Rule) -> AstNodeHandle {
-        let current_len = self.nodes.len();
+        assert!(self.nodes.len() == 0);
         self.nodes.push(AstNode { rule, parent: None, children: vec![] });
-        AstNodeHandle { index: current_len }
+        AstNodeHandle { index: 0 }
     }
 
     pub fn add_child(
