@@ -658,16 +658,19 @@ fn parse_if_else_rule(
     }
 }
 
-// parses the equality rule
-fn parse_equality_rule(
+/// for parsing binary operations in an expression
+fn parse_binary_op_rule(
     tokens: &Tokens,
     search_data: &SearchData,
+    matching_tokens: &[Token],
+    recursive_rule: Rule,
+    next_rule: Rule,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
     match find_final_matching_level_token(
         tokens,
-        &[Token::BoolEquals, Token::NotEquals],
+        matching_tokens,
         search_data.start,
         search_data.end,
         &Token::LParen,
@@ -675,14 +678,14 @@ fn parse_equality_rule(
     ) {
         Some(split_index) => {
             let recursive_node =
-                ast.add_child(search_data.node_handle, Rule::Equality);
+                ast.add_child(search_data.node_handle, recursive_rule);
             stack.push(SearchData {
                 start: search_data.start,
                 end: split_index,
                 node_handle: recursive_node,
             });
             let comparison_node =
-                ast.add_child(search_data.node_handle, Rule::Comparison);
+                ast.add_child(search_data.node_handle, next_rule);
             stack.push(SearchData {
                 start: split_index + 1,
                 end: search_data.end,
@@ -691,7 +694,7 @@ fn parse_equality_rule(
         }
         None => {
             let comparison_node =
-                ast.add_child(search_data.node_handle, Rule::Comparison);
+                ast.add_child(search_data.node_handle, next_rule);
             stack.push(SearchData {
                 start: search_data.start,
                 end: search_data.end,
@@ -699,6 +702,24 @@ fn parse_equality_rule(
             });
         }
     }
+}
+
+// parses the equality rule
+fn parse_equality_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    parse_binary_op_rule(
+        tokens,
+        search_data,
+        &[Token::BoolEquals, Token::NotEquals],
+        Rule::Equality,
+        Rule::Comparison,
+        ast,
+        stack,
+    )
 }
 
 /// parse comparison rule
@@ -708,37 +729,20 @@ fn parse_comparison_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    match find_final_matching_level_token(
+    parse_binary_op_rule(
         tokens,
+        search_data,
         &[
             Token::GreaterThan,
             Token::GreaterThanOrEqual,
             Token::LessThan,
             Token::LessThanOrEqual,
         ],
-        search_data.start,
-        search_data.end,
-        &Token::LParen,
-        &Token::RParen,
-    ) {
-        Some(split_index) => {
-            stack.push(SearchData {
-                start: search_data.start,
-                end: split_index,
-                rule: Rule::Comparison,
-            });
-            stack.push(SearchData {
-                start: split_index + 1,
-                end: search_data.end,
-                rule: Rule::PlusMinus,
-            });
-        }
-        None => stack.push(SearchData {
-            start: search_data.start,
-            end: search_data.end,
-            rule: Rule::PlusMinus,
-        }),
-    }
+        Rule::Comparison,
+        Rule::PlusMinus,
+        ast,
+        stack,
+    )
 }
 
 /// parse plus_minus rule
@@ -748,32 +752,15 @@ fn parse_plus_minus_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    match find_final_matching_level_token(
+    parse_binary_op_rule(
         tokens,
+        search_data,
         &[Token::Plus, Token::Minus],
-        search_data.start,
-        search_data.end,
-        &Token::LParen,
-        &Token::RParen,
-    ) {
-        Some(split_index) => {
-            stack.push(SearchData {
-                start: search_data.start,
-                end: split_index,
-                rule: Rule::PlusMinus,
-            });
-            stack.push(SearchData {
-                start: split_index + 1,
-                end: search_data.end,
-                rule: Rule::MultDiv,
-            });
-        }
-        None => stack.push(SearchData {
-            start: search_data.start,
-            end: search_data.end,
-            rule: Rule::MultDiv,
-        }),
-    }
+        Rule::PlusMinus,
+        Rule::MultDiv,
+        ast,
+        stack,
+    )
 }
 
 /// parse mult div
@@ -783,32 +770,15 @@ fn parse_mult_div_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    match find_final_matching_level_token(
+    parse_binary_op_rule(
         tokens,
+        search_data,
         &[Token::Times, Token::Divide],
-        search_data.start,
-        search_data.end,
-        &Token::LParen,
-        &Token::RParen,
-    ) {
-        Some(split_index) => {
-            stack.push(SearchData {
-                start: search_data.start,
-                end: split_index,
-                rule: Rule::MultDiv,
-            });
-            stack.push(SearchData {
-                start: split_index + 1,
-                end: search_data.end,
-                rule: Rule::Unary,
-            });
-        }
-        None => stack.push(SearchData {
-            start: search_data.start,
-            end: search_data.end,
-            rule: Rule::Unary,
-        }),
-    }
+        Rule::MultDiv,
+        Rule::Unary,
+        ast,
+        stack,
+    )
 }
 
 fn parse_unary_rule(
