@@ -790,16 +790,18 @@ fn parse_unary_rule(
     match tokens.get(search_data.start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
+                let child_node = ast.add_child(search_data.node_handle, Rule::Unary);
                 stack.push(SearchData {
                     start: search_data.start + 1,
                     end: search_data.end,
-                    rule: Rule::Unary,
+                    node_handle: child_node,
                 });
             } else {
+                let child_node = ast.add_child(search_data.node_handle, Rule::Primary);
                 stack.push(SearchData {
                     start: search_data.start,
                     end: search_data.end,
-                    rule: Rule::Primary,
+                    node_handle: child_node,
                 });
             }
         }
