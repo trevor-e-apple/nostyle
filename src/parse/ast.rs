@@ -1,3 +1,5 @@
+use crate::tokenize::tokens::Token;
+
 use super::rule::Rule;
 
 pub struct Ast {
@@ -11,7 +13,12 @@ impl Ast {
 
     pub fn add_root(&mut self, rule: Rule) -> AstNodeHandle {
         assert!(self.nodes.len() == 0);
-        self.nodes.push(AstNode { rule, parent: None, children: vec![] });
+        self.nodes.push(AstNode {
+            rule,
+            parent: None,
+            children: vec![],
+            data: None,
+        });
         AstNodeHandle { index: 0 }
     }
 
@@ -25,6 +32,31 @@ impl Ast {
             rule,
             parent: Some(parent_handle),
             children: vec![],
+            data: None,
+        });
+
+        let result = AstNodeHandle { index: current_len };
+
+        match self.get_node(parent_handle) {
+            Some(parent_node) => parent_node.children.push(result.clone()),
+            None => todo!("panic?"),
+        }
+
+        result
+    }
+
+    pub fn add_literal_child(
+        &mut self,
+        parent_handle: AstNodeHandle,
+        rule: Rule,
+        data: Token,
+    ) -> AstNodeHandle {
+        let current_len = self.nodes.len();
+        self.nodes.push(AstNode {
+            rule,
+            parent: Some(parent_handle),
+            children: vec![],
+            data: Some(data),
         });
 
         let result = AstNodeHandle { index: current_len };
@@ -51,4 +83,5 @@ pub struct AstNode {
     pub rule: Rule,
     pub parent: Option<AstNodeHandle>,
     pub children: Vec<AstNodeHandle>,
+    pub data: Option<Token>,
 }

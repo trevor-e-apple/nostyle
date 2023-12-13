@@ -158,7 +158,14 @@ pub fn parse(tokens: &Tokens) -> Ast {
             Rule::Unary => {
                 parse_unary_rule(tokens, &search_data, &mut result, &mut stack);
             }
-            Rule::Primary => todo!(),
+            Rule::Primary => {
+                parse_primary_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+            }
         }
     }
 
@@ -790,14 +797,16 @@ fn parse_unary_rule(
     match tokens.get(search_data.start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
-                let child_node = ast.add_child(search_data.node_handle, Rule::Unary);
+                let child_node =
+                    ast.add_child(search_data.node_handle, Rule::Unary);
                 stack.push(SearchData {
                     start: search_data.start + 1,
                     end: search_data.end,
                     node_handle: child_node,
                 });
             } else {
-                let child_node = ast.add_child(search_data.node_handle, Rule::Primary);
+                let child_node =
+                    ast.add_child(search_data.node_handle, Rule::Primary);
                 stack.push(SearchData {
                     start: search_data.start,
                     end: search_data.end,
@@ -805,6 +814,30 @@ fn parse_unary_rule(
                 });
             }
         }
+        None => todo!("Syntax error"),
+    }
+}
+
+fn parse_primary_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    match tokens.get(search_data.start) {
+        Some(token) => match token {
+            Token::Symbol(_)
+            | Token::IntLiteral(_)
+            | Token::FloatLiteral(_)
+            | Token::StringLiteral(_) => {
+                ast.add_literal_child(
+                    search_data.node_handle,
+                    Rule::Terminal,
+                    *token,
+                );
+            }
+            _ => todo!("Syntax error"),
+        },
         None => todo!("Syntax error"),
     }
 }

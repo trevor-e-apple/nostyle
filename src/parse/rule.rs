@@ -11,4 +11,5 @@ pub enum Rule {
     MultDiv,
     Unary,
     Primary,
+    Terminal,
 }
