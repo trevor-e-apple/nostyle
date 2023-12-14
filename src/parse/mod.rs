@@ -836,3 +836,83 @@ fn parse_primary_rule(
         None => todo!("Syntax error"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn single_token() {
+        todo!()
+    }
+
+    #[test]
+    fn single_token_in_braces() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn single_token_nested_braces() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn arithmetic_expression() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn expression_with_grouping() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn expression_with_brace_grouping() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn expression_with_symbols() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn assignment() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn operator_precedence() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn if_only() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn if_else() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn if_else_if() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn for_loop() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn brace_statement() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn braced_statements_and_expression() {
+        unimplemented!();
+    }
+}
