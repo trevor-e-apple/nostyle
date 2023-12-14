@@ -159,13 +159,9 @@ pub fn parse(tokens: &Tokens) -> Ast {
                 parse_unary_rule(tokens, &search_data, &mut result, &mut stack);
             }
             Rule::Primary => {
-                parse_primary_rule(
-                    tokens,
-                    &search_data,
-                    &mut result,
-                    &mut stack,
-                );
+                parse_primary_rule(tokens, &search_data, &mut result);
             }
+            Rule::Terminal => {}
         }
     }
 
@@ -822,7 +818,6 @@ fn parse_primary_rule(
     tokens: &Tokens,
     search_data: &SearchData,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
 ) {
     match tokens.get(search_data.start) {
         Some(token) => match token {
@@ -833,7 +828,7 @@ fn parse_primary_rule(
                 ast.add_literal_child(
                     search_data.node_handle,
                     Rule::Terminal,
-                    *token,
+                    token.clone(),
                 );
             }
             _ => todo!("Syntax error"),

@@ -37,7 +37,7 @@ impl Ast {
 
         let result = AstNodeHandle { index: current_len };
 
-        match self.get_node(parent_handle) {
+        match self.get_node_mut(parent_handle) {
             Some(parent_node) => parent_node.children.push(result.clone()),
             None => todo!("panic?"),
         }
@@ -61,7 +61,7 @@ impl Ast {
 
         let result = AstNodeHandle { index: current_len };
 
-        match self.get_node(parent_handle) {
+        match self.get_node_mut(parent_handle) {
             Some(parent_node) => parent_node.children.push(result.clone()),
             None => todo!("panic?"),
         }
@@ -72,9 +72,16 @@ impl Ast {
     pub fn get_node(&self, node_handle: AstNodeHandle) -> Option<&AstNode> {
         self.nodes.get(node_handle.index)
     }
+
+    pub fn get_node_mut(
+        &mut self,
+        node_handle: AstNodeHandle,
+    ) -> Option<&mut AstNode> {
+        self.nodes.get_mut(node_handle.index)
+    }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct AstNodeHandle {
     index: usize,
 }

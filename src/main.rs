@@ -17,5 +17,5 @@ fn main() {
         }
     };
 
-    parse(tokens);
+    parse(&tokens);
 }
