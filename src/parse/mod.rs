@@ -841,18 +841,26 @@ fn parse_primary_rule(
 mod tests {
     use super::*;
 
+    use crate::tokenize::tokenize;
+
     #[test]
     fn single_token() {
+        let tokens = tokenize("0").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         todo!()
     }
 
     #[test]
     fn single_token_in_braces() {
+        let tokens = tokenize("{0}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn single_token_nested_braces() {
+        let tokens = tokenize("{{0}}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
