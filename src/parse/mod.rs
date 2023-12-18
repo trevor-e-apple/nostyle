@@ -866,61 +866,194 @@ mod tests {
 
     #[test]
     fn arithmetic_expression() {
+        let tokens = tokenize("1 + 2").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn expression_with_grouping() {
+        let tokens = tokenize("1 + (2 + 3)").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn expression_with_brace_grouping() {
+        let tokens = tokenize("1 + {2 + 3}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn expression_with_symbols() {
+        let tokens = tokenize("a + b").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
-    fn assignment() {
+    fn assignment_symbol() {
+        let tokens = tokenize("a = b;").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn assign_expression() {
+        let tokens = tokenize("a = b + c;").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn assign_brace_expression() {
+        let tokens = tokenize("a = {b + c};").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn assign_brace_expression_with_statements() {
+        let tokens = tokenize("a = {b = c + d; a + b};").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn operator_precedence() {
+        let tokens = tokenize("a + b - c * d / e + (f + g)").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn nested_groups() {
+        let tokens = tokenize("a * (b - (c + d))").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn nested_brace_expressions() {
+        let tokens = tokenize("
+            {
+                a = b;
+                c = {
+                    d = 2 * a;
+                    d
+                };
+                a + b + c
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn if_only() {
+        let tokens = tokenize("if (a + b) == c {d = c;}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn if_else() {
+        let tokens = tokenize("
+            if (a + b) == c {
+                d = c;
+            } else {
+                d = a;
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn if_else_if() {
+        let tokens = tokenize("
+            if a == b {
+                d = b;
+            } else if a == c {
+                d = c;
+            } else {
+                e = 2 * e;
+                d = e;
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn assign_if_else_if() {
+        let tokens = tokenize("
+            d = if a == b {
+                b
+            } else if {
+                c
+            } else {
+                e = 2 * e;
+                e
+            };
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn for_loop() {
+        let tokens = tokenize("
+            for (a = 0; a < 10; a = a + 1;) {
+                b = 2 * b;
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
-    fn brace_statement() {
+    fn for_loop_brace() {
+        let tokens = tokenize("
+            for (a = 0; a < 10; {a = a + 1; a = 2 * a}) {
+                b = 2 * b;
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn brace_statements() {
+        let tokens = tokenize("{
+            a = b;
+            c = d;
+            e = f;
+        }").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn braced_statements_and_expression() {
+        let tokens = tokenize("{
+            a = b;
+            c = d;
+            e = f;
+            e
+        }").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn basic_parse_error() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn binary_op_and_assign() {
         unimplemented!();
     }
 }
