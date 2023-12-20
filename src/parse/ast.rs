@@ -22,6 +22,14 @@ impl Ast {
         AstNodeHandle { index: 0 }
     }
 
+    pub fn get_root(&self) -> Option<AstNodeHandle> {
+        if self.nodes.is_empty() {
+            None
+        } else {
+            Some(AstNodeHandle { index: 0 })
+        }
+    }
+
     pub fn add_child(
         &mut self,
         parent_handle: AstNodeHandle,
@@ -45,15 +53,14 @@ impl Ast {
         result
     }
 
-    pub fn add_literal_child(
+    pub fn add_terminal_child(
         &mut self,
         parent_handle: AstNodeHandle,
-        rule: Rule,
         data: Token,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
-            rule,
+            rule: Rule::Terminal,
             parent: Some(parent_handle),
             children: vec![],
             data: Some(data),
@@ -79,6 +86,44 @@ impl Ast {
     ) -> Option<&mut AstNode> {
         self.nodes.get_mut(node_handle.index)
     }
+
+    /// whether or not two ast's are equivalent
+    pub fn equivalent(a: &Self, b: &Self) -> bool {
+        let a_root = if let Some(a_root) = a.get_root() {
+            a_root
+        } else {
+            return false;
+        };
+        let b_root = if let Some(b_root) = b.get_root() {
+            b_root
+        } else {
+            return false;
+        };
+
+        let mut a_stack: Vec<AstNodeHandle> = vec![a_root];
+        let mut b_stack: Vec<AstNodeHandle> = vec![b_root];
+
+        loop {
+            if let Some(a_node_handle) = a_stack.pop() {
+                if let Some(b_node_handle) = b_stack.pop() {
+                    let a_node =
+                        a.get_node(a_node_handle).expect("Bad AST handle");
+                    let b_node =
+                        b.get_node(b_node_handle).expect("Bad AST handle");
+                    if a_node != b_node {
+                        return false;
+                    }
+                } else {
+                    // a still had data, but b did not
+                    return false;
+                }
+            } else {
+                break;
+            }
+        }
+
+        true
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -91,4 +136,31 @@ pub struct AstNode {
     pub parent: Option<AstNodeHandle>,
     pub children: Vec<AstNodeHandle>,
     pub data: Option<Token>,
+}
+
+impl PartialEq for AstNode {
+    fn eq(&self, other: &Self) -> bool {
+        if self.rule == other.rule {
+            if let Some(self_data) = &self.data {
+                if let Some(other_data) = &other.data {
+                    // same data
+                    *self_data == *other_data
+                } else {
+                    // self has data, but other does not
+                    false
+                }
+            } else {
+                if let Some(_) = &other.data {
+                    // other has data, but self does not
+                    false
+                } else {
+                    // neither has data
+                    true
+                }
+            }
+        } else {
+            // rules don't match
+            false
+        }
+    }
 }

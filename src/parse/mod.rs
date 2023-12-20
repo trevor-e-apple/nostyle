@@ -1,14 +1,7 @@
 /*
 Grammar
 
-this grammar (will) expands in a way that matches operator precedence
-
-expression -> literal | unary | binary | grouping | SYMBOL;
-literal -> NUMBER | STRING | "true" | "false";
-unary -> ("-" | "!") expression;
-binary -> expression operator expression;
-operator -> "+" | "-" | "*" | "/" | "==" | "!=" | "<" | "<=" | ">"" | ">=";
-grouping -> "(" expression ")"
+this grammar expands in a way that matches operator precedence
 
 expression -> brace_expression | if_else | for_loop | equality;
 brace_expression -> "{" brace_statements? expression "}";
@@ -825,11 +818,7 @@ fn parse_primary_rule(
             | Token::IntLiteral(_)
             | Token::FloatLiteral(_)
             | Token::StringLiteral(_) => {
-                ast.add_literal_child(
-                    search_data.node_handle,
-                    Rule::Terminal,
-                    token.clone(),
-                );
+                ast.add_terminal_child(search_data.node_handle, token.clone());
             }
             _ => todo!("Syntax error"),
         },
@@ -844,9 +833,48 @@ mod tests {
     use crate::tokenize::tokenize;
 
     #[test]
+    fn empty_parse() {
+        let tokens = tokenize("");
+        unimplemented!();
+    }
+
+    #[test]
     fn single_token() {
+        /*
+                expression -> brace_expression | if_else | for_loop | equality;
+        brace_expression -> "{" brace_statements? expression "}";
+        brace_statements -> brace_statements? (brace_expression | statement | if_else);
+        statement -> SYMBOL "=" expression ";" | expression ";";
+        if_else -> "if" expression brace_expression ("else" expression)?;
+        for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
+        equality -> (equality ("==" | "!=") comparison) | comparison;
+        comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
+        plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
+        mult_div -> (mult_div ("*" | "/") unary) | unary;
+        unary -> (("!" | "-") unary) | primary;
+        primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | "(" expression ")";*/
+
         let tokens = tokenize("0").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let mult_div_handle =
+                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+            let unary_handle =
+                expected_ast.add_child(mult_div_handle, Rule::Unary);
+            let primary_child =
+                expected_ast.add_child(unary_handle, Rule::Primary);
+            expected_ast
+                .add_terminal_child(primary_child, Token::IntLiteral(0));
+            expected_ast
+        };
         todo!()
     }
 
@@ -873,14 +901,16 @@ mod tests {
 
     #[test]
     fn expression_with_grouping() {
-        let tokens = tokenize("1 + (2 + 3)").expect("Unexpected tokenize error");
+        let tokens =
+            tokenize("1 + (2 + 3)").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn expression_with_brace_grouping() {
-        let tokens = tokenize("1 + {2 + 3}").expect("Unexpected tokenize error");
+        let tokens =
+            tokenize("1 + {2 + 3}").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
@@ -908,35 +938,40 @@ mod tests {
 
     #[test]
     fn assign_brace_expression() {
-        let tokens = tokenize("a = {b + c};").expect("Unexpected tokenize error");
+        let tokens =
+            tokenize("a = {b + c};").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn assign_brace_expression_with_statements() {
-        let tokens = tokenize("a = {b = c + d; a + b};").expect("Unexpected tokenize error");
+        let tokens = tokenize("a = {b = c + d; a + b};")
+            .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn operator_precedence() {
-        let tokens = tokenize("a + b - c * d / e + (f + g)").expect("Unexpected tokenize error");
+        let tokens = tokenize("a + b - c * d / e + (f + g)")
+            .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn nested_groups() {
-        let tokens = tokenize("a * (b - (c + d))").expect("Unexpected tokenize error");
+        let tokens =
+            tokenize("a * (b - (c + d))").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn nested_brace_expressions() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             {
                 a = b;
                 c = {
@@ -945,34 +980,41 @@ mod tests {
                 };
                 a + b + c
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn if_only() {
-        let tokens = tokenize("if (a + b) == c {d = c;}").expect("Unexpected tokenize error");
+        let tokens = tokenize("if (a + b) == c {d = c;}")
+            .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn if_else() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             if (a + b) == c {
                 d = c;
             } else {
                 d = a;
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn if_else_if() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             if a == b {
                 d = b;
             } else if a == c {
@@ -981,14 +1023,17 @@ mod tests {
                 e = 2 * e;
                 d = e;
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn assign_if_else_if() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             d = if a == b {
                 b
             } else if {
@@ -997,52 +1042,66 @@ mod tests {
                 e = 2 * e;
                 e
             };
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn for_loop() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             for (a = 0; a < 10; a = a + 1;) {
                 b = 2 * b;
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn for_loop_brace() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             for (a = 0; a < 10; {a = a + 1; a = 2 * a}) {
                 b = 2 * b;
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn brace_statements() {
-        let tokens = tokenize("{
+        let tokens = tokenize(
+            "{
             a = b;
             c = d;
             e = f;
-        }").expect("Unexpected tokenize error");
+        }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
 
     #[test]
     fn braced_statements_and_expression() {
-        let tokens = tokenize("{
+        let tokens = tokenize(
+            "{
             a = b;
             c = d;
             e = f;
             e
-        }").expect("Unexpected tokenize error");
+        }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
