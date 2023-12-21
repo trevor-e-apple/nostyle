@@ -836,20 +836,6 @@ mod tests {
 
     #[test]
     fn single_token() {
-        /*
-                expression -> brace_expression | if_else | for_loop | equality;
-        brace_expression -> "{" brace_statements? expression "}";
-        brace_statements -> brace_statements? (brace_expression | statement | if_else);
-        statement -> SYMBOL "=" expression ";" | expression ";";
-        if_else -> "if" expression brace_expression ("else" expression)?;
-        for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
-        equality -> (equality ("==" | "!=") comparison) | comparison;
-        comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
-        plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
-        mult_div -> (mult_div ("*" | "/") unary) | unary;
-        unary -> (("!" | "-") unary) | primary;
-        primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | "(" expression ")";*/
-
         let tokens = tokenize("0").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         let expected_ast = {
@@ -879,7 +865,29 @@ mod tests {
     fn single_token_in_braces() {
         let tokens = tokenize("{0}").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+            let equality_handle =
+                expected_ast.add_child(brace_expression_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let mult_div_handle =
+                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+            let unary_handle =
+                expected_ast.add_child(mult_div_handle, Rule::Unary);
+            let primary_child =
+                expected_ast.add_child(unary_handle, Rule::Primary);
+            expected_ast
+                .add_terminal_child(primary_child, Token::IntLiteral(0));
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]

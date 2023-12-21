@@ -77,7 +77,8 @@ fn get_int_literal_token(
     }
 }
 
-/// TODO: document me
+/// returns an IntLiteral or FloatLiteral token. based on the digits from index
+/// the last matching digit.
 fn get_num_token(
     chars: &Vec<char>,
     index: usize,
@@ -275,7 +276,11 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                             };
                         } else {
                             match get_num_token(&chars, index, line_number) {
-                                Ok(_) => todo!(),
+                                Ok((token, string_len)) => {
+                                    tokens.add_token(
+                                        &mut index, token, string_len,
+                                    );
+                                }
                                 Err(_) => todo!(),
                             }
                         }
@@ -667,5 +672,16 @@ mod tests {
             *tokens.get(0).unwrap(),
             Token::StringLiteral("a\nb".to_string())
         );
+    }
+
+    /// test for tokenizing zero in braces
+    #[test]
+    fn tokenize_zero_in_braces() {
+        let s = "{0}";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(*tokens.get(0).unwrap(), Token::LBrace);
+        assert_eq!(*tokens.get(1).unwrap(), Token::IntLiteral(0));
+        assert_eq!(*tokens.get(2).unwrap(), Token::RBrace);
     }
 }
