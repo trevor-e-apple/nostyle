@@ -158,7 +158,7 @@ pub fn parse(tokens: &Tokens) -> Ast {
         }
     }
 
-    todo!()
+    result
 }
 
 fn parse_expression_rule(
@@ -168,10 +168,6 @@ fn parse_expression_rule(
     stack: &mut Vec<SearchData>,
 ) {
     let start_token = match tokens.get(search_data.start) {
-        Some(token) => token,
-        None => todo!("Parse error (panic?)"),
-    };
-    let end_token = match tokens.get(search_data.end) {
         Some(token) => token,
         None => todo!("Parse error (panic?)"),
     };
@@ -875,7 +871,8 @@ mod tests {
                 .add_terminal_child(primary_child, Token::IntLiteral(0));
             expected_ast
         };
-        todo!()
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]

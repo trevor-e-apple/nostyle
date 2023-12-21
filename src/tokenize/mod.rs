@@ -504,6 +504,10 @@ mod tests {
         let error = errors[0].clone();
         assert_eq!(error.line_number, 2);
         match error.type_data {
+            TokenizeErrorType::General => {
+                assert!(false);
+                return;
+            }
             TokenizeErrorType::IntParse => {
                 assert!(false);
                 return;
