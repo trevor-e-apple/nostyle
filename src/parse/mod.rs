@@ -347,7 +347,7 @@ fn parse_brace_expression_rule(
 
     // there are two ways for a group of brace statements to terminate, either
     // a semicolon or an rbrace
-    let end_brace_statements_index: Option<usize> = {
+    let end_brace_statements: Option<usize> = {
         match find_final_matching_level_token(
             tokens,
             &[Token::EndStatement],
@@ -366,17 +366,23 @@ fn parse_brace_expression_rule(
                     brace_contents_end,
                 ) {
                     Some(final_rbrace_index) => {
-                        if final_rbrace_index == search_data.end - 1 {
+                        if final_rbrace_index == brace_contents_end - 1 {
                             // this rbrace is for the trailing expression
-                            find_final_token(
+                            // find the preceding LBrace and end brace contents there
+                            match find_prev_matching_level_token(
                                 tokens,
+                                &[Token::LBrace],
+                                brace_contents_start,
+                                final_rbrace_index,
+                                &Token::LBrace,
                                 &Token::RBrace,
-                                brace_contents_start + 1,
-                                brace_contents_end - 1,
-                            )
+                            ) {
+                                Some(lbrace_index) => Some(lbrace_index),
+                                None => todo!("Syntax error"),
+                            }
                         } else {
                             // this rbrace is for the brace statements
-                            Some(final_rbrace_index)
+                            Some(final_rbrace_index + 1)
                         }
                     }
                     None => None, // no semicolon or rbrace
@@ -385,20 +391,24 @@ fn parse_brace_expression_rule(
         }
     };
 
-    match end_brace_statements_index {
-        Some(end_brace_statements_index) => {
-            // brace statements followed by expression
-            let brace_statements_handle =
-                ast.add_child(search_data.node_handle, Rule::BraceStatements);
-            stack.push(SearchData {
-                start: brace_contents_start,
-                end: end_brace_statements_index,
-                node_handle: brace_statements_handle,
-            });
+    match end_brace_statements {
+        Some(end_brace_statements) => {
+            // some braces don't have brace statements
+            if brace_contents_start < end_brace_statements {
+                // brace statements followed by expression
+                let brace_statements_handle = ast
+                    .add_child(search_data.node_handle, Rule::BraceStatements);
+                stack.push(SearchData {
+                    start: brace_contents_start,
+                    end: end_brace_statements,
+                    node_handle: brace_statements_handle,
+                });
+            }
+
             let expression_handle =
                 ast.add_child(search_data.node_handle, Rule::Expression);
             stack.push(SearchData {
-                start: end_brace_statements_index + 1,
+                start: end_brace_statements,
                 end: brace_contents_end,
                 node_handle: expression_handle,
             });
@@ -828,12 +838,32 @@ mod tests {
 
     use crate::tokenize::tokenize;
 
+    /// test empty parse
     #[test]
     fn empty_parse() {
         let tokens = tokenize("");
         unimplemented!();
     }
 
+    #[test]
+    fn empty_braces() {
+        let tokens = tokenize("{}");
+        unimplemented!();
+    }
+
+    #[test]
+    fn empty_parens() {
+        let tokens = tokenize("()");
+        unimplemented!();
+    }
+
+    #[test]
+    fn empty_statement() {
+        let tokens = tokenize(";");
+        unimplemented!();
+    }
+
+    /// test the parse of a single basic token
     #[test]
     fn single_token() {
         let tokens = tokenize("0").expect("Unexpected tokenize error");
@@ -894,7 +924,34 @@ mod tests {
     fn single_token_nested_braces() {
         let tokens = tokenize("{{0}}").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let outer_brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+            let expression_handle = expected_ast
+                .add_child(outer_brace_expression_handle, Rule::Expression);
+            let brace_expression_handle = expected_ast
+                .add_child(expression_handle, Rule::BraceExpression);
+            let equality_handle =
+                expected_ast.add_child(brace_expression_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let mult_div_handle =
+                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+            let unary_handle =
+                expected_ast.add_child(mult_div_handle, Rule::Unary);
+            let primary_child =
+                expected_ast.add_child(unary_handle, Rule::Primary);
+            expected_ast
+                .add_terminal_child(primary_child, Token::IntLiteral(0));
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
