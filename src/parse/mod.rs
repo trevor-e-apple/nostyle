@@ -333,7 +333,7 @@ fn parse_brace_expression_rule(
         todo!("Syntax error");
     }
 
-    let final_token = match tokens.get(search_data.end) {
+    let final_token = match tokens.get(search_data.end - 1) {
         Some(token) => token,
         None => todo!("Syntax error"),
     };
