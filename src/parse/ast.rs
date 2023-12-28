@@ -56,14 +56,14 @@ impl Ast {
     pub fn add_terminal_child(
         &mut self,
         parent_handle: AstNodeHandle,
-        data: Token,
+        data: Option<Token>,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
             rule: Rule::Terminal,
             parent: Some(parent_handle),
             children: vec![],
-            data: Some(data),
+            data,
         });
 
         let result = AstNodeHandle { index: current_len };

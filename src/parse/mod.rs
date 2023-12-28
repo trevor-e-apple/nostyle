@@ -6,7 +6,7 @@ this grammar expands in a way that matches operator precedence
 expression -> brace_expression | if_else | for_loop | equality;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
-statement -> SYMBOL "=" expression ";" | expression ";";
+statement -> (SYMBOL "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -14,7 +14,7 @@ comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
 plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
 mult_div -> (mult_div ("*" | "/") unary) | unary;
 unary -> (("!" | "-") unary) | primary;
-primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | "(" expression ")";
+primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")";
 */
 
 /* NOTES:
@@ -818,13 +818,14 @@ fn parse_primary_rule(
     search_data: &SearchData,
     ast: &mut Ast,
 ) {
+    todo!("Handle empty expression evaluating to none");
     match tokens.get(search_data.start) {
         Some(token) => match token {
             Token::Symbol(_)
             | Token::IntLiteral(_)
             | Token::FloatLiteral(_)
             | Token::StringLiteral(_) => {
-                ast.add_terminal_child(search_data.node_handle, token.clone());
+                ast.add_terminal_child(search_data.node_handle, Some(token.clone()));
             }
             _ => todo!("Syntax error"),
         },
@@ -884,7 +885,7 @@ mod tests {
             let primary_child =
                 expected_ast.add_child(unary_handle, Rule::Primary);
             expected_ast
-                .add_terminal_child(primary_child, Token::IntLiteral(0));
+                .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
             expected_ast
         };
 
@@ -913,7 +914,7 @@ mod tests {
             let primary_child =
                 expected_ast.add_child(unary_handle, Rule::Primary);
             expected_ast
-                .add_terminal_child(primary_child, Token::IntLiteral(0));
+                .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
             expected_ast
         };
 
@@ -947,18 +948,97 @@ mod tests {
             let primary_child =
                 expected_ast.add_child(unary_handle, Rule::Primary);
             expected_ast
-                .add_terminal_child(primary_child, Token::IntLiteral(0));
+                .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
             expected_ast
         };
 
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
+    /// test a simple arithmetic expression
     #[test]
     fn arithmetic_expression() {
         let tokens = tokenize("1 + 2").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+
+            // 1
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast
+                    .add_terminal_child(primary_child, Some(Token::IntLiteral(1)));
+            }
+            // 2
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast
+                    .add_terminal_child(primary_child, Some(Token::IntLiteral(2)));
+            }
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
+    }
+
+    /// test a simple multiplication expression
+    #[test]
+    fn mult_expression() {
+        let tokens = tokenize("1 * 2").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let mult_div_handle =
+                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+
+            // 1
+            {
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast
+                    .add_terminal_child(primary_child, Some(Token::IntLiteral(1)));
+            }
+            // 2
+            {
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast
+                    .add_terminal_child(primary_child, Some(Token::IntLiteral(2)));
+            }
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
@@ -977,23 +1057,130 @@ mod tests {
         unimplemented!();
     }
 
+    /// test an expression including symbols as opposed to literals
     #[test]
     fn expression_with_symbols() {
         let tokens = tokenize("a + b").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+
+            // a
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+            }
+            // b
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::Symbol("b".to_owned())),
+                );
+            }
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
+    /// a basic test for assignment
     #[test]
     fn assignment_symbol() {
-        let tokens = tokenize("a = b;").expect("Unexpected tokenize error");
+        let tokens = tokenize("{ a = b; }").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let statement_handle =
+                    expected_ast.add_child(statements_handle, Rule::Statement);
+
+                // lhs
+                {
+                    expected_ast.add_terminal_child(
+                        statement_handle,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+                }
+                // rhs
+                {
+                    let equality_handle =
+                        expected_ast.add_child(statement_handle, Rule::Equality);
+                    let comparison_handle =
+                        expected_ast.add_child(equality_handle, Rule::Comparison);
+                    let plus_minus_handle =
+                        expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div_handle =
+                        expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_child =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_terminal_child(
+                        primary_child,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+                }
+            }
+
+            // expression
+            {
+                let expression_handle = expected_ast.add_child(brace_expression_handle, Rule::Expression);
+                let equality_handle =
+                    expected_ast.add_child(root_handle, Rule::Equality);
+                let comparison_handle =
+                    expected_ast.add_child(equality_handle, Rule::Comparison);
+                let plus_minus_handle =
+                    expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast
+                    .add_terminal_child(primary_child, None);
+            }
+
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
     fn assign_expression() {
-        let tokens = tokenize("a = b + c;").expect("Unexpected tokenize error");
+        let tokens =
+            tokenize("{ a = b + c; }").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         unimplemented!();
     }
@@ -1139,14 +1326,16 @@ mod tests {
         unimplemented!();
     }
 
+    /// multiple braced statements without an expression
     #[test]
     fn brace_statements() {
         let tokens = tokenize(
-            "{
-            a = b;
-            c = d;
-            e = f;
-        }",
+            "
+            {
+                a = b;
+                c = d;
+                e = f;
+            }",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
@@ -1156,12 +1345,32 @@ mod tests {
     #[test]
     fn braced_statements_and_expression() {
         let tokens = tokenize(
-            "{
-            a = b;
-            c = d;
-            e = f;
-            e
-        }",
+            "
+            {
+                a = b;
+                c = d;
+                e = f;
+                e
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn braced_statements_and_braced_expression() {
+        let tokens = tokenize(
+            "
+            {
+                a = b;
+                c = d;
+                e = f;
+                {
+                    g = a + f;
+                    g
+                }
+            }",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
