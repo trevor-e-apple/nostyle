@@ -34,7 +34,7 @@ pub mod ast;
 pub mod rule;
 mod token_search;
 
-use std::todo;
+use std::{panic, todo};
 
 use crate::tokenize::tokens::{Token, Tokens};
 
@@ -356,7 +356,7 @@ fn parse_brace_expression_rule(
             &Token::LBrace,
             &Token::RBrace,
         ) {
-            Some(final_semicolon_index) => Some(final_semicolon_index),
+            Some(final_semicolon_index) => Some(final_semicolon_index + 1),
             None => {
                 // find final rbrace
                 match find_final_token(
@@ -435,58 +435,82 @@ fn parse_brace_statements_rule(
 ) {
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
-        let mut non_recursive_end_index: Option<usize> = None;
-        for index in (search_data.start..search_data.end).rev() {
-            match tokens.get(index) {
-                Some(check_token) => {
-                    if *check_token == Token::RBrace
-                        || *check_token == Token::EndStatement
-                    {
-                        non_recursive_end_index = Some(index);
-                        break;
+        let (end_token, non_recursive_end_index): (Token, usize) = {
+            let mut non_recursive_end_data: Option<(Token, usize)> = None;
+            for index in (search_data.start..search_data.end).rev() {
+                match tokens.get(index) {
+                    Some(check_token) => {
+                        if *check_token == Token::RBrace
+                            || *check_token == Token::EndStatement
+                        {
+                            non_recursive_end_data =
+                                Some((check_token.clone(), index + 1));
+                            break;
+                        }
                     }
+                    None => todo!("Syntax error"),
                 }
+            }
+
+            match non_recursive_end_data {
+                Some(result) => result,
                 None => todo!("Syntax error"),
             }
-        }
-
-        let non_recursive_end_index = match non_recursive_end_index {
-            Some(non_recursive_end_index) => non_recursive_end_index,
-            None => todo!("Syntax error"),
         };
 
         // find the previous RBrace or EndStatement at the same level as the
         // end of the terminal
-        match find_prev_matching_level_token(
-            tokens,
-            &[Token::RBrace, Token::EndStatement],
-            search_data.start,
-            non_recursive_end_index,
-            &Token::LBrace,
-            &Token::RBrace,
-        ) {
-            Some(non_recursive_start_index) => {
-                (non_recursive_start_index + 1, non_recursive_end_index)
+        let non_recursive_start_index = if end_token == Token::RBrace {
+            // find matching lbrace
+            match find_prev_matching_level_token(
+                tokens,
+                &[Token::LBrace],
+                search_data.start,
+                non_recursive_end_index - 1,
+                &Token::LBrace,
+                &Token::RBrace,
+            ) {
+                Some(lbrace_index) => lbrace_index,
+                None => todo!("Syntax error"),
             }
-            None => todo!("Syntax error"),
-        }
+        } else if end_token == Token::EndStatement {
+            // find end of previous statement, if it exists
+            match find_prev_matching_level_token(
+                tokens,
+                &[Token::EndStatement],
+                search_data.start,
+                non_recursive_end_index - 1,
+                &Token::LBrace,
+                &Token::RBrace,
+            ) {
+                Some(prev_end_index) => prev_end_index + 1,
+                None => search_data.start,
+            }
+        } else {
+            todo!("This should never happen? panic?");
+        };
+
+        (non_recursive_start_index, non_recursive_end_index)
     };
 
     // push the preceding statements for a recursive expansion
-    let recursive_handle =
-        ast.add_child(search_data.node_handle, Rule::BraceStatements);
-    stack.push(SearchData {
-        start: search_data.start,
-        end: non_recursive_start_index - 1,
-        node_handle: recursive_handle,
-    });
+    if search_data.start < non_recursive_start_index {
+        let recursive_handle =
+            ast.add_child(search_data.node_handle, Rule::BraceStatements);
+        stack.push(SearchData {
+            start: search_data.start,
+            end: non_recursive_start_index - 1,
+            node_handle: recursive_handle,
+        });
+    }
 
     let non_recursive_start_token = match tokens.get(non_recursive_start_index)
     {
         Some(non_recursive_start_token) => non_recursive_start_token,
         None => todo!("Syntax error"),
     };
-    let non_recursive_end_token = match tokens.get(non_recursive_end_index) {
+    let non_recursive_end_token = match tokens.get(non_recursive_end_index - 1)
+    {
         Some(non_recursive_end_token) => non_recursive_end_token,
         None => todo!("Syntax error"),
     };
@@ -526,19 +550,31 @@ fn parse_statement_rule(
         Some(assign_index) => match tokens.get(search_data.end - 1) {
             Some(expected_end_statement) => {
                 if *expected_end_statement == Token::EndStatement {
+                    // RHS: expand expression
                     let child_node = ast
                         .add_child(search_data.node_handle, Rule::Expression);
                     stack.push(SearchData {
-                        start: assign_index + 1,
-                        end: search_data.end - 1,
+                        start: assign_index + 1, // move past assignment
+                        end: search_data.end - 1, // don't include endstatement token
                         node_handle: child_node,
                     });
-                    todo!("Modify AST for assigning to the symbol at search_data.start -> assign_index");
+
+                    // LHS: get the symbol for assignment
+                    match tokens.get(assign_index - 1) {
+                        Some(symbol_token) => match symbol_token {
+                            Token::Symbol(_) => ast.add_terminal_child(
+                                search_data.node_handle,
+                                Some(symbol_token.clone()),
+                            ),
+                            _ => todo!("syntax error: not a symbol"),
+                        },
+                        None => todo!("syntax error"),
+                    };
                 } else {
                     todo!("Syntax error");
                 }
             }
-            None => todo!(),
+            None => todo!("Syntax error?"),
         },
         None => match tokens.get(search_data.end - 1) {
             Some(expected_end_statement) => {
@@ -818,18 +854,25 @@ fn parse_primary_rule(
     search_data: &SearchData,
     ast: &mut Ast,
 ) {
-    todo!("Handle empty expression evaluating to none");
-    match tokens.get(search_data.start) {
-        Some(token) => match token {
-            Token::Symbol(_)
-            | Token::IntLiteral(_)
-            | Token::FloatLiteral(_)
-            | Token::StringLiteral(_) => {
-                ast.add_terminal_child(search_data.node_handle, Some(token.clone()));
-            }
-            _ => todo!("Syntax error"),
-        },
-        None => todo!("Syntax error"),
+    if search_data.start == search_data.end {
+        // handle empty expression case
+        ast.add_terminal_child(search_data.node_handle, None);
+    } else {
+        match tokens.get(search_data.start) {
+            Some(token) => match token {
+                Token::Symbol(_)
+                | Token::IntLiteral(_)
+                | Token::FloatLiteral(_)
+                | Token::StringLiteral(_) => {
+                    ast.add_terminal_child(
+                        search_data.node_handle,
+                        Some(token.clone()),
+                    );
+                }
+                _ => todo!("Syntax error"),
+            },
+            None => todo!("Syntax error"),
+        }
     }
 }
 
@@ -979,8 +1022,10 @@ mod tests {
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast
-                    .add_terminal_child(primary_child, Some(Token::IntLiteral(1)));
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(1)),
+                );
             }
             // 2
             {
@@ -990,8 +1035,10 @@ mod tests {
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast
-                    .add_terminal_child(primary_child, Some(Token::IntLiteral(2)));
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(2)),
+                );
             }
             expected_ast
         };
@@ -1023,8 +1070,10 @@ mod tests {
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast
-                    .add_terminal_child(primary_child, Some(Token::IntLiteral(1)));
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(1)),
+                );
             }
             // 2
             {
@@ -1032,8 +1081,10 @@ mod tests {
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast
-                    .add_terminal_child(primary_child, Some(Token::IntLiteral(2)));
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(2)),
+                );
             }
             expected_ast
         };
@@ -1133,14 +1184,14 @@ mod tests {
                 }
                 // rhs
                 {
-                    let equality_handle =
-                        expected_ast.add_child(statement_handle, Rule::Equality);
-                    let comparison_handle =
-                        expected_ast.add_child(equality_handle, Rule::Comparison);
-                    let plus_minus_handle =
-                        expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-                    let mult_div_handle =
-                        expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                    let equality_handle = expected_ast
+                        .add_child(statement_handle, Rule::Equality);
+                    let comparison_handle = expected_ast
+                        .add_child(equality_handle, Rule::Comparison);
+                    let plus_minus_handle = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div_handle = expected_ast
+                        .add_child(plus_minus_handle, Rule::MultDiv);
                     let unary_handle =
                         expected_ast.add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
@@ -1154,7 +1205,8 @@ mod tests {
 
             // expression
             {
-                let expression_handle = expected_ast.add_child(brace_expression_handle, Rule::Expression);
+                let expression_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::Expression);
                 let equality_handle =
                     expected_ast.add_child(root_handle, Rule::Equality);
                 let comparison_handle =
@@ -1167,14 +1219,21 @@ mod tests {
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast
-                    .add_terminal_child(primary_child, None);
+                expected_ast.add_terminal_child(primary_child, None);
             }
 
             expected_ast
         };
 
         assert!(Ast::equivalent(&ast, &expected_ast));
+    }
+
+    #[test]
+    fn no_assign_statement() {
+        let tokens =
+            tokenize("{ b + 42; }").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
     }
 
     #[test]
@@ -1227,6 +1286,25 @@ mod tests {
                     d = 2 * a;
                     d
                 };
+                a + b + c
+            }
+        ",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn nested_brace_expressions_brace_first() {
+        let tokens = tokenize(
+            "
+            {
+                c = {
+                    d = 2 * a;
+                    d
+                };
+                a = b;
                 a + b + c
             }
         ",
