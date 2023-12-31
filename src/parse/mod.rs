@@ -34,7 +34,7 @@ pub mod ast;
 pub mod rule;
 mod token_search;
 
-use std::{panic, todo};
+use std::todo;
 
 use crate::tokenize::tokens::{Token, Tokens};
 
@@ -152,7 +152,12 @@ pub fn parse(tokens: &Tokens) -> Ast {
                 parse_unary_rule(tokens, &search_data, &mut result, &mut stack);
             }
             Rule::Primary => {
-                parse_primary_rule(tokens, &search_data, &mut result);
+                parse_primary_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::Terminal => {}
         }
@@ -554,7 +559,7 @@ fn parse_statement_rule(
                     let child_node = ast
                         .add_child(search_data.node_handle, Rule::Expression);
                     stack.push(SearchData {
-                        start: assign_index + 1, // move past assignment
+                        start: assign_index + 1,  // move past assignment
                         end: search_data.end - 1, // don't include endstatement token
                         node_handle: child_node,
                     });
@@ -853,6 +858,7 @@ fn parse_primary_rule(
     tokens: &Tokens,
     search_data: &SearchData,
     ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
 ) {
     if search_data.start == search_data.end {
         // handle empty expression case
@@ -869,10 +875,32 @@ fn parse_primary_rule(
                         Some(token.clone()),
                     );
                 }
+                Token::LParen => {
+                    let child_handle = ast
+                        .add_child(search_data.node_handle, Rule::Expression);
+
+                    let expected_rparen_index = search_data.end - 1;
+                    match tokens.get(expected_rparen_index) {
+                        Some(expected_rparen) => {
+                            // check whether we have mismatched parens
+                            if *expected_rparen == Token::RParen {
+                                stack.push(SearchData {
+                                    start: search_data.start + 1,
+                                    end: expected_rparen_index,
+                                    node_handle: child_handle,
+                                });
+                            } else {
+                                todo!("Syntax error (mismatched parens)")
+                            }
+                        }
+                        None => todo!("panic?"),
+                    }
+                }
                 _ => todo!("Syntax error"),
             },
             None => todo!("Syntax error"),
         }
+        use std::unimplemented;
     }
 }
 
@@ -904,6 +932,17 @@ mod tests {
     #[test]
     fn empty_statement() {
         let tokens = tokenize(";");
+        unimplemented!();
+    }
+
+    /// test for mismatched parens
+    #[test]
+    fn paren_mismatch() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn brace_mismatch() {
         unimplemented!();
     }
 
@@ -1092,12 +1131,60 @@ mod tests {
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
+    /// test for group on right
     #[test]
-    fn expression_with_grouping() {
+    fn expression_with_grouping_right() {
         let tokens =
             tokenize("1 + (2 + 3)").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+        unimplemented!("more work");
+    }
+
+    /// test for group on left
+    #[test]
+    fn expression_with_grouping_left() {
+        let tokens =
+            tokenize("(1 + 2) * 3").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let mult_div_handle =
+                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+
+            // 1
+            {
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+            // 2
+            {
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(2)),
+                );
+            }
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
@@ -1208,7 +1295,7 @@ mod tests {
                 let expression_handle = expected_ast
                     .add_child(brace_expression_handle, Rule::Expression);
                 let equality_handle =
-                    expected_ast.add_child(root_handle, Rule::Equality);
+                    expected_ast.add_child(expression_handle, Rule::Equality);
                 let comparison_handle =
                     expected_ast.add_child(equality_handle, Rule::Comparison);
                 let plus_minus_handle =
@@ -1261,11 +1348,137 @@ mod tests {
     }
 
     #[test]
-    fn operator_precedence() {
-        let tokens = tokenize("a + b - c * d / e + (f + g)")
-            .expect("Unexpected tokenize error");
+    fn left_right_precedence() {
+        let tokens = tokenize("a + b - c").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+
+            // a + b
+            {
+                let a_plus_b_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
+
+                // a
+                {
+                    let mult_div_handle =
+                        expected_ast.add_child(a_plus_b_handle, Rule::MultDiv);
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_child =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_terminal_child(
+                        primary_child,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+                }
+
+                // b
+                {
+                    let mult_div_handle =
+                        expected_ast.add_child(a_plus_b_handle, Rule::MultDiv);
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_child =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_terminal_child(
+                        primary_child,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+                }
+            }
+
+            // - c
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::Symbol("c".to_owned())),
+                );
+            }
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
+    }
+
+    #[test]
+    fn add_mult_precedence() {
+        let tokens = tokenize("a + b * c").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+
+            // a
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+            }
+
+            // b * c
+            {
+                let bc_plus_minus_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
+                let mult_div_handle =
+                    expected_ast.add_child(bc_plus_minus_handle, Rule::MultDiv);
+
+                // b
+                {
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_child =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_terminal_child(
+                        primary_child,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+                }
+
+                // c
+                {
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_child =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_terminal_child(
+                        primary_child,
+                        Some(Token::Symbol("c".to_owned())),
+                    );
+                }
+            }
+            expected_ast
+        };
+
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]

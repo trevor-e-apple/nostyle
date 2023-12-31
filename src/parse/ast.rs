@@ -88,6 +88,7 @@ impl Ast {
     }
 
     /// whether or not two ast's are equivalent
+    #[cfg(test)]
     pub fn equivalent(a: &Self, b: &Self) -> bool {
         let a_root = if let Some(a_root) = a.get_root() {
             a_root
