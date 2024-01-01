@@ -129,9 +129,9 @@ impl Ast {
     /// prints an AST
     #[cfg(test)]
     pub fn print(&self) {
-        use std::{collections::vec_deque::VecDeque, panic};
+        use std::{panic};
 
-        struct BfsData {
+        struct DfsData {
             node_handle: AstNodeHandle,
             depth: i32,
         }
@@ -143,19 +143,18 @@ impl Ast {
             return;
         };
 
-        let mut queue: VecDeque<BfsData> = VecDeque::new();
-        queue.push_back(BfsData { node_handle: root, depth: 0 });
+        let mut stack: Vec<DfsData> = vec![DfsData { node_handle: root, depth: 0 }];
 
-        while let Some(bfs_data) = queue.pop_front() {
+        while let Some(bfs_data) = stack.pop() {
             let node = if let Some(node) = self.get_node(bfs_data.node_handle) {
                 node
             } else {
                 panic!();
             };
 
-            // add children to queue
+            // add children to stack
             for child in &node.children {
-                queue.push_back(BfsData {
+                stack.push(DfsData {
                     node_handle: child.clone(),
                     depth: bfs_data.depth + 1,
                 });
