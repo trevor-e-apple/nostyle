@@ -111,8 +111,17 @@ impl Ast {
                         a.get_node(a_node_handle).expect("Bad AST handle");
                     let b_node =
                         b.get_node(b_node_handle).expect("Bad AST handle");
+
                     if a_node != b_node {
                         return false;
+                    } else {
+                        // add children to the stack
+                        for child in &a_node.children {
+                            a_stack.push(*child);
+                        }
+                        for child in &b_node.children {
+                            b_stack.push(*child);
+                        }
                     }
                 } else {
                     // a still had data, but b did not
@@ -129,7 +138,7 @@ impl Ast {
     /// prints an AST
     #[cfg(test)]
     pub fn print(&self) {
-        use std::{panic};
+        use std::panic;
 
         struct DfsData {
             node_handle: AstNodeHandle,
@@ -143,7 +152,8 @@ impl Ast {
             return;
         };
 
-        let mut stack: Vec<DfsData> = vec![DfsData { node_handle: root, depth: 0 }];
+        let mut stack: Vec<DfsData> =
+            vec![DfsData { node_handle: root, depth: 0 }];
 
         while let Some(bfs_data) = stack.pop() {
             let node = if let Some(node) = self.get_node(bfs_data.node_handle) {
