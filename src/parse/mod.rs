@@ -1021,14 +1021,18 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
+            
             let outer_brace_expression_handle =
                 expected_ast.add_child(root_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(outer_brace_expression_handle, Rule::Expression);
+            
             let brace_expression_handle = expected_ast
                 .add_child(expression_handle, Rule::BraceExpression);
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
             let equality_handle =
-                expected_ast.add_child(brace_expression_handle, Rule::Equality);
+                expected_ast.add_child(expression_handle, Rule::Equality);
             let comparison_handle =
                 expected_ast.add_child(equality_handle, Rule::Comparison);
             let plus_minus_handle =
