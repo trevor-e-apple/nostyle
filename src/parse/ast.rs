@@ -125,6 +125,48 @@ impl Ast {
 
         true
     }
+
+    /// prints an AST
+    #[cfg(test)]
+    pub fn print(&self) {
+        use std::{collections::vec_deque::VecDeque, panic};
+
+        struct BfsData {
+            node_handle: AstNodeHandle,
+            depth: i32,
+        }
+
+        let root = if let Some(root) = self.get_root() {
+            root
+        } else {
+            // nothing to print
+            return;
+        };
+
+        let mut queue: VecDeque<BfsData> = VecDeque::new();
+        queue.push_back(BfsData { node_handle: root, depth: 0 });
+
+        while let Some(bfs_data) = queue.pop_front() {
+            let node = if let Some(node) = self.get_node(bfs_data.node_handle) {
+                node
+            } else {
+                panic!();
+            };
+
+            // add children to queue
+            for child in &node.children {
+                queue.push_back(BfsData {
+                    node_handle: child.clone(),
+                    depth: bfs_data.depth + 1,
+                });
+            }
+
+            for _ in 0..bfs_data.depth {
+                print!("    ");
+            }
+            println!("{:?}", node.make_terse_string());
+        }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -137,6 +179,13 @@ pub struct AstNode {
     pub parent: Option<AstNodeHandle>,
     pub children: Vec<AstNodeHandle>,
     pub data: Option<Token>,
+}
+
+impl AstNode {
+    #[cfg(test)]
+    pub fn make_terse_string(&self) -> String {
+        format!("Rule: {:?} Data: {:?}", self.rule, self.data)
+    }
 }
 
 impl PartialEq for AstNode {

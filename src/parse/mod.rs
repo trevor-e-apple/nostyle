@@ -971,6 +971,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1000,6 +1002,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1034,6 +1038,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1082,6 +1088,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1128,6 +1136,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1184,6 +1194,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1240,6 +1252,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1412,6 +1426,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
@@ -1478,6 +1494,8 @@ mod tests {
             expected_ast
         };
 
+        ast.print();
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
