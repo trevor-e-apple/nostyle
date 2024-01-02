@@ -1021,12 +1021,12 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            
+
             let outer_brace_expression_handle =
                 expected_ast.add_child(root_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(outer_brace_expression_handle, Rule::Expression);
-            
+
             let brace_expression_handle = expected_ast
                 .add_child(expression_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
@@ -1048,7 +1048,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
@@ -1100,7 +1102,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
@@ -1123,8 +1127,10 @@ mod tests {
             let mult_div_handle =
                 expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
 
-            // 1
+            // 1 (recursive)
             {
+                let mult_div_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::MultDiv);
                 let unary_handle =
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
@@ -1148,7 +1154,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
@@ -1206,7 +1214,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
@@ -1235,8 +1245,10 @@ mod tests {
             let plus_minus_handle =
                 expected_ast.add_child(comparison_handle, Rule::PlusMinus);
 
-            // a
+            // a (recursive)
             {
+                let plus_minus_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
                 let mult_div_handle =
                     expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
                 let unary_handle =
@@ -1248,6 +1260,7 @@ mod tests {
                     Some(Token::Symbol("a".to_owned())),
                 );
             }
+
             // b
             {
                 let mult_div_handle =
@@ -1264,7 +1277,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
@@ -1288,17 +1303,12 @@ mod tests {
                 let statement_handle =
                     expected_ast.add_child(statements_handle, Rule::Statement);
 
-                // lhs
-                {
-                    expected_ast.add_terminal_child(
-                        statement_handle,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
-                }
                 // rhs
                 {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
                     let equality_handle = expected_ast
-                        .add_child(statement_handle, Rule::Equality);
+                        .add_child(expression_handle, Rule::Equality);
                     let comparison_handle = expected_ast
                         .add_child(equality_handle, Rule::Comparison);
                     let plus_minus_handle = expected_ast
@@ -1312,6 +1322,14 @@ mod tests {
                     expected_ast.add_terminal_child(
                         primary_child,
                         Some(Token::Symbol("b".to_owned())),
+                    );
+                }
+
+                // lhs
+                {
+                    expected_ast.add_terminal_child(
+                        statement_handle,
+                        Some(Token::Symbol("a".to_owned())),
                     );
                 }
             }
@@ -1338,6 +1356,10 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
