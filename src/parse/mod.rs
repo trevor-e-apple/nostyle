@@ -1189,7 +1189,58 @@ mod tests {
             let mult_div_handle =
                 expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
 
-            // 1
+            // LHS: (1 + 2)
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+
+                // 1 + 2
+                {
+                    let expression_handle =
+                        expected_ast.add_child(primary_child, Rule::Expression);
+                    let equality_handle = expected_ast
+                        .add_child(expression_handle, Rule::Equality);
+                    let comparison_handle = expected_ast
+                        .add_child(equality_handle, Rule::Comparison);
+                    let plus_minus_handle = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+
+                    // 1 (recursive)
+                    {
+                        let recursive_handle = expected_ast
+                            .add_child(plus_minus_handle, Rule::PlusMinus);
+                        let mult_div_handle = expected_ast
+                            .add_child(recursive_handle, Rule::MultDiv);
+                        let unary_handle = expected_ast
+                            .add_child(mult_div_handle, Rule::Unary);
+                        let primary_child =
+                            expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_terminal_child(
+                            primary_child,
+                            Some(Token::IntLiteral(1)),
+                        );
+                    }
+                    // 2
+                    {
+                        let mult_div_handle = expected_ast
+                            .add_child(plus_minus_handle, Rule::MultDiv);
+                        let unary_handle = expected_ast
+                            .add_child(mult_div_handle, Rule::Unary);
+                        let primary_child =
+                            expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_terminal_child(
+                            primary_child,
+                            Some(Token::IntLiteral(2)),
+                        );
+                    }
+                }
+            }
+
+            // RHS: 3
             {
                 let unary_handle =
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
@@ -1197,24 +1248,13 @@ mod tests {
                     expected_ast.add_child(unary_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
-                    Some(Token::IntLiteral(1)),
+                    Some(Token::IntLiteral(3)),
                 );
             }
-            // 2
-            {
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
-                let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::IntLiteral(2)),
-                );
-            }
+
             expected_ast
         };
 
-        todo!("fix me");
         println!("ast:");
         ast.print();
         println!("expected_ast:");
