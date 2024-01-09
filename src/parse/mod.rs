@@ -1523,8 +1523,10 @@ mod tests {
 
             // a
             {
-                let mult_div_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let recursive_plus_minus_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
+                let mult_div_handle = expected_ast
+                    .add_child(recursive_plus_minus_handle, Rule::MultDiv);
                 let unary_handle =
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
@@ -1537,10 +1539,8 @@ mod tests {
 
             // b * c
             {
-                let bc_plus_minus_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
                 let mult_div_handle =
-                    expected_ast.add_child(bc_plus_minus_handle, Rule::MultDiv);
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
 
                 // b
                 {
@@ -1556,6 +1556,7 @@ mod tests {
 
                 // c
                 {
+                    let recursive_mult_div_handle = expected_ast.add_child(mult_div_handle, Rule::MultDiv);
                     let unary_handle =
                         expected_ast.add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
@@ -1569,7 +1570,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
