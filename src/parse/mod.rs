@@ -1544,8 +1544,10 @@ mod tests {
 
                 // b
                 {
-                    let unary_handle =
-                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let recursive_mult_div_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::MultDiv);
+                    let unary_handle = expected_ast
+                        .add_child(recursive_mult_div_handle, Rule::Unary);
                     let primary_child =
                         expected_ast.add_child(unary_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
@@ -1556,7 +1558,6 @@ mod tests {
 
                 // c
                 {
-                    let recursive_mult_div_handle = expected_ast.add_child(mult_div_handle, Rule::MultDiv);
                     let unary_handle =
                         expected_ast.add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
