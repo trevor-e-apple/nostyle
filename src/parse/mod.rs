@@ -581,7 +581,7 @@ fn parse_statement_rule(
             }
             None => todo!("Syntax error?"),
         },
-        None => match tokens.get(search_data.end - 1) {
+        None => match tokens.get(search_data.end - 2) {
             Some(expected_end_statement) => {
                 if *expected_end_statement != Token::EndStatement {
                     let child_node = ast
@@ -1481,7 +1481,6 @@ mod tests {
         println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
-        unimplemented!();
     }
 
     #[test]
