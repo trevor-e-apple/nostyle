@@ -912,6 +912,23 @@ mod tests {
 
     use crate::tokenize::tokenize;
 
+    /// helper function for adding a none terminal expression to an ast
+    fn add_none_terminal_expression(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+    ) {
+        let expression_handle = ast.add_child(parent_handle, Rule::Expression);
+        let equality_handle = ast.add_child(expression_handle, Rule::Equality);
+        let comparison_handle =
+            ast.add_child(equality_handle, Rule::Comparison);
+        let plus_minus_handle =
+            ast.add_child(comparison_handle, Rule::PlusMinus);
+        let mult_div_handle = ast.add_child(plus_minus_handle, Rule::MultDiv);
+        let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+        let primary_child = ast.add_child(unary_handle, Rule::Primary);
+        ast.add_terminal_child(primary_child, None);
+    }
+
     /// test empty parse
     #[test]
     fn empty_parse() {
@@ -1375,24 +1392,8 @@ mod tests {
                 }
             }
 
-            // expression
-            {
-                let expression_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::Expression);
-                let equality_handle =
-                    expected_ast.add_child(expression_handle, Rule::Equality);
-                let comparison_handle =
-                    expected_ast.add_child(equality_handle, Rule::Comparison);
-                let plus_minus_handle =
-                    expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-                let mult_div_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
-                let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast.add_terminal_child(primary_child, None);
-            }
+            // no expression at end of brace expression
+            add_none_terminal_expression(&mut expected_ast, brace_expression_handle);
 
             expected_ast
         };
@@ -1434,30 +1435,8 @@ mod tests {
                 let statement_handle =
                     expected_ast.add_child(statements_handle, Rule::Statement);
 
-                let expression_handle = expected_ast
-                    .add_child(statement_handle, Rule::Expression);
-                let equality_handle = expected_ast
-                    .add_child(expression_handle, Rule::Equality);
-                let comparison_handle = expected_ast
-                    .add_child(equality_handle, Rule::Comparison);
-                let plus_minus_handle = expected_ast
-                    .add_child(comparison_handle, Rule::PlusMinus);
-                let mult_div_handle = expected_ast
-                    .add_child(plus_minus_handle, Rule::MultDiv);
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
-                let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::Symbol("a".to_owned())),
-                );
-            }
-
-            // expression
-            {
-                let expression_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::Expression);
+                let expression_handle =
+                    expected_ast.add_child(statement_handle, Rule::Expression);
                 let equality_handle =
                     expected_ast.add_child(expression_handle, Rule::Equality);
                 let comparison_handle =
@@ -1470,8 +1449,14 @@ mod tests {
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast.add_terminal_child(primary_child, None);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::Symbol("a".to_owned())),
+                );
             }
+
+            // no expression at end of brace expression
+            add_none_terminal_expression(&mut expected_ast, brace_expression_handle);
 
             expected_ast
         };
@@ -1488,7 +1473,6 @@ mod tests {
         let tokens =
             tokenize("{ b + 42; }").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-
 
         let expected_ast = {
             let mut expected_ast = Ast::new();
