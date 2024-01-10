@@ -1502,12 +1502,10 @@ mod tests {
                         .add_child(equality_handle, Rule::Comparison);
                     let plus_minus_handle = expected_ast
                         .add_child(comparison_handle, Rule::PlusMinus);
-                    let a_plus_b_handle = expected_ast
-                        .add_child(plus_minus_handle, Rule::PlusMinus);
 
                     // a
                     {
-                        let recursive_handle = expected_ast.add_child(a_plus_b_handle, Rule::PlusMinus);
+                        let recursive_handle = expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
                         let mult_div_handle = expected_ast
                             .add_child(recursive_handle, Rule::MultDiv);
                         let unary_handle = expected_ast
@@ -1523,7 +1521,7 @@ mod tests {
                     // b
                     {
                         let mult_div_handle = expected_ast
-                            .add_child(a_plus_b_handle, Rule::MultDiv);
+                            .add_child(plus_minus_handle, Rule::MultDiv);
                         let unary_handle = expected_ast
                             .add_child(mult_div_handle, Rule::Unary);
                         let primary_child =
