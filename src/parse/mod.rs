@@ -1393,7 +1393,10 @@ mod tests {
             }
 
             // no expression at end of brace expression
-            add_none_terminal_expression(&mut expected_ast, brace_expression_handle);
+            add_none_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+            );
 
             expected_ast
         };
@@ -1456,7 +1459,10 @@ mod tests {
             }
 
             // no expression at end of brace expression
-            add_none_terminal_expression(&mut expected_ast, brace_expression_handle);
+            add_none_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+            );
 
             expected_ast
         };
@@ -1470,8 +1476,7 @@ mod tests {
 
     #[test]
     fn brace_expression_statement_only() {
-        let tokens =
-            tokenize("{ b + 42; }").expect("Unexpected tokenize error");
+        let tokens = tokenize("{ a + b; }").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
 
         let expected_ast = {
@@ -1487,7 +1492,7 @@ mod tests {
                 let statement_handle =
                     expected_ast.add_child(statements_handle, Rule::Statement);
 
-                // rhs
+                // a + b
                 {
                     let expression_handle = expected_ast
                         .add_child(statement_handle, Rule::Expression);
@@ -1497,45 +1502,45 @@ mod tests {
                         .add_child(equality_handle, Rule::Comparison);
                     let plus_minus_handle = expected_ast
                         .add_child(comparison_handle, Rule::PlusMinus);
-                    let mult_div_handle = expected_ast
-                        .add_child(plus_minus_handle, Rule::MultDiv);
-                    let unary_handle =
-                        expected_ast.add_child(mult_div_handle, Rule::Unary);
-                    let primary_child =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_child,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
-                }
+                    let a_plus_b_handle = expected_ast
+                        .add_child(plus_minus_handle, Rule::PlusMinus);
 
-                // lhs
-                {
-                    expected_ast.add_terminal_child(
-                        statement_handle,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
+                    // a
+                    {
+                        let recursive_handle = expected_ast.add_child(a_plus_b_handle, Rule::PlusMinus);
+                        let mult_div_handle = expected_ast
+                            .add_child(recursive_handle, Rule::MultDiv);
+                        let unary_handle = expected_ast
+                            .add_child(mult_div_handle, Rule::Unary);
+                        let primary_child =
+                            expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_terminal_child(
+                            primary_child,
+                            Some(Token::Symbol("a".to_owned())),
+                        );
+                    }
+
+                    // b
+                    {
+                        let mult_div_handle = expected_ast
+                            .add_child(a_plus_b_handle, Rule::MultDiv);
+                        let unary_handle = expected_ast
+                            .add_child(mult_div_handle, Rule::Unary);
+                        let primary_child =
+                            expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_terminal_child(
+                            primary_child,
+                            Some(Token::Symbol("b".to_owned())),
+                        );
+                    }
                 }
             }
 
-            // expression
-            {
-                let expression_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::Expression);
-                let equality_handle =
-                    expected_ast.add_child(expression_handle, Rule::Equality);
-                let comparison_handle =
-                    expected_ast.add_child(equality_handle, Rule::Comparison);
-                let plus_minus_handle =
-                    expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-                let mult_div_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
-                let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast.add_terminal_child(primary_child, None);
-            }
+            // no expression at end of braces
+            add_none_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+            );
 
             expected_ast
         };
@@ -1593,8 +1598,9 @@ mod tests {
 
                 // a
                 {
+                    let recursive_handle = expected_ast.add_child(a_plus_b_handle, Rule::PlusMinus);
                     let mult_div_handle =
-                        expected_ast.add_child(a_plus_b_handle, Rule::MultDiv);
+                        expected_ast.add_child(recursive_handle, Rule::MultDiv);
                     let unary_handle =
                         expected_ast.add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
@@ -1636,7 +1642,9 @@ mod tests {
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
