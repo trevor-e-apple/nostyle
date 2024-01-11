@@ -1184,7 +1184,91 @@ mod tests {
         let tokens =
             tokenize("1 + (2 + 3)").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!("more work");
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+
+            // LHS: 1
+            {
+                let recursive_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::Expression);
+                let mult_div_handle =
+                    expected_ast.add_child(recursive_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+
+            // RHS: (2 + 3)
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary); 
+
+                // 2 + 3
+                {
+                    let expression_handle =
+                        expected_ast.add_child(primary_child, Rule::Expression);
+                    let equality_handle = expected_ast
+                        .add_child(expression_handle, Rule::Equality);
+                    let comparison_handle = expected_ast
+                        .add_child(equality_handle, Rule::Comparison);
+                    let plus_minus_handle = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+
+                    // 2 (recursive)
+                    {
+                        let recursive_handle = expected_ast
+                            .add_child(plus_minus_handle, Rule::PlusMinus);
+                        let mult_div_handle = expected_ast
+                            .add_child(recursive_handle, Rule::MultDiv);
+                        let unary_handle = expected_ast
+                            .add_child(mult_div_handle, Rule::Unary);
+                        let primary_child =
+                            expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_terminal_child(
+                            primary_child,
+                            Some(Token::IntLiteral(2)),
+                        );
+                    }
+                    // 3
+                    {
+                        let mult_div_handle = expected_ast
+                            .add_child(plus_minus_handle, Rule::MultDiv);
+                        let unary_handle = expected_ast
+                            .add_child(mult_div_handle, Rule::Unary);
+                        let primary_child =
+                            expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_terminal_child(
+                            primary_child,
+                            Some(Token::IntLiteral(3)),
+                        );
+                    }
+                }
+            }
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
     }
 
     /// test for group on left
@@ -1505,7 +1589,8 @@ mod tests {
 
                     // a
                     {
-                        let recursive_handle = expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
+                        let recursive_handle = expected_ast
+                            .add_child(plus_minus_handle, Rule::PlusMinus);
                         let mult_div_handle = expected_ast
                             .add_child(recursive_handle, Rule::MultDiv);
                         let unary_handle = expected_ast
@@ -1596,7 +1681,8 @@ mod tests {
 
                 // a
                 {
-                    let recursive_handle = expected_ast.add_child(a_plus_b_handle, Rule::PlusMinus);
+                    let recursive_handle = expected_ast
+                        .add_child(a_plus_b_handle, Rule::PlusMinus);
                     let mult_div_handle =
                         expected_ast.add_child(recursive_handle, Rule::MultDiv);
                     let unary_handle =
