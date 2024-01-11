@@ -912,10 +912,12 @@ mod tests {
 
     use crate::tokenize::tokenize;
 
-    /// helper function for adding a none terminal expression to an ast
-    fn add_none_terminal_expression(
+    /// helper function for adding an expression with nothing but a terminal
+    /// to an ast
+    fn add_terminal_expression(
         ast: &mut Ast,
         parent_handle: AstNodeHandle,
+        terminal_value: Option<Token>,
     ) {
         let expression_handle = ast.add_child(parent_handle, Rule::Expression);
         let equality_handle = ast.add_child(expression_handle, Rule::Equality);
@@ -926,7 +928,7 @@ mod tests {
         let mult_div_handle = ast.add_child(plus_minus_handle, Rule::MultDiv);
         let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
         let primary_child = ast.add_child(unary_handle, Rule::Primary);
-        ast.add_terminal_child(primary_child, None);
+        ast.add_terminal_child(primary_child, terminal_value);
     }
 
     /// test empty parse
@@ -1218,7 +1220,7 @@ mod tests {
                 let unary_handle =
                     expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary); 
+                    expected_ast.add_child(unary_handle, Rule::Primary);
 
                 // 2 + 3
                 {
@@ -1477,9 +1479,10 @@ mod tests {
             }
 
             // no expression at end of brace expression
-            add_none_terminal_expression(
+            add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
+                None,
             );
 
             expected_ast
@@ -1494,8 +1497,54 @@ mod tests {
 
     #[test]
     fn brace_expression_with_variable_only() {
-        let tokens = tokenize("{ a }");
-        unimplemented!();
+        let tokens = tokenize("{ a }").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let statement_handle =
+                    expected_ast.add_child(statements_handle, Rule::Statement);
+
+                let expression_handle =
+                    expected_ast.add_child(statement_handle, Rule::Expression);
+                let equality_handle =
+                    expected_ast.add_child(expression_handle, Rule::Equality);
+                let comparison_handle =
+                    expected_ast.add_child(equality_handle, Rule::Comparison);
+                let plus_minus_handle =
+                    expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(primary_child, None);
+            }
+
+            // no expression at end of brace expression
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
@@ -1543,9 +1592,10 @@ mod tests {
             }
 
             // no expression at end of brace expression
-            add_none_terminal_expression(
+            add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
+                None,
             );
 
             expected_ast
@@ -1620,9 +1670,10 @@ mod tests {
             }
 
             // no expression at end of braces
-            add_none_terminal_expression(
+            add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
+                None,
             );
 
             expected_ast
