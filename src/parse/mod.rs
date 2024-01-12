@@ -1513,7 +1513,11 @@ mod tests {
                 let statement_handle =
                     expected_ast.add_child(statements_handle, Rule::Statement);
 
-                add_terminal_expression(&mut expected_ast, statement_handle, None);
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    None,
+                );
             }
 
             // no expression at end of brace expression
@@ -1677,7 +1681,89 @@ mod tests {
         let tokens =
             tokenize("{ a = b + c; }").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let statement_handle =
+                    expected_ast.add_child(statements_handle, Rule::Statement);
+
+                // a = b + c
+                {
+                    // rhs: b + c
+                    {
+                        let expression_handle = expected_ast
+                            .add_child(statement_handle, Rule::Expression);
+                        let equality_handle = expected_ast
+                            .add_child(expression_handle, Rule::Equality);
+                        let comparison_handle = expected_ast
+                            .add_child(equality_handle, Rule::Comparison);
+                        let plus_minus_handle = expected_ast
+                            .add_child(comparison_handle, Rule::PlusMinus);
+
+                        // b
+                        {
+                            let recursive_handle = expected_ast
+                                .add_child(plus_minus_handle, Rule::PlusMinus);
+                            let mult_div_handle = expected_ast
+                                .add_child(recursive_handle, Rule::MultDiv);
+                            let unary_handle = expected_ast
+                                .add_child(mult_div_handle, Rule::Unary);
+                            let primary_child = expected_ast
+                                .add_child(unary_handle, Rule::Primary);
+                            expected_ast.add_terminal_child(
+                                primary_child,
+                                Some(Token::Symbol("b".to_owned())),
+                            );
+                        }
+
+                        // c
+                        {
+                            let mult_div_handle = expected_ast
+                                .add_child(plus_minus_handle, Rule::MultDiv);
+                            let unary_handle = expected_ast
+                                .add_child(mult_div_handle, Rule::Unary);
+                            let primary_child = expected_ast
+                                .add_child(unary_handle, Rule::Primary);
+                            expected_ast.add_terminal_child(
+                                primary_child,
+                                Some(Token::Symbol("c".to_owned())),
+                            );
+                        }
+                    }
+
+                    // lhs: a
+                    {
+                        expected_ast.add_terminal_child(
+                            statement_handle,
+                            Some(Token::Symbol("a".to_owned())),
+                        );
+                    }
+                }
+            }
+
+            // no expression at end of braces
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
