@@ -1647,9 +1647,83 @@ mod tests {
     #[test]
     fn assign_brace_expression() {
         let tokens =
-            tokenize("a = {b + c};").expect("Unexpected tokenize error");
+            tokenize("{ a = {b + c}; }").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let brace_statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let statement_handle = expected_ast
+                    .add_child(brace_statements_handle, Rule::Statement);
+
+                // rhs: {b + c}
+                {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    let brace_expression_handle = expected_ast
+                        .add_child(expression_handle, Rule::BraceExpression);
+
+                    // no statements
+                    {
+                        let brace_statements_handle = expected_ast.add_child(
+                            brace_expression_handle,
+                            Rule::BraceStatements,
+                        );
+                        let statement_handle = expected_ast.add_child(
+                            brace_statements_handle,
+                            Rule::Statement,
+                        );
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            statement_handle,
+                            None,
+                        );
+                    }
+                    // expression
+                    {
+                        let rhs_expression_handle = expected_ast.add_child(
+                            brace_expression_handle,
+                            Rule::Expression,
+                        );
+                        add_expected_add_child(
+                            &mut expected_ast,
+                            rhs_expression_handle,
+                            Token::Symbol("b".to_owned()),
+                            Token::Symbol("c".to_owned()),
+                        );
+                    }
+                }
+
+                // lhs: a
+                expected_ast.add_terminal_child(
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+            }
+
+            // expression
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
