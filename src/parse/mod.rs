@@ -504,7 +504,7 @@ fn parse_brace_statements_rule(
             ast.add_child(search_data.node_handle, Rule::BraceStatements);
         stack.push(SearchData {
             start: search_data.start,
-            end: non_recursive_start_index - 1,
+            end: non_recursive_start_index,
             node_handle: recursive_handle,
         });
     }
@@ -966,6 +966,21 @@ mod tests {
         }
     }
 
+    /// a helper function for adding the ast nodes for a simple assignment from
+    /// one terminal to another
+    fn add_assignment_statement(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        lhs_terminal: Token,
+        rhs_terminal: Token,
+    ) {
+        let statement_handle = ast.add_child(parent_handle, Rule::Statement);
+
+        add_terminal_expression(ast, statement_handle, Some(rhs_terminal));
+
+        ast.add_terminal_child(statement_handle, Some(lhs_terminal));
+    }
+
     /// test empty parse
     #[test]
     fn empty_parse() {
@@ -1362,20 +1377,11 @@ mod tests {
             {
                 let statements_handle = expected_ast
                     .add_child(brace_expression_handle, Rule::BraceStatements);
-                let statement_handle =
-                    expected_ast.add_child(statements_handle, Rule::Statement);
-
-                // rhs
-                add_terminal_expression(
+                add_assignment_statement(
                     &mut expected_ast,
-                    statement_handle,
-                    Some(Token::Symbol("b".to_owned())),
-                );
-
-                // lhs
-                expected_ast.add_terminal_child(
-                    statement_handle,
-                    Some(Token::Symbol("a".to_owned())),
+                    statements_handle,
+                    Token::Symbol("a".to_owned()),
+                    Token::Symbol("b".to_owned()),
                 );
             }
 
@@ -2029,7 +2035,72 @@ mod tests {
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                // recursive statements
+                {
+                    let statements_handle = expected_ast
+                        .add_child(statements_handle, Rule::BraceStatements);
+
+                    // recursive statements
+                    {
+                        let statements_handle = expected_ast.add_child(
+                            statements_handle,
+                            Rule::BraceStatements,
+                        );
+
+                        // a = b;
+                        add_assignment_statement(
+                            &mut expected_ast,
+                            statements_handle,
+                            Token::Symbol("a".to_owned()),
+                            Token::Symbol("b".to_owned()),
+                        );
+                    }
+
+                    // c = d;
+                    add_assignment_statement(
+                        &mut expected_ast,
+                        statements_handle,
+                        Token::Symbol("c".to_owned()),
+                        Token::Symbol("d".to_owned()),
+                    );
+                }
+
+                // e = f;
+                add_assignment_statement(
+                    &mut expected_ast,
+                    statements_handle,
+                    Token::Symbol("e".to_owned()),
+                    Token::Symbol("f".to_owned()),
+                );
+            }
+
+            // no expression at end of braces
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
@@ -2045,6 +2116,7 @@ mod tests {
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
+
         unimplemented!();
     }
 
