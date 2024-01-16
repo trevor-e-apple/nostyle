@@ -626,37 +626,39 @@ fn parse_if_else_rule(
         &Token::RBrace,
     ) {
         Some(else_index) => {
-            let else_brace_expression =
-                ast.add_child(search_data.node_handle, Rule::BraceExpression);
-            stack.push(SearchData {
-                start: else_index + 1,
-                end: search_data.end,
-                node_handle: else_brace_expression,
-            });
-
             let if_lbrace_index = match find_matching_group_indices_end(
                 tokens,
                 &Token::LBrace,
                 &Token::RBrace,
                 search_data.start,
-                else_index - 1,
+                else_index,
             ) {
                 Some(lbrace_index) => lbrace_index,
                 None => todo!("Syntax error"),
             };
-            let if_brace_expression =
-                ast.add_child(search_data.node_handle, Rule::BraceExpression);
-            stack.push(SearchData {
-                start: if_lbrace_index,
-                end: else_index - 1,
-                node_handle: if_brace_expression,
-            });
             let if_condition_expression =
                 ast.add_child(search_data.node_handle, Rule::Expression);
             stack.push(SearchData {
                 start: search_data.start + 1,
-                end: if_lbrace_index - 1,
+                end: if_lbrace_index,
                 node_handle: if_condition_expression,
+            });
+            let if_brace_expression =
+                ast.add_child(search_data.node_handle, Rule::BraceExpression);
+            stack.push(SearchData {
+                start: if_lbrace_index,
+                end: else_index,
+                node_handle: if_brace_expression,
+            });
+
+            // to differentiate between if condition expression and else
+            // expression, we always need to add the else expression second 
+            let else_brace_expression =
+                ast.add_child(search_data.node_handle, Rule::Expression);
+            stack.push(SearchData {
+                start: else_index + 1,
+                end: search_data.end,
+                node_handle: else_brace_expression,
             });
         }
         None => {
@@ -918,7 +920,7 @@ mod tests {
         ast: &mut Ast,
         parent_handle: AstNodeHandle,
         terminal_value: Option<Token>,
-    ) {
+    ) -> AstNodeHandle {
         let expression_handle = ast.add_child(parent_handle, Rule::Expression);
         let equality_handle = ast.add_child(expression_handle, Rule::Equality);
         let comparison_handle =
@@ -929,6 +931,8 @@ mod tests {
         let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
         let primary_child = ast.add_child(unary_handle, Rule::Primary);
         ast.add_terminal_child(primary_child, terminal_value);
+
+        return expression_handle;
     }
 
     /// helper function for adding a child that just adds two tokens. Adds from
@@ -2029,13 +2033,120 @@ mod tests {
             if (a + b) == c {
                 d = c;
             } else {
-                d = a;
+                d = e;
             }
         ",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let if_else_handle =
+                expected_ast.add_child(root_handle, Rule::IfElse);
+
+            // condition expression
+            {
+                let condition_expression_handle =
+                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let equality_handle = expected_ast
+                    .add_child(condition_expression_handle, Rule::Equality);
+                // (a + b)
+                {
+                    let recursive_handle =
+                        expected_ast.add_child(equality_handle, Rule::Equality);
+                    let comparison_handle = expected_ast
+                        .add_child(recursive_handle, Rule::Comparison);
+                    let plus_minus_handle = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div_handle = expected_ast
+                        .add_child(plus_minus_handle, Rule::MultDiv);
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_handle =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    let expression_handle = expected_ast
+                        .add_child(primary_handle, Rule::Expression);
+                    add_expected_add_child(
+                        &mut expected_ast,
+                        expression_handle,
+                        Token::Symbol("a".to_owned()),
+                        Token::Symbol("b".to_owned()),
+                    );
+                }
+                // c
+                {
+                    let comparison_handle = expected_ast
+                        .add_child(equality_handle, Rule::Comparison);
+                    let plus_minus_handle = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div_handle = expected_ast
+                        .add_child(plus_minus_handle, Rule::MultDiv);
+                    let unary_handle =
+                        expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    let primary_handle =
+                        expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_terminal_child(
+                        primary_handle,
+                        Some(Token::Symbol("c".to_owned())),
+                    );
+                }
+            }
+            // executed brace_expression
+            {
+                let brace_expression = expected_ast
+                    .add_child(if_else_handle, Rule::BraceExpression);
+                // brace statements
+                {
+                    let brace_statements_handle = expected_ast
+                        .add_child(brace_expression, Rule::BraceStatements);
+                    add_assignment_statement(
+                        &mut expected_ast,
+                        brace_statements_handle,
+                        Token::Symbol("d".to_owned()),
+                        Token::Symbol("c".to_owned()),
+                    );
+                }
+
+                // no ending expression
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression,
+                    None,
+                );
+            }
+
+            // else
+            {
+                let expression_handle =
+                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let brace_expression_handle = expected_ast
+                    .add_child(expression_handle, Rule::BraceExpression);
+
+                // statements
+                let brace_statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                add_assignment_statement(
+                    &mut expected_ast,
+                    brace_statements_handle,
+                    Token::Symbol("d".to_owned()),
+                    Token::Symbol("e".to_owned()),
+                );
+                // expression
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression_handle,
+                    None,
+                );
+            }
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
@@ -2047,7 +2158,6 @@ mod tests {
             } else if a == c {
                 d = c;
             } else {
-                e = 2 * e;
                 d = e;
             }
         ",
@@ -2063,7 +2173,7 @@ mod tests {
             "
             d = if a == b {
                 b
-            } else if {
+            } else if a == c {
                 c
             } else {
                 e = 2 * e;
