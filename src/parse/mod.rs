@@ -3,7 +3,7 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> brace_expression | if_else | for_loop | equality;
+expression -> brace_expression | if_else | for_loop | statement | equality;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> (SYMBOL "=" expression ";") | (expression ";");
@@ -2371,6 +2371,20 @@ mod tests {
 
     #[test]
     fn for_loop() {
+        /*
+        expression -> brace_expression | if_else | for_loop | equality;
+        brace_expression -> "{" brace_statements? expression "}";
+        brace_statements -> brace_statements? (brace_expression | statement | if_else);
+        statement -> (SYMBOL "=" expression ";") | (expression ";");
+        if_else -> "if" expression brace_expression ("else" expression)?;
+        for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
+        equality -> (equality ("==" | "!=") comparison) | comparison;
+        comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
+        plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
+        mult_div -> (mult_div ("*" | "/") unary) | unary;
+        unary -> (("!" | "-") unary) | primary;
+        primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")";
+        */
         let tokens = tokenize(
             "
             for (a = 0; a < 10; a = a + 1;) {
@@ -2380,6 +2394,50 @@ mod tests {
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
+            // init expression
+            {
+                let init_expression = expected_ast.add_child(for_handle, Rule::Expression);
+                add_assignment_statement(
+                    &mut expected_ast, init_expression, Token::Symbol("a".to_owned()), Token::IntLiteral(0)
+                );
+            }
+            // condition
+            {
+                let condition_expression = expected_ast.add_child(for_handle, Rule::Expression);
+                let equality_handle = expected_ast.add_child(condition_expression, Rule::Equality);
+                let comparison_handle = expected_ast.add_child(equality_handle, Rule::Comparison);
+                // recursive side
+                {
+                    let comparison_handle = expected_ast.add_child(comparison_handle, Rule::Comparison);
+                    let plus_minus = expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div = expected_ast.add_child(plus_minus, Rule::MultDiv);
+                    let unary = expected_ast.add_child(mult_div, Rule::Unary);
+                    expected_ast.add_terminal_child(unary, Some(Token::Symbol("a".to_owned())));
+                }
+                // terminal side
+                {
+                    let plus_minus = expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div = expected_ast.add_child(plus_minus, Rule::MultDiv);
+                    let unary = expected_ast.add_child(mult_div, Rule::Unary);
+                    expected_ast.add_terminal_child(unary, Some(Token::IntLiteral(10)));
+                }
+            }
+            // increment
+            {
+                let increment_expression = expected_ast.add_child(for_handle, Rule::Expression);
+                unimplemented!();
+            }
+            // brace_expression
+            {
+                let brace_expression = expected_ast.add_child(for_handle, Rule::BraceExpression);
+                unimplemented!();
+            }
+        };
         unimplemented!();
     }
 
