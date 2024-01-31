@@ -3,12 +3,12 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> brace_expression | if_else | for_loop | statement | equality;
+expression -> brace_expression | if_else | for_loop | equality;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> (SYMBOL "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
-for_loop -> "for" "(" expression ";" expression ";" expression ";" ")" brace_expression;
+for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
 comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
 plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
@@ -2399,42 +2399,76 @@ mod tests {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
             let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
-            // init expression
+            // init statement
             {
-                let init_expression = expected_ast.add_child(for_handle, Rule::Expression);
                 add_assignment_statement(
-                    &mut expected_ast, init_expression, Token::Symbol("a".to_owned()), Token::IntLiteral(0)
+                    &mut expected_ast,
+                    for_handle,
+                    Token::Symbol("a".to_owned()),
+                    Token::IntLiteral(0),
                 );
             }
-            // condition
+
+            // condition statement
             {
-                let condition_expression = expected_ast.add_child(for_handle, Rule::Expression);
-                let equality_handle = expected_ast.add_child(condition_expression, Rule::Equality);
-                let comparison_handle = expected_ast.add_child(equality_handle, Rule::Comparison);
+                let condition_statement =
+                    expected_ast.add_child(for_handle, Rule::Statement);
+                let condition_expression = expected_ast
+                    .add_child(condition_statement, Rule::Expression);
+                let equality_handle = expected_ast
+                    .add_child(condition_expression, Rule::Equality);
+                let comparison_handle =
+                    expected_ast.add_child(equality_handle, Rule::Comparison);
                 // recursive side
                 {
-                    let comparison_handle = expected_ast.add_child(comparison_handle, Rule::Comparison);
-                    let plus_minus = expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-                    let mult_div = expected_ast.add_child(plus_minus, Rule::MultDiv);
+                    let comparison_handle = expected_ast
+                        .add_child(comparison_handle, Rule::Comparison);
+                    let plus_minus = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div =
+                        expected_ast.add_child(plus_minus, Rule::MultDiv);
                     let unary = expected_ast.add_child(mult_div, Rule::Unary);
-                    expected_ast.add_terminal_child(unary, Some(Token::Symbol("a".to_owned())));
+                    expected_ast.add_terminal_child(
+                        unary,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
                 }
                 // terminal side
                 {
-                    let plus_minus = expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-                    let mult_div = expected_ast.add_child(plus_minus, Rule::MultDiv);
+                    let plus_minus = expected_ast
+                        .add_child(comparison_handle, Rule::PlusMinus);
+                    let mult_div =
+                        expected_ast.add_child(plus_minus, Rule::MultDiv);
                     let unary = expected_ast.add_child(mult_div, Rule::Unary);
-                    expected_ast.add_terminal_child(unary, Some(Token::IntLiteral(10)));
+                    expected_ast
+                        .add_terminal_child(unary, Some(Token::IntLiteral(10)));
                 }
             }
             // increment
             {
-                let increment_expression = expected_ast.add_child(for_handle, Rule::Expression);
-                unimplemented!();
+                let statement_handle =
+                    expected_ast.add_child(for_handle, Rule::Statement);
+                // expression
+                {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    add_expected_add_child(
+                        &mut expected_ast,
+                        expression_handle,
+                        Token::Symbol("a".to_owned()),
+                        Token::IntLiteral(1),
+                    )
+                }
+                // assignment
+                expected_ast.add_terminal_child(
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
             }
             // brace_expression
             {
-                let brace_expression = expected_ast.add_child(for_handle, Rule::BraceExpression);
+                let brace_expression =
+                    expected_ast.add_child(for_handle, Rule::BraceExpression);
                 unimplemented!();
             }
         };
