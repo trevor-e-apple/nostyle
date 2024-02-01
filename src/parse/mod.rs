@@ -949,7 +949,7 @@ mod tests {
         let plus_minus_handle =
             ast.add_child(comparison_handle, Rule::PlusMinus);
 
-        // a (recursive)
+        // lhs (recursive)
         {
             let plus_minus_handle =
                 ast.add_child(plus_minus_handle, Rule::PlusMinus);
@@ -960,10 +960,42 @@ mod tests {
             ast.add_terminal_child(primary_child, Some(lhs_terminal));
         }
 
-        // b
+        // rhs
         {
             let mult_div_handle =
                 ast.add_child(plus_minus_handle, Rule::MultDiv);
+            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+            let primary_child = ast.add_child(unary_handle, Rule::Primary);
+            ast.add_terminal_child(primary_child, Some(rhs_terminal));
+        }
+    }
+
+    /// helper function for adding a child that just multiplies two tokens. Adds
+    /// from the "equality" rule downward
+    fn add_expected_mult_child(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        lhs_terminal: Token,
+        rhs_terminal: Token,
+    ) {
+        let equality_handle = ast.add_child(parent_handle, Rule::Equality);
+        let comparison_handle =
+            ast.add_child(equality_handle, Rule::Comparison);
+        let plus_minus_handle =
+            ast.add_child(comparison_handle, Rule::PlusMinus);
+        let mult_div_handle = ast.add_child(plus_minus_handle, Rule::MultDiv);
+
+        // lhs (recursive)
+        {
+            let mult_div_handle =
+                ast.add_child(plus_minus_handle, Rule::MultDiv);
+            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+            let primary_child = ast.add_child(unary_handle, Rule::Primary);
+            ast.add_terminal_child(primary_child, Some(lhs_terminal));
+        }
+
+        // b
+        {
             let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
             let primary_child = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(rhs_terminal));
@@ -2469,7 +2501,37 @@ mod tests {
             {
                 let brace_expression =
                     expected_ast.add_child(for_handle, Rule::BraceExpression);
-                unimplemented!();
+                // brace statements
+                {
+                    let brace_statements = expected_ast
+                        .add_child(brace_expression, Rule::BraceStatements);
+                    let statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::Statement);
+
+                    // statement rhs: expression
+                    {
+                        let rhs_expression = expected_ast
+                            .add_child(statement_handle, Rule::Expression);
+                        add_expected_mult_child(
+                            &mut expected_ast,
+                            rhs_expression,
+                            Token::IntLiteral(2),
+                            Token::Symbol("b".to_owned()),
+                        );
+                    }
+
+                    // statement lhs: assignment
+                    expected_ast.add_terminal_child(
+                        statement_handle,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+                }
+                // expression
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression,
+                    None,
+                );
             }
         };
         unimplemented!();
