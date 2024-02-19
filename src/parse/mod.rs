@@ -721,7 +721,15 @@ fn parse_binary_op_rule(
         &Token::LParen,
         &Token::RParen,
     ) {
-        Some(split_index) => {
+        Some((split_index, binary_op_token)) => {
+            // update the token data in the expanding node
+            match ast.get_node_mut(search_data.node_handle) {
+                Some(node) => {
+                    node.data = Some(binary_op_token);
+                }
+                None => todo!("Bad handle"),
+            }
+
             let recursive_node =
                 ast.add_child(search_data.node_handle, recursive_rule);
             stack.push(SearchData {
@@ -835,8 +843,11 @@ fn parse_unary_rule(
     match tokens.get(search_data.start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
-                let child_node =
-                    ast.add_child(search_data.node_handle, Rule::Unary);
+                let child_node = ast.add_child_with_data(
+                    search_data.node_handle,
+                    Rule::Unary,
+                    Some(*first_token),
+                );
                 stack.push(SearchData {
                     start: search_data.start + 1,
                     end: search_data.end,
@@ -987,8 +998,7 @@ mod tests {
 
         // lhs (recursive)
         {
-            let mult_div_handle =
-                ast.add_child(mult_div_handle, Rule::MultDiv);
+            let mult_div_handle = ast.add_child(mult_div_handle, Rule::MultDiv);
             let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
             let primary_child = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(lhs_terminal));
@@ -2497,8 +2507,10 @@ mod tests {
                         expected_ast.add_child(plus_minus, Rule::MultDiv);
                     let unary = expected_ast.add_child(mult_div, Rule::Unary);
                     let primary = expected_ast.add_child(unary, Rule::Primary);
-                    expected_ast
-                        .add_terminal_child(primary, Some(Token::IntLiteral(10)));
+                    expected_ast.add_terminal_child(
+                        primary,
+                        Some(Token::IntLiteral(10)),
+                    );
                 }
             }
             // increment

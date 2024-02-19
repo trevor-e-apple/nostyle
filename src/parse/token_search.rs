@@ -96,8 +96,8 @@ pub fn find_final_matching_level_token(
     ends_at: usize,
     group_start_token: &Token,
     group_end_token: &Token,
-) -> Option<usize> {
-    let mut result: Option<usize> = None;
+) -> Option<(usize, Token)> {
+    let mut result: Option<(usize, Token)> = None;
 
     let mut current_level = 0;
     for index in starts_at..ends_at {
@@ -109,7 +109,7 @@ pub fn find_final_matching_level_token(
             } else if current_level == 0
                 && matching_tokens.contains(check_token)
             {
-                result = Some(index);
+                result = Some((index, *check_token));
             }
 
             if current_level < 0 {

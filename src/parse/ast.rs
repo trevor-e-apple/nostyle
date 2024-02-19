@@ -30,17 +30,18 @@ impl Ast {
         }
     }
 
-    pub fn add_child(
+    pub fn add_child_with_data(
         &mut self,
         parent_handle: AstNodeHandle,
         rule: Rule,
+        data: Option<Token>,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
             rule,
             parent: Some(parent_handle),
             children: vec![],
-            data: None,
+            data,
         });
 
         let result = AstNodeHandle { index: current_len };
@@ -51,6 +52,14 @@ impl Ast {
         }
 
         result
+    }
+
+    pub fn add_child(
+        &mut self,
+        parent_handle: AstNodeHandle,
+        rule: Rule,
+    ) -> AstNodeHandle {
+        self.add_child_with_data(parent_handle, rule, None)
     }
 
     pub fn add_terminal_child(
