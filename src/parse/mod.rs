@@ -1213,9 +1213,11 @@ mod tests {
                 expected_ast.add_child(equality_handle, Rule::Comparison);
             let plus_minus_handle =
                 expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-            let mult_div_handle =
-                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
-
+            let mult_div_handle = expected_ast.add_child_with_data(
+                plus_minus_handle,
+                Rule::MultDiv,
+                Some(Token::Times),
+            );
             // 1 (recursive)
             {
                 let mult_div_handle =
@@ -1330,8 +1332,11 @@ mod tests {
                 expected_ast.add_child(equality_handle, Rule::Comparison);
             let plus_minus_handle =
                 expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-            let mult_div_handle =
-                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+            let mult_div_handle = expected_ast.add_child_with_data(
+                plus_minus_handle,
+                Rule::MultDiv,
+                Some(Token::Times),
+            );
 
             // LHS: (1 + 2)
             {
@@ -1801,13 +1806,19 @@ mod tests {
                 expected_ast.add_child(root_handle, Rule::Equality);
             let comparison_handle =
                 expected_ast.add_child(equality_handle, Rule::Comparison);
-            let plus_minus_handle =
-                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let plus_minus_handle = expected_ast.add_child_with_data(
+                comparison_handle,
+                Rule::PlusMinus,
+                Some(Token::Minus),
+            );
 
             // a + b
             {
-                let a_plus_b_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
+                let a_plus_b_handle = expected_ast.add_child_with_data(
+                    plus_minus_handle,
+                    Rule::PlusMinus,
+                    Some(Token::Plus),
+                );
 
                 // a
                 {
@@ -1875,8 +1886,11 @@ mod tests {
                 expected_ast.add_child(root_handle, Rule::Equality);
             let comparison_handle =
                 expected_ast.add_child(equality_handle, Rule::Comparison);
-            let plus_minus_handle =
-                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let plus_minus_handle = expected_ast.add_child_with_data(
+                comparison_handle,
+                Rule::PlusMinus,
+                Some(Token::Plus),
+            );
 
             // a
             {
@@ -1896,8 +1910,11 @@ mod tests {
 
             // b * c
             {
-                let mult_div_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let mult_div_handle = expected_ast.add_child_with_data(
+                    plus_minus_handle,
+                    Rule::MultDiv,
+                    Some(Token::Times),
+                );
 
                 // b
                 {
