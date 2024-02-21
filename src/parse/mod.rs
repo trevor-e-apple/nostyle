@@ -361,7 +361,7 @@ fn parse_brace_expression_rule(
             &Token::LBrace,
             &Token::RBrace,
         ) {
-            Some(final_semicolon_index) => Some(final_semicolon_index + 1),
+            Some((final_semicolon_index, _)) => Some(final_semicolon_index + 1),
             None => {
                 // find final rbrace
                 match find_final_token(
@@ -846,7 +846,7 @@ fn parse_unary_rule(
                 let child_node = ast.add_child_with_data(
                     search_data.node_handle,
                     Rule::Unary,
-                    Some(*first_token),
+                    Some(first_token.clone()),
                 );
                 stack.push(SearchData {
                     start: search_data.start + 1,
@@ -957,8 +957,11 @@ mod tests {
         let equality_handle = ast.add_child(parent_handle, Rule::Equality);
         let comparison_handle =
             ast.add_child(equality_handle, Rule::Comparison);
-        let plus_minus_handle =
-            ast.add_child(comparison_handle, Rule::PlusMinus);
+        let plus_minus_handle = ast.add_child_with_data(
+            comparison_handle,
+            Rule::PlusMinus,
+            Some(Token::Plus),
+        );
 
         // lhs (recursive)
         {

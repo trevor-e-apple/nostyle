@@ -109,7 +109,7 @@ pub fn find_final_matching_level_token(
             } else if current_level == 0
                 && matching_tokens.contains(check_token)
             {
-                result = Some((index, *check_token));
+                result = Some((index, check_token.clone()));
             }
 
             if current_level < 0 {
