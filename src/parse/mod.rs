@@ -997,7 +997,11 @@ mod tests {
             ast.add_child(equality_handle, Rule::Comparison);
         let plus_minus_handle =
             ast.add_child(comparison_handle, Rule::PlusMinus);
-        let mult_div_handle = ast.add_child(plus_minus_handle, Rule::MultDiv);
+        let mult_div_handle = ast.add_child_with_data(
+            plus_minus_handle,
+            Rule::MultDiv,
+            Some(Token::Times),
+        );
 
         // lhs (recursive)
         {
@@ -2505,9 +2509,11 @@ mod tests {
                     .add_child(condition_statement, Rule::Expression);
                 let equality_handle = expected_ast
                     .add_child(condition_expression, Rule::Equality);
-                let comparison_handle =
-                    expected_ast.add_child(equality_handle, Rule::Comparison);
-                // recursive side
+                let comparison_handle = expected_ast.add_child_with_data(
+                    equality_handle,
+                    Rule::Comparison,
+                    Some(Token::LessThan),
+                );
                 {
                     let comparison_handle = expected_ast
                         .add_child(comparison_handle, Rule::Comparison);
