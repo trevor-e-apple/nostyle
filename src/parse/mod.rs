@@ -2247,8 +2247,11 @@ mod tests {
             {
                 let condition_expression_handle =
                     expected_ast.add_child(if_else_handle, Rule::Expression);
-                let equality_handle = expected_ast
-                    .add_child(condition_expression_handle, Rule::Equality);
+                let equality_handle = expected_ast.add_child_with_data(
+                    condition_expression_handle,
+                    Rule::Equality,
+                    Some(Token::BoolEquals),
+                );
                 // a
                 {
                     let recursive_handle =
@@ -2322,8 +2325,11 @@ mod tests {
                 {
                     let condition_expression_handle = expected_ast
                         .add_child(if_else_handle, Rule::Expression);
-                    let equality_handle = expected_ast
-                        .add_child(condition_expression_handle, Rule::Equality);
+                    let equality_handle = expected_ast.add_child_with_data(
+                        condition_expression_handle,
+                        Rule::Equality,
+                        Some(Token::BoolEquals),
+                    );
                     // a
                     {
                         let recursive_handle = expected_ast
