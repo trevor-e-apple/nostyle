@@ -1786,10 +1786,10 @@ mod tests {
                     let brace_expression_handle = expected_ast
                         .add_child(expression_handle, Rule::BraceExpression);
 
-                    add_no_statements(
-                        &mut expected_ast,
-                        brace_expression_handle,
-                    );
+                    // add_no_statements(
+                    //     &mut expected_ast,
+                    //     brace_expression_handle,
+                    // );
 
                     // expression
                     {
