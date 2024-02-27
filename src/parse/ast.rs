@@ -141,7 +141,8 @@ impl Ast {
             }
         }
 
-        true
+        // loop broke because a_stack was out of data. b_stack should be too
+        b_stack.len() == 0
     }
 
     /// prints an AST
