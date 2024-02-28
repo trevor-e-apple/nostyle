@@ -1564,20 +1564,6 @@ mod tests {
             let brace_expression_handle =
                 expected_ast.add_child(root_handle, Rule::BraceExpression);
 
-            // statements
-            {
-                let statements_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::BraceStatements);
-                let statement_handle =
-                    expected_ast.add_child(statements_handle, Rule::Statement);
-
-                add_terminal_expression(
-                    &mut expected_ast,
-                    statement_handle,
-                    None,
-                );
-            }
-
             let expression_handle = expected_ast
                 .add_child(brace_expression_handle, Rule::Expression);
 
