@@ -2173,86 +2173,90 @@ mod tests {
                 let statements_handle = expected_ast
                     .add_child(brace_expression_handle, Rule::BraceStatements);
 
-                // recursive statements
+                // a = b;
                 {
                     let statements_handle = expected_ast
                         .add_child(statements_handle, Rule::BraceStatements);
 
-                    // recursive statements
-                    {
-                        let statements_handle = expected_ast.add_child(
-                            statements_handle,
-                            Rule::BraceStatements,
-                        );
+                    // a = b;
+                    add_assignment_statement(
+                        &mut expected_ast,
+                        statements_handle,
+                        Token::Symbol("a".to_owned()),
+                        Token::Symbol("b".to_owned()),
+                    );
+                }
 
-                        // a = b;
-                        add_assignment_statement(
-                            &mut expected_ast,
-                            statements_handle,
-                            Token::Symbol("a".to_owned()),
-                            Token::Symbol("b".to_owned()),
-                        );
-                    }
+                /*
+                c = {
+                    d = 2 * a;
+                    d
+                };
+                */
+                {
+                    let statement_handle = expected_ast
+                        .add_child(statements_handle, Rule::Statement);
 
+                    // RHS
                     /*
-                    c = {
+                    {
                         d = 2 * a;
                         d
                     };
                     */
                     {
-                        let statement_handle = expected_ast
-                            .add_child(statements_handle, Rule::Statement);
+                        let expression_handle = expected_ast
+                            .add_child(statement_handle, Rule::Expression);
+                        let brace_expression_handle = expected_ast.add_child(
+                            expression_handle,
+                            Rule::BraceExpression,
+                        );
 
-                        // RHS
-                        /*
-                        {
-                            d = 2 * a;
-                            d
-                        };
-                        */
                         {
                             let statements_handle = expected_ast.add_child(
-                                statements_handle,
+                                brace_expression_handle,
                                 Rule::BraceStatements,
                             );
 
-                            // recursive statements
+                            // d = 2 * a;
                             {
-                                let statements_handle = expected_ast.add_child(
+                                let statement_handle = expected_ast.add_child(
                                     statements_handle,
-                                    Rule::BraceStatements,
+                                    Rule::Statement,
+                                );
+                                let expression_handle = expected_ast.add_child(
+                                    statement_handle,
+                                    Rule::Expression,
                                 );
 
-                                // a = b;
-                                add_assignment_statement(
+                                 // LHS: d
+                                expected_ast.add_terminal_child(
+                                    statement_handle,
+                                    Some(Token::Symbol("d".to_owned())),
+                                );
+
+                                // RHS: 2 * a
+                                add_expected_mult_child(
                                     &mut expected_ast,
-                                    statements_handle,
+                                    expression_handle,
+                                    Token::IntLiteral(2),
                                     Token::Symbol("a".to_owned()),
-                                    Token::Symbol("b".to_owned()),
                                 );
                             }
-
-                            // expression at end
-
-                            add_terminal_expression(
-                                &mut expected_ast,
-                                statements_handle,
-                                Some(Token::Symbol("d".to_owned())),
-                            );
                         }
 
-                        // LHS: c
-                        expected_ast.add_terminal_child(
-                            statement_handle,
-                            Some(Token::Symbol("c".to_owned())),
+                        // expression at end
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            brace_expression_handle,
+                            Some(Token::Symbol("d".to_owned())),
                         );
                     }
-                    add_assignment_statement(
-                        &mut expected_ast,
-                        statements_handle,
-                        Token::Symbol("c".to_owned()),
-                        Token::Symbol("d".to_owned()),
+
+                    // LHS: c
+                    expected_ast.add_terminal_child(
+                        statement_handle,
+                        Some(Token::Symbol("c".to_owned())),
                     );
                 }
             }
