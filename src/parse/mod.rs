@@ -2155,13 +2155,128 @@ mod tests {
                     d = 2 * a;
                     d
                 };
-                a + b + c
+                a + c
             }
         ",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let statements_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                // recursive statements
+                {
+                    let statements_handle = expected_ast
+                        .add_child(statements_handle, Rule::BraceStatements);
+
+                    // recursive statements
+                    {
+                        let statements_handle = expected_ast.add_child(
+                            statements_handle,
+                            Rule::BraceStatements,
+                        );
+
+                        // a = b;
+                        add_assignment_statement(
+                            &mut expected_ast,
+                            statements_handle,
+                            Token::Symbol("a".to_owned()),
+                            Token::Symbol("b".to_owned()),
+                        );
+                    }
+
+                    /*
+                    c = {
+                        d = 2 * a;
+                        d
+                    };
+                    */
+                    {
+                        let statement_handle = expected_ast
+                            .add_child(statements_handle, Rule::Statement);
+
+                        // RHS
+                        /*
+                        {
+                            d = 2 * a;
+                            d
+                        };
+                        */
+                        {
+                            let statements_handle = expected_ast.add_child(
+                                statements_handle,
+                                Rule::BraceStatements,
+                            );
+
+                            // recursive statements
+                            {
+                                let statements_handle = expected_ast.add_child(
+                                    statements_handle,
+                                    Rule::BraceStatements,
+                                );
+
+                                // a = b;
+                                add_assignment_statement(
+                                    &mut expected_ast,
+                                    statements_handle,
+                                    Token::Symbol("a".to_owned()),
+                                    Token::Symbol("b".to_owned()),
+                                );
+                            }
+
+                            // expression at end
+
+                            add_terminal_expression(
+                                &mut expected_ast,
+                                statements_handle,
+                                Some(Token::Symbol("d".to_owned())),
+                            );
+                        }
+
+                        // LHS: c
+                        expected_ast.add_terminal_child(
+                            statement_handle,
+                            Some(Token::Symbol("c".to_owned())),
+                        );
+                    }
+                    add_assignment_statement(
+                        &mut expected_ast,
+                        statements_handle,
+                        Token::Symbol("c".to_owned()),
+                        Token::Symbol("d".to_owned()),
+                    );
+                }
+            }
+
+            // a + c
+            {
+                let end_expression_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::Expression);
+                add_expected_add_child(
+                    &mut expected_ast,
+                    end_expression_handle,
+                    Token::Symbol("a".to_owned()),
+                    Token::Symbol("c".to_owned()),
+                );
+            }
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
     }
 
     #[test]
