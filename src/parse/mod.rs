@@ -14,7 +14,7 @@ comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
 plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
 mult_div -> (mult_div ("*" | "/") unary) | unary;
 unary -> (("!" | "-") unary) | primary;
-primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")";
+primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression;
 */
 
 /* NOTES:
@@ -42,7 +42,8 @@ use self::{
     ast::{Ast, AstNodeHandle},
     rule::Rule,
     token_search::{
-        find_final_matching_level_token, find_final_token,
+        find_final_matching_level_token,
+        find_final_matching_level_token_all_groups, find_final_token,
         find_matching_group_indices, find_matching_group_indices_end,
         find_next_matching_level_token, find_next_token,
         find_prev_matching_level_token,
@@ -713,13 +714,11 @@ fn parse_binary_op_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    match find_final_matching_level_token(
+    match find_final_matching_level_token_all_groups(
         tokens,
         matching_tokens,
         search_data.start,
         search_data.end,
-        &Token::LParen,
-        &Token::RParen,
     ) {
         Some((split_index, binary_op_token)) => {
             // update the token data in the expanding node
@@ -909,11 +908,33 @@ fn parse_primary_rule(
                         None => todo!("panic?"),
                     }
                 }
+                Token::LBrace => {
+                    let child_handle = ast.add_child(
+                        search_data.node_handle,
+                        Rule::BraceExpression,
+                    );
+
+                    let expected_rbrace_index = search_data.end - 1;
+                    match tokens.get(expected_rbrace_index) {
+                        Some(expected_rbrace) => {
+                            // check whether we have mismatched braces
+                            if *expected_rbrace == Token::RBrace {
+                                stack.push(SearchData {
+                                    start: search_data.start,
+                                    end: expected_rbrace_index + 1,
+                                    node_handle: child_handle,
+                                });
+                            } else {
+                                todo!("Syntax error (mismatched braces)")
+                            }
+                        }
+                        None => todo!("panic?"),
+                    }
+                }
                 _ => todo!("Syntax error"),
             },
             None => todo!("Syntax error"),
         }
-        use std::unimplemented;
     }
 }
 
@@ -1442,7 +1463,62 @@ mod tests {
         let tokens =
             tokenize("1 + {2 + 3}").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let equality_handle =
+                expected_ast.add_child(root_handle, Rule::Equality);
+            let comparison_handle =
+                expected_ast.add_child(equality_handle, Rule::Comparison);
+            let plus_minus_handle =
+                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+
+            // LHS: 1
+            {
+                let recursive_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::Expression);
+                let mult_div_handle =
+                    expected_ast.add_child(recursive_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_terminal_child(
+                    primary_child,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+
+            // RHS: {2 + 3}
+            {
+                let mult_div_handle =
+                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
+                let unary_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                let primary_child =
+                    expected_ast.add_child(unary_handle, Rule::Primary);
+
+                // 2 + 3
+                {
+                    let expression_handle = expected_ast
+                        .add_child(primary_child, Rule::BraceExpression);
+                    add_expected_add_child(
+                        &mut expected_ast,
+                        expression_handle,
+                        Token::IntLiteral(2),
+                        Token::IntLiteral(3),
+                    );
+                }
+            }
+
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
     }
 
     /// test an expression including symbols as opposed to literals
