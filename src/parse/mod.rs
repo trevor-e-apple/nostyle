@@ -745,12 +745,19 @@ fn parse_binary_op_rule(
             });
         }
         None => {
-            let comparison_node =
-                ast.add_child(search_data.node_handle, next_rule);
+            // modify current node with next rule
+            // let comparison_node =
+            //     ast.add_child(search_data.node_handle, next_rule);
+            let node = match ast.get_node_mut(search_data.node_handle) {
+                Some(node) => node,
+                None => todo!(),
+            };
+            node.rule = next_rule;
+            // push back onto the stack
             stack.push(SearchData {
                 start: search_data.start,
                 end: search_data.end,
-                node_handle: comparison_node,
+                node_handle: search_data.node_handle,
             });
         }
     }
@@ -954,13 +961,7 @@ mod tests {
         terminal_value: Option<Token>,
     ) -> AstNodeHandle {
         let expression_handle = ast.add_child(parent_handle, Rule::Expression);
-        let equality_handle = ast.add_child(expression_handle, Rule::Equality);
-        let comparison_handle =
-            ast.add_child(equality_handle, Rule::Comparison);
-        let plus_minus_handle =
-            ast.add_child(comparison_handle, Rule::PlusMinus);
-        let mult_div_handle = ast.add_child(plus_minus_handle, Rule::MultDiv);
-        let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+        let unary_handle = ast.add_child(expression_handle, Rule::Unary);
         let primary_child = ast.add_child(unary_handle, Rule::Primary);
         ast.add_terminal_child(primary_child, terminal_value);
 
@@ -975,31 +976,22 @@ mod tests {
         lhs_terminal: Token,
         rhs_terminal: Token,
     ) {
-        let equality_handle = ast.add_child(parent_handle, Rule::Equality);
-        let comparison_handle =
-            ast.add_child(equality_handle, Rule::Comparison);
         let plus_minus_handle = ast.add_child_with_data(
-            comparison_handle,
+            parent_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
         );
 
         // lhs (recursive)
         {
-            let plus_minus_handle =
-                ast.add_child(plus_minus_handle, Rule::PlusMinus);
-            let mult_div_handle =
-                ast.add_child(plus_minus_handle, Rule::MultDiv);
-            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+            let unary_handle = ast.add_child(plus_minus_handle, Rule::Unary);
             let primary_child = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(lhs_terminal));
         }
 
         // rhs
         {
-            let mult_div_handle =
-                ast.add_child(plus_minus_handle, Rule::MultDiv);
-            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+            let unary_handle = ast.add_child(plus_minus_handle, Rule::Unary);
             let primary_child = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(rhs_terminal));
         }
@@ -1834,11 +1826,6 @@ mod tests {
                     let brace_expression_handle = expected_ast
                         .add_child(expression_handle, Rule::BraceExpression);
 
-                    // add_no_statements(
-                    //     &mut expected_ast,
-                    //     brace_expression_handle,
-                    // );
-
                     // expression
                     {
                         let rhs_expression_handle = expected_ast.add_child(
@@ -2067,24 +2054,16 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let equality_handle =
-                expected_ast.add_child(root_handle, Rule::Equality);
-            let comparison_handle =
-                expected_ast.add_child(equality_handle, Rule::Comparison);
             let plus_minus_handle = expected_ast.add_child_with_data(
-                comparison_handle,
+                root_handle,
                 Rule::PlusMinus,
                 Some(Token::Plus),
             );
 
             // a
             {
-                let recursive_plus_minus_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::PlusMinus);
-                let mult_div_handle = expected_ast
-                    .add_child(recursive_plus_minus_handle, Rule::MultDiv);
                 let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
+                    expected_ast.add_child(plus_minus_handle, Rule::Unary);
                 let primary_child =
                     expected_ast.add_child(unary_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
@@ -2103,10 +2082,8 @@ mod tests {
 
                 // b
                 {
-                    let recursive_mult_div_handle =
-                        expected_ast.add_child(mult_div_handle, Rule::MultDiv);
                     let unary_handle = expected_ast
-                        .add_child(recursive_mult_div_handle, Rule::Unary);
+                        .add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
                         expected_ast.add_child(unary_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
