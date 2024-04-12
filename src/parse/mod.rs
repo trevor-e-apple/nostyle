@@ -1005,20 +1005,14 @@ mod tests {
         lhs_terminal: Token,
         rhs_terminal: Token,
     ) {
-        let equality_handle = ast.add_child(parent_handle, Rule::Equality);
-        let comparison_handle =
-            ast.add_child(equality_handle, Rule::Comparison);
-        let plus_minus_handle =
-            ast.add_child(comparison_handle, Rule::PlusMinus);
         let mult_div_handle = ast.add_child_with_data(
-            plus_minus_handle,
+            parent_handle,
             Rule::MultDiv,
             Some(Token::Times),
         );
 
         // lhs (recursive)
         {
-            let mult_div_handle = ast.add_child(mult_div_handle, Rule::MultDiv);
             let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
             let primary_child = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(lhs_terminal));
@@ -2810,21 +2804,14 @@ mod tests {
                     expected_ast.add_child(for_handle, Rule::Statement);
                 let condition_expression = expected_ast
                     .add_child(condition_statement, Rule::Expression);
-                let equality_handle = expected_ast
-                    .add_child(condition_expression, Rule::Equality);
                 let comparison_handle = expected_ast.add_child_with_data(
-                    equality_handle,
+                    condition_expression,
                     Rule::Comparison,
                     Some(Token::LessThan),
                 );
+
                 {
-                    let comparison_handle = expected_ast
-                        .add_child(comparison_handle, Rule::Comparison);
-                    let plus_minus = expected_ast
-                        .add_child(comparison_handle, Rule::PlusMinus);
-                    let mult_div =
-                        expected_ast.add_child(plus_minus, Rule::MultDiv);
-                    let unary = expected_ast.add_child(mult_div, Rule::Unary);
+                    let unary = expected_ast.add_child(comparison_handle, Rule::Unary);
                     let primary = expected_ast.add_child(unary, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary,
@@ -2833,11 +2820,7 @@ mod tests {
                 }
                 // terminal side
                 {
-                    let plus_minus = expected_ast
-                        .add_child(comparison_handle, Rule::PlusMinus);
-                    let mult_div =
-                        expected_ast.add_child(plus_minus, Rule::MultDiv);
-                    let unary = expected_ast.add_child(mult_div, Rule::Unary);
+                    let unary = expected_ast.add_child(comparison_handle, Rule::Unary);
                     let primary = expected_ast.add_child(unary, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary,
