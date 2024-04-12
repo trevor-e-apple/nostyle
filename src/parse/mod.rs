@@ -1071,28 +1071,14 @@ mod tests {
 
         // a
         {
-            let recursive_handle =
-                ast.add_child(equality_handle, Rule::Equality);
-            let comparison_handle =
-                ast.add_child(recursive_handle, Rule::Comparison);
-            let plus_minus_handle =
-                ast.add_child(comparison_handle, Rule::PlusMinus);
-            let mult_div_handle =
-                ast.add_child(plus_minus_handle, Rule::MultDiv);
-            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+            let unary_handle = ast.add_child(equality_handle, Rule::Unary);
             let primary_handle = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_handle, Some(a));
         }
 
         // b
         {
-            let comparison_handle =
-                ast.add_child(equality_handle, Rule::Comparison);
-            let plus_minus_handle =
-                ast.add_child(comparison_handle, Rule::PlusMinus);
-            let mult_div_handle =
-                ast.add_child(plus_minus_handle, Rule::MultDiv);
-            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
+            let unary_handle = ast.add_child(equality_handle, Rule::Unary);
             let primary_handle = ast.add_child(unary_handle, Rule::Primary);
             ast.add_terminal_child(primary_handle, Some(b));
         }
