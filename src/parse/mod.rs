@@ -964,8 +964,7 @@ mod tests {
         terminal_value: Option<Token>,
     ) -> AstNodeHandle {
         let expression_handle = ast.add_child(parent_handle, Rule::Expression);
-        let unary_handle = ast.add_child(expression_handle, Rule::Unary);
-        let primary_child = ast.add_child(unary_handle, Rule::Primary);
+        let primary_child = ast.add_child(expression_handle, Rule::Primary);
         ast.add_terminal_child(primary_child, terminal_value);
 
         return expression_handle;
@@ -1014,15 +1013,13 @@ mod tests {
 
         // lhs (recursive)
         {
-            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
-            let primary_child = ast.add_child(unary_handle, Rule::Primary);
+            let primary_child = ast.add_child(mult_div_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(lhs_terminal));
         }
 
         // rhs
         {
-            let unary_handle = ast.add_child(mult_div_handle, Rule::Unary);
-            let primary_child = ast.add_child(unary_handle, Rule::Primary);
+            let primary_child = ast.add_child(mult_div_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(rhs_terminal));
         }
     }
@@ -1123,9 +1120,8 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let unary_handle = expected_ast.add_child(root_handle, Rule::Unary);
             let primary_child =
-                expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_child(root_handle, Rule::Primary);
             expected_ast
                 .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
             expected_ast
@@ -1147,10 +1143,8 @@ mod tests {
                 expected_ast.add_child(root_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(brace_expression_handle, Rule::Expression);
-            let unary_handle =
-                expected_ast.add_child(expression_handle, Rule::Unary);
             let primary_child =
-                expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_child(expression_handle, Rule::Primary);
             expected_ast
                 .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
             expected_ast
@@ -1181,10 +1175,8 @@ mod tests {
                 .add_child(expression_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(brace_expression_handle, Rule::Expression);
-            let unary_handle =
-                expected_ast.add_child(expression_handle, Rule::Unary);
             let primary_child =
-                expected_ast.add_child(unary_handle, Rule::Primary);
+                expected_ast.add_child(expression_handle, Rule::Primary);
             expected_ast
                 .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
             expected_ast
