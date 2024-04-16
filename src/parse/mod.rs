@@ -1147,16 +1147,8 @@ mod tests {
                 expected_ast.add_child(root_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(brace_expression_handle, Rule::Expression);
-            let equality_handle =
-                expected_ast.add_child(expression_handle, Rule::Equality);
-            let comparison_handle =
-                expected_ast.add_child(equality_handle, Rule::Comparison);
-            let plus_minus_handle =
-                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
-            let mult_div_handle =
-                expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
             let unary_handle =
-                expected_ast.add_child(mult_div_handle, Rule::Unary);
+                expected_ast.add_child(expression_handle, Rule::Unary);
             let primary_child =
                 expected_ast.add_child(unary_handle, Rule::Primary);
             expected_ast
