@@ -1063,15 +1063,13 @@ mod tests {
 
         // a
         {
-            let unary_handle = ast.add_child(equality_handle, Rule::Unary);
-            let primary_handle = ast.add_child(unary_handle, Rule::Primary);
+            let primary_handle = ast.add_child(equality_handle, Rule::Primary);
             ast.add_terminal_child(primary_handle, Some(a));
         }
 
         // b
         {
-            let unary_handle = ast.add_child(equality_handle, Rule::Unary);
-            let primary_handle = ast.add_child(unary_handle, Rule::Primary);
+            let primary_handle = ast.add_child(equality_handle, Rule::Primary);
             ast.add_terminal_child(primary_handle, Some(b));
         }
     }
@@ -1914,10 +1912,8 @@ mod tests {
 
                 // a
                 {
-                    let unary_handle =
-                        expected_ast.add_child(a_plus_b_handle, Rule::Unary);
                     let primary_child =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_child(a_plus_b_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary_child,
                         Some(Token::Symbol("a".to_owned())),
@@ -1926,10 +1922,8 @@ mod tests {
 
                 // b
                 {
-                    let unary_handle =
-                        expected_ast.add_child(a_plus_b_handle, Rule::Unary);
                     let primary_child =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_child(a_plus_b_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary_child,
                         Some(Token::Symbol("b".to_owned())),
@@ -1939,10 +1933,8 @@ mod tests {
 
             // - c
             {
-                let unary_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(plus_minus_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
                     Some(Token::Symbol("c".to_owned())),
@@ -2294,10 +2286,8 @@ mod tests {
                 );
                 // (a + b)
                 {
-                    let unary_handle =
-                        expected_ast.add_child(equality_handle, Rule::Unary);
                     let primary_handle =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_child(equality_handle, Rule::Primary);
                     let expression_handle = expected_ast
                         .add_child(primary_handle, Rule::Expression);
                     add_expected_add_child(
@@ -2309,10 +2299,8 @@ mod tests {
                 }
                 // c
                 {
-                    let unary_handle =
-                        expected_ast.add_child(equality_handle, Rule::Unary);
                     let primary_handle =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_child(equality_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary_handle,
                         Some(Token::Symbol("c".to_owned())),
