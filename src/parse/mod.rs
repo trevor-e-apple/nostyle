@@ -857,7 +857,7 @@ fn parse_unary_rule(
                     end: search_data.end,
                     node_handle: child_node,
                 });
-            } else {                
+            } else {
                 // update current node with next rule
                 let node = match ast.get_node_mut(search_data.node_handle) {
                     Some(node) => node,
@@ -1228,10 +1228,8 @@ mod tests {
             );
             // 1 (recursive)
             {
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(mult_div_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
                     Some(Token::IntLiteral(1)),
@@ -1239,10 +1237,8 @@ mod tests {
             }
             // 2
             {
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(mult_div_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
                     Some(Token::IntLiteral(2)),
@@ -1340,10 +1336,8 @@ mod tests {
 
             // LHS: (1 + 2)
             {
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(mult_div_handle, Rule::Primary);
 
                 // 1 + 2
                 {
@@ -1360,10 +1354,8 @@ mod tests {
 
             // RHS: 3
             {
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(mult_div_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
                     Some(Token::IntLiteral(3)),
@@ -1588,10 +1580,8 @@ mod tests {
 
                 let expression_handle =
                     expected_ast.add_child(statement_handle, Rule::Expression);
-                let unary_handle =
-                    expected_ast.add_child(expression_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(expression_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
                     Some(Token::Symbol("a".to_owned())),
@@ -2709,9 +2699,8 @@ mod tests {
                 );
 
                 {
-                    let unary =
-                        expected_ast.add_child(comparison_handle, Rule::Unary);
-                    let primary = expected_ast.add_child(unary, Rule::Primary);
+                    let primary = expected_ast
+                        .add_child(comparison_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary,
                         Some(Token::Symbol("a".to_owned())),
@@ -2719,9 +2708,8 @@ mod tests {
                 }
                 // terminal side
                 {
-                    let unary =
-                        expected_ast.add_child(comparison_handle, Rule::Unary);
-                    let primary = expected_ast.add_child(unary, Rule::Primary);
+                    let primary = expected_ast
+                        .add_child(comparison_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary,
                         Some(Token::IntLiteral(10)),
