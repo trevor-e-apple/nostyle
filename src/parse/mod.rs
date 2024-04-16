@@ -746,8 +746,6 @@ fn parse_binary_op_rule(
         }
         None => {
             // modify current node with next rule
-            // let comparison_node =
-            //     ast.add_child(search_data.node_handle, next_rule);
             let node = match ast.get_node_mut(search_data.node_handle) {
                 Some(node) => node,
                 None => todo!(),
@@ -859,13 +857,18 @@ fn parse_unary_rule(
                     end: search_data.end,
                     node_handle: child_node,
                 });
-            } else {
-                let child_node =
-                    ast.add_child(search_data.node_handle, Rule::Primary);
+            } else {                
+                // update current node with next rule
+                let node = match ast.get_node_mut(search_data.node_handle) {
+                    Some(node) => node,
+                    None => todo!(),
+                };
+                node.rule = Rule::Primary;
+                // push back onto the stack
                 stack.push(SearchData {
                     start: search_data.start,
                     end: search_data.end,
-                    node_handle: child_node,
+                    node_handle: search_data.node_handle,
                 });
             }
         }
@@ -1122,8 +1125,7 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let unary_handle =
-                expected_ast.add_child(root_handle, Rule::Unary);
+            let unary_handle = expected_ast.add_child(root_handle, Rule::Unary);
             let primary_child =
                 expected_ast.add_child(unary_handle, Rule::Primary);
             expected_ast
@@ -1982,10 +1984,8 @@ mod tests {
 
             // a
             {
-                let unary_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::Unary);
                 let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
+                    expected_ast.add_child(plus_minus_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
                     primary_child,
                     Some(Token::Symbol("a".to_owned())),
@@ -2002,10 +2002,8 @@ mod tests {
 
                 // b
                 {
-                    let unary_handle = expected_ast
-                        .add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_child(mult_div_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary_child,
                         Some(Token::Symbol("b".to_owned())),
@@ -2014,10 +2012,8 @@ mod tests {
 
                 // c
                 {
-                    let unary_handle =
-                        expected_ast.add_child(mult_div_handle, Rule::Unary);
                     let primary_child =
-                        expected_ast.add_child(unary_handle, Rule::Primary);
+                        expected_ast.add_child(mult_div_handle, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary_child,
                         Some(Token::Symbol("c".to_owned())),
@@ -2126,7 +2122,7 @@ mod tests {
                                     Rule::Expression,
                                 );
 
-                                 // LHS: d
+                                // LHS: d
                                 expected_ast.add_terminal_child(
                                     statement_handle,
                                     Some(Token::Symbol("d".to_owned())),
@@ -2739,7 +2735,8 @@ mod tests {
                 );
 
                 {
-                    let unary = expected_ast.add_child(comparison_handle, Rule::Unary);
+                    let unary =
+                        expected_ast.add_child(comparison_handle, Rule::Unary);
                     let primary = expected_ast.add_child(unary, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary,
@@ -2748,7 +2745,8 @@ mod tests {
                 }
                 // terminal side
                 {
-                    let unary = expected_ast.add_child(comparison_handle, Rule::Unary);
+                    let unary =
+                        expected_ast.add_child(comparison_handle, Rule::Unary);
                     let primary = expected_ast.add_child(unary, Rule::Primary);
                     expected_ast.add_terminal_child(
                         primary,
@@ -2979,6 +2977,12 @@ mod tests {
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
+        unimplemented!();
+    }
+
+    #[test]
+    fn unary_expansion() {
+        let tokens = tokenize("----1").expect("Unexpected tokenize error");
         unimplemented!();
     }
 
