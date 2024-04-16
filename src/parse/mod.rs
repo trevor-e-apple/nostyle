@@ -2963,4 +2963,9 @@ mod tests {
     fn binary_op_and_assign() {
         unimplemented!();
     }
+
+    #[test]
+    fn statement_lhs_is_statement() {
+        unimplemented!();
+    }
 }
