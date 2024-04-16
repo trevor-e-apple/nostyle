@@ -987,15 +987,13 @@ mod tests {
 
         // lhs (recursive)
         {
-            let unary_handle = ast.add_child(plus_minus_handle, Rule::Unary);
-            let primary_child = ast.add_child(unary_handle, Rule::Primary);
+            let primary_child = ast.add_child(plus_minus_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(lhs_terminal));
         }
 
         // rhs
         {
-            let unary_handle = ast.add_child(plus_minus_handle, Rule::Unary);
-            let primary_child = ast.add_child(unary_handle, Rule::Primary);
+            let primary_child = ast.add_child(plus_minus_handle, Rule::Primary);
             ast.add_terminal_child(primary_child, Some(rhs_terminal));
         }
     }
@@ -2983,6 +2981,12 @@ mod tests {
     #[test]
     fn unary_expansion() {
         let tokens = tokenize("----1").expect("Unexpected tokenize error");
+        unimplemented!();
+    }
+
+    #[test]
+    fn add_negative_number() {
+        let tokens = tokenize("1 + -1").expect("Unexpected tokenize error");
         unimplemented!();
     }
 
