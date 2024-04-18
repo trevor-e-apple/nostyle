@@ -884,7 +884,12 @@ fn parse_primary_rule(
 ) {
     if search_data.start == search_data.end {
         // handle empty expression case
-        ast.add_terminal_child(search_data.node_handle, None);
+        let node = match ast.get_node_mut(search_data.node_handle) {
+            Some(node) => node,
+            None => todo!(),
+        };
+        node.rule = Rule::Terminal;
+        node.data = None;
     } else {
         match tokens.get(search_data.start) {
             Some(token) => match token {
@@ -892,10 +897,13 @@ fn parse_primary_rule(
                 | Token::IntLiteral(_)
                 | Token::FloatLiteral(_)
                 | Token::StringLiteral(_) => {
-                    ast.add_terminal_child(
-                        search_data.node_handle,
-                        Some(token.clone()),
-                    );
+                    // update current primary to terminal
+                    let node = match ast.get_node_mut(search_data.node_handle) {
+                        Some(node) => node,
+                        None => todo!(),
+                    };
+                    node.rule = Rule::Terminal;
+                    node.data = Some(token.clone());
                 }
                 Token::LParen => {
                     let child_handle = ast
@@ -964,8 +972,7 @@ mod tests {
         terminal_value: Option<Token>,
     ) -> AstNodeHandle {
         let expression_handle = ast.add_child(parent_handle, Rule::Expression);
-        let primary_child = ast.add_child(expression_handle, Rule::Primary);
-        ast.add_terminal_child(primary_child, terminal_value);
+        ast.add_terminal_child(expression_handle, terminal_value);
 
         return expression_handle;
     }
@@ -985,16 +992,10 @@ mod tests {
         );
 
         // lhs (recursive)
-        {
-            let primary_child = ast.add_child(plus_minus_handle, Rule::Primary);
-            ast.add_terminal_child(primary_child, Some(lhs_terminal));
-        }
+        ast.add_terminal_child(plus_minus_handle, Some(lhs_terminal));
 
         // rhs
-        {
-            let primary_child = ast.add_child(plus_minus_handle, Rule::Primary);
-            ast.add_terminal_child(primary_child, Some(rhs_terminal));
-        }
+        ast.add_terminal_child(plus_minus_handle, Some(rhs_terminal));
     }
 
     /// helper function for adding a child that just multiplies two tokens. Adds
@@ -1012,16 +1013,10 @@ mod tests {
         );
 
         // lhs (recursive)
-        {
-            let primary_child = ast.add_child(mult_div_handle, Rule::Primary);
-            ast.add_terminal_child(primary_child, Some(lhs_terminal));
-        }
+        ast.add_terminal_child(mult_div_handle, Some(lhs_terminal));
 
         // rhs
-        {
-            let primary_child = ast.add_child(mult_div_handle, Rule::Primary);
-            ast.add_terminal_child(primary_child, Some(rhs_terminal));
-        }
+        ast.add_terminal_child(mult_div_handle, Some(rhs_terminal));
     }
 
     /// a helper function for adding the ast nodes for a simple assignment from
@@ -1062,16 +1057,10 @@ mod tests {
         );
 
         // a
-        {
-            let primary_handle = ast.add_child(equality_handle, Rule::Primary);
-            ast.add_terminal_child(primary_handle, Some(a));
-        }
+        ast.add_terminal_child(equality_handle, Some(a));
 
         // b
-        {
-            let primary_handle = ast.add_child(equality_handle, Rule::Primary);
-            ast.add_terminal_child(primary_handle, Some(b));
-        }
+        ast.add_terminal_child(equality_handle, Some(b));
     }
 
     /// test empty parse
@@ -1118,14 +1107,14 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let primary_child =
-                expected_ast.add_child(root_handle, Rule::Primary);
             expected_ast
-                .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
+                .add_terminal_child(root_handle, Some(Token::IntLiteral(0)));
             expected_ast
         };
 
+        println!("ast:");
         ast.print();
+        println!("expected_ast:");
         expected_ast.print();
         assert!(Ast::equivalent(&ast, &expected_ast));
     }
@@ -1141,10 +1130,10 @@ mod tests {
                 expected_ast.add_child(root_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(brace_expression_handle, Rule::Expression);
-            let primary_child =
-                expected_ast.add_child(expression_handle, Rule::Primary);
-            expected_ast
-                .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
+            expected_ast.add_terminal_child(
+                expression_handle,
+                Some(Token::IntLiteral(0)),
+            );
             expected_ast
         };
 
@@ -1173,10 +1162,10 @@ mod tests {
                 .add_child(expression_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
                 .add_child(brace_expression_handle, Rule::Expression);
-            let primary_child =
-                expected_ast.add_child(expression_handle, Rule::Primary);
-            expected_ast
-                .add_terminal_child(primary_child, Some(Token::IntLiteral(0)));
+            expected_ast.add_terminal_child(
+                expression_handle,
+                Some(Token::IntLiteral(0)),
+            );
             expected_ast
         };
 
@@ -1227,23 +1216,15 @@ mod tests {
                 Some(Token::Times),
             );
             // 1 (recursive)
-            {
-                let primary_child =
-                    expected_ast.add_child(mult_div_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::IntLiteral(1)),
-                );
-            }
+            expected_ast.add_terminal_child(
+                mult_div_handle,
+                Some(Token::IntLiteral(1)),
+            );
             // 2
-            {
-                let primary_child =
-                    expected_ast.add_child(mult_div_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::IntLiteral(2)),
-                );
-            }
+            expected_ast.add_terminal_child(
+                mult_div_handle,
+                Some(Token::IntLiteral(2)),
+            );
             expected_ast
         };
 
@@ -1353,14 +1334,10 @@ mod tests {
             }
 
             // RHS: 3
-            {
-                let primary_child =
-                    expected_ast.add_child(mult_div_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::IntLiteral(3)),
-                );
-            }
+            expected_ast.add_terminal_child(
+                mult_div_handle,
+                Some(Token::IntLiteral(3)),
+            );
 
             expected_ast
         };
@@ -1580,10 +1557,8 @@ mod tests {
 
                 let expression_handle =
                     expected_ast.add_child(statement_handle, Rule::Expression);
-                let primary_child =
-                    expected_ast.add_child(expression_handle, Rule::Primary);
                 expected_ast.add_terminal_child(
-                    primary_child,
+                    expression_handle,
                     Some(Token::Symbol("a".to_owned())),
                 );
             }
@@ -1901,35 +1876,24 @@ mod tests {
                 );
 
                 // a
-                {
-                    let primary_child =
-                        expected_ast.add_child(a_plus_b_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_child,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    a_plus_b_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
 
                 // b
-                {
-                    let primary_child =
-                        expected_ast.add_child(a_plus_b_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_child,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    a_plus_b_handle,
+                    Some(Token::Symbol("b".to_owned())),
+                );
             }
 
             // - c
-            {
-                let primary_child =
-                    expected_ast.add_child(plus_minus_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::Symbol("c".to_owned())),
-                );
-            }
+            expected_ast.add_terminal_child(
+                plus_minus_handle,
+                Some(Token::Symbol("c".to_owned())),
+            );
+
             expected_ast
         };
 
@@ -1955,14 +1919,10 @@ mod tests {
             );
 
             // a
-            {
-                let primary_child =
-                    expected_ast.add_child(plus_minus_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::Symbol("a".to_owned())),
-                );
-            }
+            expected_ast.add_terminal_child(
+                plus_minus_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
 
             // b * c
             {
@@ -1973,24 +1933,16 @@ mod tests {
                 );
 
                 // b
-                {
-                    let primary_child =
-                        expected_ast.add_child(mult_div_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_child,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    mult_div_handle,
+                    Some(Token::Symbol("b".to_owned())),
+                );
 
                 // c
-                {
-                    let primary_child =
-                        expected_ast.add_child(mult_div_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_child,
-                        Some(Token::Symbol("c".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    mult_div_handle,
+                    Some(Token::Symbol("c".to_owned())),
+                );
             }
             expected_ast
         };
@@ -2200,14 +2152,10 @@ mod tests {
                     );
                 }
                 // c
-                {
-                    let primary_handle =
-                        expected_ast.add_child(equality_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_handle,
-                        Some(Token::Symbol("c".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    equality_handle,
+                    Some(Token::Symbol("c".to_owned())),
+                );
             }
             // executed brace_expression
             {
@@ -2284,14 +2232,10 @@ mod tests {
                     );
                 }
                 // c
-                {
-                    let primary_handle =
-                        expected_ast.add_child(equality_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary_handle,
-                        Some(Token::Symbol("c".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    equality_handle,
+                    Some(Token::Symbol("c".to_owned())),
+                );
             }
             // executed brace_expression
             {
@@ -2698,23 +2642,16 @@ mod tests {
                     Some(Token::LessThan),
                 );
 
-                {
-                    let primary = expected_ast
-                        .add_child(comparison_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    comparison_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
                 // terminal side
-                {
-                    let primary = expected_ast
-                        .add_child(comparison_handle, Rule::Primary);
-                    expected_ast.add_terminal_child(
-                        primary,
-                        Some(Token::IntLiteral(10)),
-                    );
-                }
+                expected_ast.add_terminal_child(
+                    comparison_handle,
+                    Some(Token::IntLiteral(10)),
+                );
             }
             // increment
             {
@@ -2965,7 +2902,7 @@ mod tests {
     }
 
     #[test]
-    fn statement_lhs_is_statement() {
+    fn statement_lhs_is_expression() {
         unimplemented!();
     }
 }
