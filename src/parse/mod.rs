@@ -906,18 +906,23 @@ fn parse_primary_rule(
                     node.data = Some(token.clone());
                 }
                 Token::LParen => {
-                    let child_handle = ast
-                        .add_child(search_data.node_handle, Rule::Expression);
+                    // update current node to expression rule
+                    let node = match ast.get_node_mut(search_data.node_handle) {
+                        Some(node) => node,
+                        None => todo!(),
+                    };
+                    node.rule = Rule::Expression;
 
                     let expected_rparen_index = search_data.end - 1;
                     match tokens.get(expected_rparen_index) {
                         Some(expected_rparen) => {
                             // check whether we have mismatched parens
                             if *expected_rparen == Token::RParen {
+                                // add back to stack
                                 stack.push(SearchData {
                                     start: search_data.start + 1,
                                     end: expected_rparen_index,
-                                    node_handle: child_handle,
+                                    node_handle: search_data.node_handle,
                                 });
                             } else {
                                 todo!("Syntax error (mismatched parens)")
@@ -927,10 +932,12 @@ fn parse_primary_rule(
                     }
                 }
                 Token::LBrace => {
-                    let child_handle = ast.add_child(
-                        search_data.node_handle,
-                        Rule::BraceExpression,
-                    );
+                    // update current node to BraceExpression rule
+                    let node = match ast.get_node_mut(search_data.node_handle) {
+                        Some(node) => node,
+                        None => todo!(),
+                    };
+                    node.rule = Rule::BraceExpression;
 
                     let expected_rbrace_index = search_data.end - 1;
                     match tokens.get(expected_rbrace_index) {
@@ -940,7 +947,7 @@ fn parse_primary_rule(
                                 stack.push(SearchData {
                                     start: search_data.start,
                                     end: expected_rbrace_index + 1,
-                                    node_handle: child_handle,
+                                    node_handle: search_data.node_handle,
                                 });
                             } else {
                                 todo!("Syntax error (mismatched braces)")
@@ -1317,20 +1324,14 @@ mod tests {
 
             // LHS: (1 + 2)
             {
-                let primary_child =
-                    expected_ast.add_child(mult_div_handle, Rule::Primary);
-
-                // 1 + 2
-                {
-                    let expression_handle =
-                        expected_ast.add_child(primary_child, Rule::Expression);
-                    add_expected_add_child(
-                        &mut expected_ast,
-                        expression_handle,
-                        Token::IntLiteral(1),
-                        Token::IntLiteral(2),
-                    );
-                }
+                let expression_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Expression);
+                add_expected_add_child(
+                    &mut expected_ast,
+                    expression_handle,
+                    Token::IntLiteral(1),
+                    Token::IntLiteral(2),
+                );
             }
 
             // RHS: 3
@@ -2140,10 +2141,8 @@ mod tests {
                 );
                 // (a + b)
                 {
-                    let primary_handle =
-                        expected_ast.add_child(equality_handle, Rule::Primary);
                     let expression_handle = expected_ast
-                        .add_child(primary_handle, Rule::Expression);
+                        .add_child(equality_handle, Rule::Expression);
                     add_expected_add_child(
                         &mut expected_ast,
                         expression_handle,
@@ -2220,10 +2219,8 @@ mod tests {
                 );
                 // (a + b)
                 {
-                    let primary_handle =
-                        expected_ast.add_child(equality_handle, Rule::Primary);
                     let expression_handle = expected_ast
-                        .add_child(primary_handle, Rule::Expression);
+                        .add_child(equality_handle, Rule::Expression);
                     add_expected_add_child(
                         &mut expected_ast,
                         expression_handle,
