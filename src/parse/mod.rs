@@ -2014,6 +2014,13 @@ mod tests {
                     let statement_handle = expected_ast
                         .add_child(statements_handle, Rule::Statement);
 
+                    // LHS: c
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        statement_handle,
+                        Some(Token::Symbol("c".to_owned())),
+                    );
+
                     // RHS
                     /*
                     {
@@ -2041,18 +2048,19 @@ mod tests {
                                     statements_handle,
                                     Rule::Statement,
                                 );
-                                let expression_handle = expected_ast.add_child(
-                                    statement_handle,
-                                    Rule::Expression,
-                                );
 
                                 // LHS: d
-                                expected_ast.add_terminal_child(
+                                add_terminal_expression(
+                                    &mut expected_ast,
                                     statement_handle,
                                     Some(Token::Symbol("d".to_owned())),
                                 );
 
                                 // RHS: 2 * a
+                                let expression_handle = expected_ast.add_child(
+                                    statement_handle,
+                                    Rule::Expression,
+                                );
                                 add_expected_mult_child(
                                     &mut expected_ast,
                                     expression_handle,
@@ -2069,12 +2077,6 @@ mod tests {
                             Some(Token::Symbol("d".to_owned())),
                         );
                     }
-
-                    // LHS: c
-                    expected_ast.add_terminal_child(
-                        statement_handle,
-                        Some(Token::Symbol("c".to_owned())),
-                    );
                 }
             }
 
