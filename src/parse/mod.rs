@@ -2592,6 +2592,13 @@ mod tests {
                     let statement_handle = expected_ast
                         .add_child(brace_statements, Rule::Statement);
 
+                    // statement lhs: assignment
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        statement_handle,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+
                     // statement rhs: expression
                     {
                         let rhs_expression = expected_ast
@@ -2603,13 +2610,8 @@ mod tests {
                             Token::Symbol("b".to_owned()),
                         );
                     }
-
-                    // statement lhs: assignment
-                    expected_ast.add_terminal_child(
-                        statement_handle,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
                 }
+
                 // expression
                 add_terminal_expression(
                     &mut expected_ast,
@@ -2619,14 +2621,12 @@ mod tests {
             }
 
             // init statement
-            {
-                add_assignment_statement(
-                    &mut expected_ast,
-                    for_handle,
-                    Token::Symbol("a".to_owned()),
-                    Token::IntLiteral(0),
-                );
-            }
+            add_assignment_statement(
+                &mut expected_ast,
+                for_handle,
+                Token::Symbol("a".to_owned()),
+                Token::IntLiteral(0),
+            );
 
             // condition statement
             {
@@ -2655,7 +2655,15 @@ mod tests {
             {
                 let statement_handle =
                     expected_ast.add_child(for_handle, Rule::Statement);
-                // expression
+
+                // lhs
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
+                // rhs
                 {
                     let expression_handle = expected_ast
                         .add_child(statement_handle, Rule::Expression);
@@ -2666,11 +2674,6 @@ mod tests {
                         Token::IntLiteral(1),
                     )
                 }
-                // assignment
-                expected_ast.add_terminal_child(
-                    statement_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                );
             }
 
             expected_ast
