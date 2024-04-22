@@ -165,22 +165,22 @@ impl Ast {
         let mut stack: Vec<DfsData> =
             vec![DfsData { node_handle: root, depth: 0 }];
 
-        while let Some(bfs_data) = stack.pop() {
-            let node = if let Some(node) = self.get_node(bfs_data.node_handle) {
+        while let Some(dfs_data) = stack.pop() {
+            let node = if let Some(node) = self.get_node(dfs_data.node_handle) {
                 node
             } else {
                 panic!();
             };
 
-            // add children to stack
-            for child in &node.children {
+            // add children to stack in reverse so they are expanded from left to right
+            for child_handle in (&node.children).into_iter().rev() {
                 stack.push(DfsData {
-                    node_handle: child.clone(),
-                    depth: bfs_data.depth + 1,
+                    node_handle: child_handle.clone(),
+                    depth: dfs_data.depth + 1,
                 });
             }
 
-            for _ in 0..bfs_data.depth {
+            for _ in 0..dfs_data.depth {
                 print!("    ");
             }
             println!("{:?}", node.make_terse_string());

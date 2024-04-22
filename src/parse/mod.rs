@@ -6,7 +6,7 @@ this grammar expands in a way that matches operator precedence
 expression -> brace_expression | if_else | for_loop | equality;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
-statement -> (SYMBOL "=" expression ";") | (expression ";");
+statement -> (expression "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -556,7 +556,16 @@ fn parse_statement_rule(
         Some(assign_index) => match tokens.get(search_data.end - 1) {
             Some(expected_end_statement) => {
                 if *expected_end_statement == Token::EndStatement {
-                    // RHS: expand expression
+                    // LHS expression
+                    let child_node = ast
+                        .add_child(search_data.node_handle, Rule::Expression);
+                    stack.push(SearchData {
+                        start: search_data.start,
+                        end: assign_index, // don't include assignment token
+                        node_handle: child_node,
+                    });
+
+                    // RHS expression
                     let child_node = ast
                         .add_child(search_data.node_handle, Rule::Expression);
                     stack.push(SearchData {
@@ -564,18 +573,6 @@ fn parse_statement_rule(
                         end: search_data.end - 1, // don't include endstatement token
                         node_handle: child_node,
                     });
-
-                    // LHS: get the symbol for assignment
-                    match tokens.get(assign_index - 1) {
-                        Some(symbol_token) => match symbol_token {
-                            Token::Symbol(_) => ast.add_terminal_child(
-                                search_data.node_handle,
-                                Some(symbol_token.clone()),
-                            ),
-                            _ => todo!("syntax error: not a symbol"),
-                        },
-                        None => todo!("syntax error"),
-                    };
                 } else {
                     todo!("Syntax error");
                 }
@@ -1036,9 +1033,12 @@ mod tests {
     ) {
         let statement_handle = ast.add_child(parent_handle, Rule::Statement);
 
-        add_terminal_expression(ast, statement_handle, Some(rhs_terminal));
+        // LHS
+        let lhs_expression = ast.add_child(statement_handle, Rule::Expression);
+        ast.add_terminal_child(lhs_expression, Some(lhs_terminal));
 
-        ast.add_terminal_child(statement_handle, Some(lhs_terminal));
+        // RHS
+        add_terminal_expression(ast, statement_handle, Some(rhs_terminal));
     }
 
     /// adds no statements descendents to parent
@@ -1648,6 +1648,13 @@ mod tests {
 
                 // a = b + c
                 {
+                    // lhs: a
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        statement_handle,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+
                     // rhs: b + c
                     {
                         let expression_handle = expected_ast
@@ -1657,14 +1664,6 @@ mod tests {
                             expression_handle,
                             Token::Symbol("b".to_owned()),
                             Token::Symbol("c".to_owned()),
-                        );
-                    }
-
-                    // lhs: a
-                    {
-                        expected_ast.add_terminal_child(
-                            statement_handle,
-                            Some(Token::Symbol("a".to_owned())),
                         );
                     }
                 }
@@ -2900,6 +2899,56 @@ mod tests {
 
     #[test]
     fn statement_lhs_is_expression() {
+        let tokens = tokenize("{{a} = 1;}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression, Rule::BraceStatements);
+                let statement_handle =
+                    expected_ast.add_child(brace_statements, Rule::Statement);
+
+                // LHS
+                {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    let brace_expression = expected_ast
+                        .add_child(expression_handle, Rule::BraceExpression);
+                    let expression_handle = expected_ast
+                        .add_child(brace_expression, Rule::Expression);
+                    expected_ast.add_terminal_child(
+                        expression_handle,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+                }
+
+                // RHS
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+            // expression
+            add_terminal_expression(&mut expected_ast, brace_expression, None);
+            expected_ast
+        };
+
+        println!("ast:");
+        ast.print();
+        println!("expected_ast:");
+        expected_ast.print();
+        assert!(Ast::equivalent(&ast, &expected_ast));
+    }
+
+    #[test]
+    fn statement_lhs_is_function() {
         unimplemented!();
     }
 }
