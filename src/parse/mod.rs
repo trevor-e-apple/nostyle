@@ -1326,58 +1326,37 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let equality_handle =
-                expected_ast.add_child(root_handle, Rule::Equality);
-            let comparison_handle =
-                expected_ast.add_child(equality_handle, Rule::Comparison);
-            let plus_minus_handle =
-                expected_ast.add_child(comparison_handle, Rule::PlusMinus);
+            let plus_minus_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::PlusMinus,
+                Some(Token::Plus),
+            );
 
             // LHS: 1
-            {
-                let recursive_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::Expression);
-                let mult_div_handle =
-                    expected_ast.add_child(recursive_handle, Rule::MultDiv);
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
-                let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
-                expected_ast.add_terminal_child(
-                    primary_child,
-                    Some(Token::IntLiteral(1)),
-                );
-            }
+            expected_ast.add_terminal_child(
+                plus_minus_handle,
+                Some(Token::IntLiteral(1)),
+            );
 
             // RHS: {2 + 3}
             {
-                let mult_div_handle =
-                    expected_ast.add_child(plus_minus_handle, Rule::MultDiv);
-                let unary_handle =
-                    expected_ast.add_child(mult_div_handle, Rule::Unary);
-                let primary_child =
-                    expected_ast.add_child(unary_handle, Rule::Primary);
-
                 // 2 + 3
-                {
-                    let expression_handle = expected_ast
-                        .add_child(primary_child, Rule::BraceExpression);
-                    add_expected_add_child(
-                        &mut expected_ast,
-                        expression_handle,
-                        Token::IntLiteral(2),
-                        Token::IntLiteral(3),
-                    );
-                }
+                let brace_expression_handle = expected_ast
+                    .add_child(plus_minus_handle, Rule::BraceExpression);
+                let expression_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::Expression);
+                add_expected_add_child(
+                    &mut expected_ast,
+                    expression_handle,
+                    Token::IntLiteral(2),
+                    Token::IntLiteral(3),
+                );
             }
 
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected_ast:");
-        expected_ast.print();
+        check_ast_equal(&ast, &expected_ast);
     }
 
     /// test an expression including symbols as opposed to literals
