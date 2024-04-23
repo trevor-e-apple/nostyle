@@ -1150,11 +1150,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -1810,11 +1806,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -1860,11 +1852,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -2092,11 +2080,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -2194,11 +2178,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -2332,11 +2312,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -2468,11 +2444,7 @@ mod tests {
             expected_ast
         };
 
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -2588,11 +2560,7 @@ mod tests {
 
             expected_ast
         };
-        println!("ast:");
-        ast.print();
-        println!("expected ast:");
-        expected_ast.print();
-        assert!(Ast::equivalent(&ast, &expected_ast));
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
