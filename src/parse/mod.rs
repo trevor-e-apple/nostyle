@@ -2459,13 +2459,20 @@ mod tests {
             let statement_handle =
                 expected_ast.add_child(statements_handle, Rule::Statement);
 
-            let expression_handle =
-                expected_ast.add_child(statement_handle, Rule::Expression);
-            let if_else_handle =
-                expected_ast.add_child(expression_handle, Rule::IfElse);
+            // Statement LHS
+            add_terminal_expression(
+                &mut expected_ast,
+                statement_handle,
+                Some(Token::Symbol("d".to_owned())),
+            );
 
             // Statement RHS
             {
+                let expression_handle =
+                    expected_ast.add_child(statement_handle, Rule::Expression);
+                let if_else_handle =
+                    expected_ast.add_child(expression_handle, Rule::IfElse);
+
                 // a == b
                 {
                     let condition_expression_handle = expected_ast
@@ -2541,12 +2548,6 @@ mod tests {
                     }
                 }
             }
-
-            // Statement LHS
-            expected_ast.add_terminal_child(
-                statement_handle,
-                Some(Token::Symbol("d".to_owned())),
-            );
 
             // no terminal expression
             add_terminal_expression(
