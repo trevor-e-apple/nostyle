@@ -1772,6 +1772,13 @@ mod tests {
                 let statement_handle = expected_ast
                     .add_child(brace_statements_handle, Rule::Statement);
 
+                // lhs: a
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
                 // rhs: {b = c + d; a + b}
                 {
                     let expression_handle = expected_ast
@@ -1792,6 +1799,13 @@ mod tests {
 
                         // b = c + d;
                         {
+                            // lhs
+                            add_terminal_expression(
+                                &mut expected_ast,
+                                statement_handle,
+                                Some(Token::Symbol("b".to_owned())),
+                            );
+
                             // rhs
                             {
                                 let expression_handle = expected_ast.add_child(
@@ -1805,12 +1819,6 @@ mod tests {
                                     Token::Symbol("d".to_owned()),
                                 );
                             }
-
-                            // lhs
-                            expected_ast.add_terminal_child(
-                                statement_handle,
-                                Some(Token::Symbol("b".to_owned())),
-                            );
                         }
                     }
 
@@ -1828,12 +1836,6 @@ mod tests {
                         );
                     }
                 }
-
-                // lhs: a
-                expected_ast.add_terminal_child(
-                    statement_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                );
             }
 
             // expression
