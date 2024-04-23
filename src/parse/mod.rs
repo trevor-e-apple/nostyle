@@ -1706,6 +1706,13 @@ mod tests {
                 let statement_handle = expected_ast
                     .add_child(brace_statements_handle, Rule::Statement);
 
+                // lhs: a
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
                 // rhs: {b + c}
                 {
                     let expression_handle = expected_ast
@@ -1727,12 +1734,6 @@ mod tests {
                         );
                     }
                 }
-
-                // lhs: a
-                expected_ast.add_terminal_child(
-                    statement_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                );
             }
 
             // expression
