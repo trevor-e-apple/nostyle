@@ -718,6 +718,14 @@ fn parse_binary_op_rule(
         search_data.end,
     ) {
         Some((split_index, binary_op_token)) => {
+            /***
+             * Special case: Minus token is both a binary operator and a unary
+             * operator. In general, binary operators cannot be adjacent, so we know
+             * that if we see a minus by another binary operator, we should treat it
+             * as a unary. If we see a different binary op, we should raise an error
+             ***/
+            todo!("Implement binary op adjacency check");
+
             // update the token data in the expanding node
             match ast.get_node_mut(search_data.node_handle) {
                 Some(node) => {
@@ -2757,11 +2765,77 @@ mod tests {
     }
 
     #[test]
-    fn add_negative_number() {
+    fn add_negative_number_lhs() {
+        let tokens = tokenize("-1 + 1").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let plus_minus_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::PlusMinus,
+                Some(Token::Minus),
+            );
+
+            unimplemented!("todo");
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn add_negative_number_rhs() {
         let tokens = tokenize("1 + -1").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        let expected_ast = {};
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
 
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let plus_minus_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::PlusMinus,
+                Some(Token::Plus),
+            );
+
+            // LHS
+            expected_ast.add_terminal_child(
+                plus_minus_handle,
+                Some(Token::IntLiteral(1)),
+            );
+
+            // RHS
+            {
+                let unary_handle = expected_ast.add_child_with_data(
+                    plus_minus_handle,
+                    Rule::Unary,
+                    Some(Token::Minus),
+                );
+                expected_ast.add_terminal_child(
+                    unary_handle,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn add_negative_number_lhs_unary_expansion() {
+        let tokens = tokenize("--1 + 1").expect("Unexpected tokenize error");
+        unimplemented!();
+    }
+
+    #[test]
+    fn add_negative_number_rhs_unary_expansion() {
+        let tokens = tokenize("1 + --1").expect("Unexpected tokenize error");
         unimplemented!();
     }
 
@@ -2772,6 +2846,13 @@ mod tests {
 
     #[test]
     fn binary_op_and_assign() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn binary_op_repeat() {
+        // binary ops cannot repeat, should be parsing error
+        let tokens = tokenize("a +* b");
         unimplemented!();
     }
 
