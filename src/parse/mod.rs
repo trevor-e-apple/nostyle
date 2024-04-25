@@ -724,30 +724,77 @@ fn parse_binary_op_rule(
              * that if we see a minus by another binary operator, we should treat it
              * as a unary. If we see a different binary op, we should raise an error
              ***/
-            todo!("Implement binary op adjacency check");
+            let (is_unary, split_index, binary_op_token) = {
+                let mut split_index = split_index;
+                let mut binary_op_token = binary_op_token;
+                let mut is_unary: bool = false;
+                loop {
+                    if binary_op_token == Token::Minus {
+                        // check previous token to see if it's a binary op token
+                        let prev_token_index = split_index - 1;
+                        let prev_token = match tokens.get(prev_token_index) {
+                            Some(prev_token) => prev_token,
+                            None => {
+                                // must be a leading unary operator
+                                is_unary = true;
+                                break;
+                            }
+                        };
 
-            // update the token data in the expanding node
-            match ast.get_node_mut(search_data.node_handle) {
-                Some(node) => {
-                    node.data = Some(binary_op_token);
+                        if matching_tokens.contains(prev_token) {
+                            // keep looking for a binary operator
+                            split_index = prev_token_index;
+                            binary_op_token = prev_token.clone();
+                        } else {
+                            // Minus token must be a binary operator. Break
+                            break;
+                        }
+                    } else {
+                        // not a minus token, so must not be a unary operator, continue
+                        break;
+                    }
                 }
-                None => todo!("Bad handle"),
-            }
 
-            let recursive_node =
-                ast.add_child(search_data.node_handle, recursive_rule);
-            stack.push(SearchData {
-                start: search_data.start,
-                end: split_index,
-                node_handle: recursive_node,
-            });
-            let comparison_node =
-                ast.add_child(search_data.node_handle, next_rule);
-            stack.push(SearchData {
-                start: split_index + 1,
-                end: search_data.end,
-                node_handle: comparison_node,
-            });
+                (is_unary, split_index, binary_op_token)
+            };
+
+            if is_unary {
+                // modify current node with next rule
+                let node = match ast.get_node_mut(search_data.node_handle) {
+                    Some(node) => node,
+                    None => todo!(),
+                };
+                node.rule = next_rule;
+                // push back onto the stack
+                stack.push(SearchData {
+                    start: search_data.start,
+                    end: search_data.end,
+                    node_handle: search_data.node_handle,
+                });
+            } else {
+                // update the token data in the expanding node
+                match ast.get_node_mut(search_data.node_handle) {
+                    Some(node) => {
+                        node.data = Some(binary_op_token);
+                    }
+                    None => todo!("Bad handle"),
+                }
+
+                let recursive_node =
+                    ast.add_child(search_data.node_handle, recursive_rule);
+                stack.push(SearchData {
+                    start: search_data.start,
+                    end: split_index,
+                    node_handle: recursive_node,
+                });
+                let next_rule_node =
+                    ast.add_child(search_data.node_handle, next_rule);
+                stack.push(SearchData {
+                    start: split_index + 1,
+                    end: search_data.end,
+                    node_handle: next_rule_node,
+                });
+            }
         }
         None => {
             // modify current node with next rule
@@ -852,11 +899,17 @@ fn parse_unary_rule(
     match tokens.get(search_data.start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
-                let child_node = ast.add_child_with_data(
-                    search_data.node_handle,
-                    Rule::Unary,
-                    Some(first_token.clone()),
-                );
+                println!("{:?}", first_token);
+                // add data to current node
+                let node = match ast.get_node_mut(search_data.node_handle) {
+                    Some(node) => node,
+                    None => todo!(),
+                };
+                node.data = Some(first_token.clone());
+
+                // recursion for unary expansion
+                let child_node =
+                    ast.add_child(search_data.node_handle, Rule::Unary);
                 stack.push(SearchData {
                     start: search_data.start + 1,
                     end: search_data.end,
