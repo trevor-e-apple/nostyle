@@ -1925,7 +1925,25 @@ mod tests {
         let tokens =
             tokenize("a * (b - (c + d))").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let mult_div_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::MultDiv,
+                Some(Token::Times),
+            );
+
+            // LHS: a
+            {}
+            // RHS: (b - (c + d))
+            {}
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
