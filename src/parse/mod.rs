@@ -34,6 +34,7 @@ pub mod ast;
 pub mod rule;
 mod token_search;
 
+use core::panic;
 use std::todo;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -730,15 +731,18 @@ fn parse_binary_op_rule(
                 let mut is_unary: bool = false;
                 loop {
                     if binary_op_token == Token::Minus {
+                        if split_index == 0 {
+                            // leading minus operator must be a unary or a failed parse, not a binary op
+                            is_unary = true;
+                            break;
+                        }
+
                         // check previous token to see if it's a binary op token
                         let prev_token_index = split_index - 1;
                         let prev_token = match tokens.get(prev_token_index) {
                             Some(prev_token) => prev_token,
-                            None => {
-                                // must be a leading unary operator
-                                is_unary = true;
-                                break;
-                            }
+                            // This means (split_index - 1) >= tokens.len, which means find_final_matching_level_token_all_groups is messed up
+                            None => panic!(),
                         };
 
                         if matching_tokens.contains(prev_token) {
@@ -2829,10 +2833,27 @@ mod tests {
             let plus_minus_handle = expected_ast.add_child_with_data(
                 root_handle,
                 Rule::PlusMinus,
-                Some(Token::Minus),
+                Some(Token::Plus),
             );
 
-            unimplemented!("todo");
+            // LHS
+            {
+                let unary_handle = expected_ast.add_child_with_data(
+                    plus_minus_handle,
+                    Rule::Unary,
+                    Some(Token::Minus),
+                );
+                expected_ast.add_terminal_child(
+                    unary_handle,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+
+            // RHS
+            expected_ast.add_terminal_child(
+                plus_minus_handle,
+                Some(Token::IntLiteral(1)),
+            );
 
             expected_ast
         };
@@ -2957,6 +2978,16 @@ mod tests {
 
     #[test]
     fn statement_lhs_is_function() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn trailing_binary_op() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn trailing_minus() {
         unimplemented!();
     }
 }
