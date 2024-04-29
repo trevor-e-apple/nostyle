@@ -1937,9 +1937,50 @@ mod tests {
             );
 
             // LHS: a
-            {}
+            expected_ast.add_terminal_child(
+                mult_div_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
             // RHS: (b - (c + d))
-            {}
+            {
+                let expression_handle =
+                    expected_ast.add_child(mult_div_handle, Rule::Expression);
+                let plus_minus_handle = expected_ast.add_child_with_data(
+                    expression_handle,
+                    Rule::PlusMinus,
+                    Some(Token::Minus),
+                );
+
+                // LHS: b
+                expected_ast.add_terminal_child(
+                    plus_minus_handle,
+                    Some(Token::Symbol("b".to_owned())),
+                );
+
+                // RHS: (c + d)
+                {
+                    let expression_handle = expected_ast
+                        .add_child(plus_minus_handle, Rule::Expression);
+                    let plus_minus_handle = expected_ast.add_child_with_data(
+                        expression_handle,
+                        Rule::PlusMinus,
+                        Some(Token::Plus),
+                    );
+
+                    // LHS: c
+                    expected_ast.add_terminal_child(
+                        plus_minus_handle,
+                        Some(Token::Symbol("c".to_owned())),
+                    );
+
+                    // RHS: d
+                    expected_ast.add_terminal_child(
+                        plus_minus_handle,
+                        Some(Token::Symbol("d".to_owned())),
+                    );
+                }
+            }
 
             expected_ast
         };
