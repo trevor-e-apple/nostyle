@@ -46,7 +46,8 @@ use self::{
         find_final_matching_level_token,
         find_final_matching_level_token_all_groups, find_final_token,
         find_matching_group_indices, find_matching_group_indices_end,
-        find_next_matching_level_token, find_next_token,
+        find_next_matching_level_token,
+        find_next_matching_level_token_all_groups, find_next_token,
         find_prev_matching_level_token,
     },
 };
@@ -238,33 +239,36 @@ fn parse_for_rule(
 
     // set up init, condition, increment statements
     {
-        let init_semicolon_index = match find_next_token(
-            tokens,
-            &Token::EndStatement,
-            lparen_index,
-            rparen_index,
-        ) {
-            Some(index) => index,
-            None => todo!("Syntax error"),
-        };
-        let condition_semicolon_index = match find_next_token(
-            tokens,
-            &Token::EndStatement,
-            init_semicolon_index + 1,
-            rparen_index,
-        ) {
-            Some(index) => index,
-            None => todo!("Syntax error"),
-        };
-        let increment_semicolon_index = match find_next_token(
-            tokens,
-            &Token::EndStatement,
-            condition_semicolon_index + 1,
-            rparen_index,
-        ) {
-            Some(index) => index,
-            None => todo!("Syntax error"),
-        };
+        let init_semicolon_index =
+            match find_next_matching_level_token_all_groups(
+                tokens,
+                &[Token::EndStatement],
+                lparen_index + 1,
+                rparen_index,
+            ) {
+                Some(index) => index,
+                None => todo!("Syntax error"),
+            };
+        let condition_semicolon_index =
+            match find_next_matching_level_token_all_groups(
+                tokens,
+                &[Token::EndStatement],
+                init_semicolon_index + 1,
+                rparen_index,
+            ) {
+                Some(index) => index,
+                None => todo!("Syntax error"),
+            };
+        let increment_semicolon_index =
+            match find_next_matching_level_token_all_groups(
+                tokens,
+                &[Token::EndStatement],
+                condition_semicolon_index + 1,
+                rparen_index,
+            ) {
+                Some(index) => index,
+                None => todo!("Syntax error"),
+            };
 
         let init_statement_handle =
             ast.add_child(search_data.node_handle, Rule::Statement);
@@ -2808,14 +2812,118 @@ mod tests {
     fn for_loop_brace() {
         let tokens = tokenize(
             "
-            for (a = 0; a < 10; {a = a + 1; a = 2 * a}) {
+            for ({a = 0}; {a < 10}; a = {a = a + 1; (2 * a)};) {
                 b = 2 * b;
             }
         ",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        unimplemented!();
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
+
+            // init statement
+            add_assignment_statement(
+                &mut expected_ast,
+                for_handle,
+                Token::Symbol("a".to_owned()),
+                Token::IntLiteral(0),
+            );
+
+            // condition statement
+            {
+                let condition_statement =
+                    expected_ast.add_child(for_handle, Rule::Statement);
+                let condition_expression = expected_ast
+                    .add_child(condition_statement, Rule::Expression);
+                let comparison_handle = expected_ast.add_child_with_data(
+                    condition_expression,
+                    Rule::Comparison,
+                    Some(Token::LessThan),
+                );
+
+                expected_ast.add_terminal_child(
+                    comparison_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
+                // terminal side
+                expected_ast.add_terminal_child(
+                    comparison_handle,
+                    Some(Token::IntLiteral(10)),
+                );
+            }
+
+            // increment
+            {
+                let statement_handle =
+                    expected_ast.add_child(for_handle, Rule::Statement);
+
+                // lhs
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
+                // rhs
+                {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    add_expected_add_child(
+                        &mut expected_ast,
+                        expression_handle,
+                        Token::Symbol("a".to_owned()),
+                        Token::IntLiteral(1),
+                    )
+                }
+            }
+
+            // brace_expression
+            {
+                let brace_expression =
+                    expected_ast.add_child(for_handle, Rule::BraceExpression);
+                // brace statements
+                {
+                    let brace_statements = expected_ast
+                        .add_child(brace_expression, Rule::BraceStatements);
+                    let statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::Statement);
+
+                    // statement lhs: assignment
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        statement_handle,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+
+                    // statement rhs: expression
+                    {
+                        let rhs_expression = expected_ast
+                            .add_child(statement_handle, Rule::Expression);
+                        add_expected_mult_child(
+                            &mut expected_ast,
+                            rhs_expression,
+                            Token::IntLiteral(2),
+                            Token::Symbol("b".to_owned()),
+                        );
+                    }
+                }
+
+                // expression
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression,
+                    None,
+                );
+            }
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     /// multiple braced statements without an expression

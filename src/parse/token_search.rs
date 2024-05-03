@@ -124,7 +124,7 @@ pub fn find_final_matching_level_token(
     result
 }
 
-/// special case code for finding
+/// Finds the next matching token and ignoring both braces and parentheses group markers
 ///
 /// Returns None if not found
 pub fn find_final_matching_level_token_all_groups(
@@ -189,6 +189,44 @@ pub fn find_next_matching_level_token(
                 current_level += 1;
             } else if *check_token == *group_end_token {
                 current_level -= 1;
+            }
+        } else {
+            return None;
+        }
+    }
+
+    None
+}
+
+/// finds the index of the next token after starts_at and before ends_at
+/// (starts_at <= index < ends_at) that is at the same grouping level as
+/// starts_at
+///
+/// returns None if not found
+pub fn find_next_matching_level_token_all_groups(
+    tokens: &Tokens,
+    matching_tokens: &[Token],
+    starts_at: usize,
+    ends_at: usize,
+) -> Option<usize> {
+    let mut brace_level = 0;
+    let mut paren_level = 0;
+
+    for index in starts_at..ends_at {
+        if let Some(check_token) = tokens.get(index) {
+            if brace_level == 0
+                && paren_level == 0
+                && matching_tokens.contains(check_token)
+            {
+                return Some(index);
+            } else if *check_token == Token::LParen {
+                paren_level += 1;
+            } else if *check_token == Token::RParen {
+                paren_level -= 1;
+            } else if *check_token == Token::LBrace {
+                brace_level += 1;
+            } else if *check_token == Token::RBrace {
+                brace_level -= 1;
             }
         } else {
             return None;
