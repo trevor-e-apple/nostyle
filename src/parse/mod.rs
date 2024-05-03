@@ -236,38 +236,6 @@ fn parse_for_rule(
         None => todo!("Syntax error"),
     };
 
-    // set up brace expression
-    {
-        let lbrace_index = rparen_index + 1;
-        match tokens.get(lbrace_index) {
-            Some(expected_lbrace) => {
-                if *expected_lbrace != Token::LBrace {
-                    todo!("Syntax error");
-                }
-            }
-            None => todo!("Syntax error"),
-        }
-
-        let rbrace_index = match find_matching_group_indices(
-            tokens,
-            &Token::LBrace,
-            &Token::RBrace,
-            lbrace_index,
-            search_data.end,
-        ) {
-            Some(rbrace_index) => rbrace_index,
-            None => todo!("Syntax error"),
-        };
-
-        let child_handle =
-            ast.add_child(search_data.node_handle, Rule::BraceExpression);
-        stack.push(SearchData {
-            start: lbrace_index,
-            end: rbrace_index + 1,
-            node_handle: child_handle,
-        });
-    }
-
     // set up init, condition, increment statements
     {
         let init_semicolon_index = match find_next_token(
@@ -320,6 +288,38 @@ fn parse_for_rule(
             start: condition_semicolon_index + 1,
             end: increment_semicolon_index + 1,
             node_handle: increment_statement_handle,
+        });
+    }
+
+    // set up brace expression
+    {
+        let lbrace_index = rparen_index + 1;
+        match tokens.get(lbrace_index) {
+            Some(expected_lbrace) => {
+                if *expected_lbrace != Token::LBrace {
+                    todo!("Syntax error");
+                }
+            }
+            None => todo!("Syntax error"),
+        }
+
+        let rbrace_index = match find_matching_group_indices(
+            tokens,
+            &Token::LBrace,
+            &Token::RBrace,
+            lbrace_index,
+            search_data.end,
+        ) {
+            Some(rbrace_index) => rbrace_index,
+            None => todo!("Syntax error"),
+        };
+
+        let child_handle =
+            ast.add_child(search_data.node_handle, Rule::BraceExpression);
+        stack.push(SearchData {
+            start: lbrace_index,
+            end: rbrace_index + 1,
+            node_handle: child_handle,
         });
     }
 }
@@ -2703,44 +2703,6 @@ mod tests {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
             let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
-            // brace_expression
-            {
-                let brace_expression =
-                    expected_ast.add_child(for_handle, Rule::BraceExpression);
-                // brace statements
-                {
-                    let brace_statements = expected_ast
-                        .add_child(brace_expression, Rule::BraceStatements);
-                    let statement_handle = expected_ast
-                        .add_child(brace_statements, Rule::Statement);
-
-                    // statement lhs: assignment
-                    add_terminal_expression(
-                        &mut expected_ast,
-                        statement_handle,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
-
-                    // statement rhs: expression
-                    {
-                        let rhs_expression = expected_ast
-                            .add_child(statement_handle, Rule::Expression);
-                        add_expected_mult_child(
-                            &mut expected_ast,
-                            rhs_expression,
-                            Token::IntLiteral(2),
-                            Token::Symbol("b".to_owned()),
-                        );
-                    }
-                }
-
-                // expression
-                add_terminal_expression(
-                    &mut expected_ast,
-                    brace_expression,
-                    None,
-                );
-            }
 
             // init statement
             add_assignment_statement(
@@ -2796,6 +2758,45 @@ mod tests {
                         Token::IntLiteral(1),
                     )
                 }
+            }
+
+            // brace_expression
+            {
+                let brace_expression =
+                    expected_ast.add_child(for_handle, Rule::BraceExpression);
+                // brace statements
+                {
+                    let brace_statements = expected_ast
+                        .add_child(brace_expression, Rule::BraceStatements);
+                    let statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::Statement);
+
+                    // statement lhs: assignment
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        statement_handle,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+
+                    // statement rhs: expression
+                    {
+                        let rhs_expression = expected_ast
+                            .add_child(statement_handle, Rule::Expression);
+                        add_expected_mult_child(
+                            &mut expected_ast,
+                            rhs_expression,
+                            Token::IntLiteral(2),
+                            Token::Symbol("b".to_owned()),
+                        );
+                    }
+                }
+
+                // expression
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression,
+                    None,
+                );
             }
 
             expected_ast
