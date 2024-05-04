@@ -552,9 +552,9 @@ fn parse_statement_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    match find_next_token(
+    match find_next_matching_level_token_all_groups(
         tokens,
-        &Token::Assign,
+        &[Token::Assign],
         search_data.start,
         search_data.end,
     ) {
@@ -2809,10 +2809,66 @@ mod tests {
     }
 
     #[test]
+    fn nested_assignment_in_brace_expressions() {
+        let tokens =
+            tokenize("{{a = 0;}; a}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let brace_expression =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // {a = 0;};
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression, Rule::BraceStatements);
+                let statement =
+                    expected_ast.add_child(brace_statements, Rule::Statement);
+                let expression =
+                    expected_ast.add_child(statement, Rule::Expression);
+                let brace_expression =
+                    expected_ast.add_child(expression, Rule::BraceExpression);
+
+                // a = 0;
+                {
+                    let brace_statements = expected_ast
+                        .add_child(brace_expression, Rule::BraceStatements);
+
+                    add_assignment_statement(
+                        &mut expected_ast,
+                        brace_statements,
+                        Token::Symbol("a".to_owned()),
+                        Token::IntLiteral(0),
+                    );
+                }
+                // ending expression
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression,
+                    None,
+                );
+            }
+
+            // ending expression
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
     fn for_loop_brace() {
         let tokens = tokenize(
             "
-            for ({a = 0}; {a < 10}; a = {a = a + 1; (2 * a)};) {
+            for (a = 0; a < 10; a = {(a + 1)};) {
                 b = 2 * b;
             }
         ",
@@ -2873,9 +2929,15 @@ mod tests {
                 {
                     let expression_handle = expected_ast
                         .add_child(statement_handle, Rule::Expression);
+                    let brace_expression_handle = expected_ast
+                        .add_child(expression_handle, Rule::BraceExpression);
+                    let end_expression_handle = expected_ast
+                        .add_child(brace_expression_handle, Rule::Expression);
+                    let paren_group_handle = expected_ast
+                        .add_child(end_expression_handle, Rule::Expression);
                     add_expected_add_child(
                         &mut expected_ast,
-                        expression_handle,
+                        paren_group_handle,
                         Token::Symbol("a".to_owned()),
                         Token::IntLiteral(1),
                     )
