@@ -3,7 +3,9 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> brace_expression | if_else | for_loop | equality;
+expression -> brace_expression | if_else | for_loop | equality | function_call;
+function_call -> SYMBOL"(" function_arguments ")";
+function_arguments -> function_arguments? ","?;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> (expression "=" expression ";") | (expression ";");
@@ -15,19 +17,6 @@ plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
 mult_div -> (mult_div ("*" | "/") unary) | unary;
 unary -> (("!" | "-") unary) | primary;
 primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression;
-*/
-
-/* NOTES:
-TODO: delete me
-
-what is it we actually need from the parser?
-The abstract syntax tree shows the order of operations, and a tree is a natural
-way to express that b/c it's a grammar...
-but what about flow control? it's just another type of node i suppose
-break? early return?
-named loops?
-function calls?
-data structures
 */
 
 pub mod ast;
@@ -3529,6 +3518,46 @@ mod tests {
 
     #[test]
     fn trailing_minus() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_no_arguments() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_one_argument() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_multiple_arguments() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_trailing_comma() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_no_trailing_comma() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_calls_nested() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_argument_expression() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_multiple_in_expression() {
         unimplemented!();
     }
 }
