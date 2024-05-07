@@ -3,9 +3,7 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> brace_expression | if_else | for_loop | equality | function_call;
-function_call -> SYMBOL"(" function_arguments ")";
-function_arguments -> function_arguments? ","?;
+expression -> brace_expression | if_else | for_loop | equality;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> (expression "=" expression ";") | (expression ";");
@@ -15,7 +13,9 @@ equality -> (equality ("==" | "!=") comparison) | comparison;
 comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
 plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
 mult_div -> (mult_div ("*" | "/") unary) | unary;
-unary -> (("!" | "-") unary) | primary;
+unary -> (("!" | "-") unary) | function_call;
+function_call -> SYMBOL"(" function_arguments ")" | primary;
+function_arguments -> (function_arguments ",")? expression;
 primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression;
 */
 
@@ -36,7 +36,7 @@ use self::{
         find_final_matching_level_token_all_groups, find_final_token,
         find_matching_group_indices, find_matching_group_indices_end,
         find_next_matching_level_token,
-        find_next_matching_level_token_all_groups, find_next_token,
+        find_next_matching_level_token_all_groups,
         find_prev_matching_level_token,
     },
 };
@@ -142,6 +142,17 @@ pub fn parse(tokens: &Tokens) -> Ast {
             }
             Rule::Unary => {
                 parse_unary_rule(tokens, &search_data, &mut result, &mut stack);
+            }
+            Rule::FunctionCall => {
+                parse_function_call_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+            }
+            Rule::FunctionArguments => {
+                unimplemented!();
             }
             Rule::Primary => {
                 parse_primary_rule(
@@ -695,6 +706,28 @@ fn parse_if_else_rule(
     }
 }
 
+/// function for all data updates related to moving through one grammar rule and onto the next one
+fn next_rule_updates(
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+    next_rule: Rule,
+) {
+    // update current node with next rule
+    let node = match ast.get_node_mut(search_data.node_handle) {
+        Some(node) => node,
+        None => todo!(),
+    };
+    node.rule = next_rule;
+
+    // push back onto the stack
+    stack.push(SearchData {
+        start: search_data.start,
+        end: search_data.end,
+        node_handle: search_data.node_handle,
+    });
+}
+
 /// for parsing binary operations in an expression
 fn parse_binary_op_rule(
     tokens: &Tokens,
@@ -794,18 +827,7 @@ fn parse_binary_op_rule(
             }
         }
         None => {
-            // modify current node with next rule
-            let node = match ast.get_node_mut(search_data.node_handle) {
-                Some(node) => node,
-                None => todo!(),
-            };
-            node.rule = next_rule;
-            // push back onto the stack
-            stack.push(SearchData {
-                start: search_data.start,
-                end: search_data.end,
-                node_handle: search_data.node_handle,
-            });
+            next_rule_updates(search_data, ast, stack, next_rule);
         }
     }
 }
@@ -913,21 +935,81 @@ fn parse_unary_rule(
                     node_handle: child_node,
                 });
             } else {
-                // update current node with next rule
-                let node = match ast.get_node_mut(search_data.node_handle) {
-                    Some(node) => node,
-                    None => todo!(),
-                };
-                node.rule = Rule::Primary;
-                // push back onto the stack
-                stack.push(SearchData {
-                    start: search_data.start,
-                    end: search_data.end,
-                    node_handle: search_data.node_handle,
-                });
+                next_rule_updates(search_data, ast, stack, Rule::FunctionCall);
             }
         }
         None => todo!("Syntax error"),
+    }
+}
+
+fn parse_function_call_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    match tokens.get(search_data.start) {
+        Some(token) => match token {
+            Token::Symbol(_) => {
+                // check for left and right parens
+                let has_parens: bool = match tokens.get(search_data.start + 1) {
+                    Some(possible_lparen) => {
+                        if *possible_lparen == Token::LParen {
+                            match tokens.get(search_data.end - 1) {
+                                Some(possible_rparen) => {
+                                    if *possible_rparen == Token::RParen {
+                                        true
+                                    } else {
+                                        todo!("Syntax error? Starts with lparen but doesn't end with one");
+                                    }
+                                },
+                                None => todo!("Syntax error? starts with lparen but doesn't end with one"),
+                            }
+                        } else {
+                            next_rule_updates(
+                                search_data,
+                                ast,
+                                stack,
+                                Rule::Primary,
+                            );
+                            false
+                        }
+                    }
+                    None => {
+                        // if there aren't other tokens, then move on to the next rule
+                        next_rule_updates(
+                            search_data,
+                            ast,
+                            stack,
+                            Rule::Primary,
+                        );
+                        false
+                    }
+                };
+
+                if has_parens {
+                    // make function arguments child
+                    let function_arguments_handle = ast.add_child(
+                        search_data.node_handle,
+                        Rule::FunctionArguments,
+                    );
+
+                    // add child to the stack
+                    stack.push(SearchData {
+                        start: search_data.start + 2, // drop symbol and lparen
+                        end: search_data.end - 1,     // drop rparen
+                        node_handle: function_arguments_handle,
+                    });
+                }
+            }
+            _ => {
+                // if not a symbol, move on to next rule
+                next_rule_updates(search_data, ast, stack, Rule::Primary);
+            }
+        },
+        None => {
+            todo!("Syntax error? Bit weird to not find this token at all");
+        }
     }
 }
 

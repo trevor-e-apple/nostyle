@@ -11,6 +11,8 @@ pub enum Rule {
     PlusMinus,
     MultDiv,
     Unary,
+    FunctionCall,
+    FunctionArguments,
     Primary,
     Terminal,
 }
