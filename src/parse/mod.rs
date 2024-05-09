@@ -152,7 +152,12 @@ pub fn parse(tokens: &Tokens) -> Ast {
                 );
             }
             Rule::FunctionArguments => {
-                unimplemented!();
+                parse_function_arguments_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
             }
             Rule::Primary => {
                 parse_primary_rule(
@@ -1009,6 +1014,104 @@ fn parse_function_call_rule(
         },
         None => {
             todo!("Syntax error? Bit weird to not find this token at all");
+        }
+    }
+}
+
+/// Helper function for creating a child and adding it to the search stack
+fn add_child_to_search_stack(
+    parent_handle: AstNodeHandle,
+    child_rule: Rule,
+    start: usize,
+    end: usize,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    let child_handle = ast.add_child(parent_handle, child_rule);
+
+    // add child to search stack
+    stack.push(SearchData { start, end, node_handle: child_handle });
+}
+
+fn parse_function_arguments_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    // function_arguments -> (function_arguments ",")? expression;
+
+    // find the final comma in the search range
+    match find_final_matching_level_token_all_groups(
+        tokens,
+        &[Token::Comma],
+        search_data.start,
+        search_data.end,
+    ) {
+        Some((final_comma_index, _)) => {
+            // find the RHS expression start and end. if there is no left hand side,
+            // this block of code will add to the stack in place
+            let (added_to_stack, rhs_start, rhs_end) =
+                if final_comma_index == (search_data.end - 1) {
+                    let (added_to_stack, prev_arg_comma_index) =
+                        match find_final_matching_level_token_all_groups(
+                            tokens,
+                            &[Token::Comma],
+                            search_data.start,
+                            final_comma_index,
+                        ) {
+                            Some((prev_arg_comma_index, _)) => {
+                                (false, prev_arg_comma_index)
+                            }
+                            None => {
+                                add_child_to_search_stack(
+                                    search_data.node_handle,
+                                    Rule::Expression,
+                                    search_data.start,
+                                    final_comma_index,
+                                    ast,
+                                    stack,
+                                );
+                                (true, 0)
+                            }
+                        };
+                    (added_to_stack, prev_arg_comma_index, final_comma_index)
+                } else {
+                    (false, final_comma_index, search_data.end)
+                };
+
+            if !added_to_stack {
+                // LHS is the recursive side
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::FunctionArguments,
+                    search_data.start,
+                    rhs_start,
+                    ast,
+                    stack,
+                );
+
+                // RHS is an expression
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::Expression,
+                    rhs_start,
+                    rhs_end,
+                    ast,
+                    stack,
+                );
+            }
+        }
+        None => {
+            // the entire search range must be the final expression
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                search_data.start,
+                search_data.end,
+                ast,
+                stack,
+            );
         }
     }
 }
@@ -3615,6 +3718,11 @@ mod tests {
 
     #[test]
     fn function_call_multiple_arguments() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_trailing_comma_single_arg() {
         unimplemented!();
     }
 

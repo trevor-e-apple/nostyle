@@ -124,8 +124,9 @@ pub fn find_final_matching_level_token(
     result
 }
 
-/// Finds the next matching token and ignoring both braces and parentheses group markers
+/// Finds the next matching token and ignores both braces and parentheses group markers.
 ///
+/// Returns a tuple of the index that token that was found
 /// Returns None if not found
 pub fn find_final_matching_level_token_all_groups(
     tokens: &Tokens,
