@@ -1001,45 +1001,41 @@ fn parse_function_call_rule(
     stack: &mut Vec<SearchData>,
 ) {
     match tokens.get(search_data.start) {
-        Some(token) => match token {
+        Some(start_token) => match start_token {
             Token::Symbol(_) => {
                 // check for left and right parens
-                let has_parens: bool = match tokens.get(search_data.start + 1) {
+                let has_lparen: bool = match tokens.get(search_data.start + 1) {
                     Some(possible_lparen) => {
                         if *possible_lparen == Token::LParen {
-                            match tokens.get(search_data.end - 1) {
-                                Some(possible_rparen) => {
-                                    if *possible_rparen == Token::RParen {
-                                        true
-                                    } else {
-                                        todo!("Syntax error? Starts with lparen but doesn't end with one");
-                                    }
-                                },
-                                None => todo!("Syntax error? starts with lparen but doesn't end with one"),
-                            }
+                            true
                         } else {
-                            next_rule_updates(
-                                search_data,
-                                ast,
-                                stack,
-                                Rule::Primary,
-                            );
                             false
                         }
                     }
                     None => {
                         // if there aren't other tokens, then move on to the next rule
-                        next_rule_updates(
-                            search_data,
-                            ast,
-                            stack,
-                            Rule::Primary,
-                        );
                         false
                     }
                 };
+                let has_rparen = match tokens.get(search_data.end - 1) {
+                    Some(possible_rparen) => {
+                        if *possible_rparen == Token::RParen {
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    None => false,
+                };
 
-                if has_parens {
+                if has_lparen && has_rparen {
+                    // update current node to include function name
+                    let node = match ast.get_node_mut(search_data.node_handle) {
+                        Some(node) => node,
+                        None => todo!("node handle bad???"),
+                    };
+                    node.data = Some(start_token.clone());
+
                     add_child_to_search_stack(
                         search_data.node_handle,
                         Rule::FunctionArguments,
@@ -1048,6 +1044,12 @@ fn parse_function_call_rule(
                         ast,
                         stack,
                     );
+                } else if has_lparen || has_rparen {
+                    // has_lparen xor has_rparen == true
+                    todo!("Syntax error");
+                } else {
+                    // no parens, symbol can't be parsed as function call
+                    next_rule_updates(search_data, ast, stack, Rule::Primary);
                 }
             }
             _ => {
@@ -1233,7 +1235,7 @@ fn parse_primary_rule(
 
 #[cfg(test)]
 mod tests {
-    use std::println;
+    use std::{env::args, println};
 
     use super::*;
 
@@ -3736,17 +3738,60 @@ mod tests {
 
     #[test]
     fn function_call_no_arguments() {
-        unimplemented!();
+        let tokens = tokenize("test()").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+            let args_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+            add_terminal_expression(&mut expected_ast, args_handle, None);
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
     fn function_call_one_argument() {
-        unimplemented!();
+        let tokens = tokenize("test(me)").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+            let args_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+            add_terminal_expression(
+                &mut expected_ast,
+                args_handle,
+                Some(Token::Symbol("me".to_owned())),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
     fn function_call_multiple_arguments() {
-        unimplemented!();
+        let tokens =
+            tokenize("test(me, please)").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -3776,6 +3821,12 @@ mod tests {
 
     #[test]
     fn function_call_multiple_in_expression() {
+        unimplemented!();
+    }
+
+    /// test sequential function calls
+    #[test]
+    fn multiple_function_calls() {
         unimplemented!();
     }
 }

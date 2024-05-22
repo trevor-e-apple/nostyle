@@ -684,4 +684,22 @@ mod tests {
         assert_eq!(*tokens.get(1).unwrap(), Token::IntLiteral(0));
         assert_eq!(*tokens.get(2).unwrap(), Token::RBrace);
     }
+
+    #[test]
+    fn tokenize_sudden_parens_in_symbol() {
+        let s = "ab()d";
+        unimplemented!();
+    }
+
+    #[test]
+    fn tokenize_sudden_lparen_in_symbol() {
+        let s = "ab(d";
+        unimplemented!();
+    }
+
+    #[test]
+    fn tokenize_rparen_in_symbol() {
+        let s = "ab)d";
+        unimplemented!();
+    }
 }
