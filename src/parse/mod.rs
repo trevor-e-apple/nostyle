@@ -174,6 +174,43 @@ pub fn parse(tokens: &Tokens) -> Ast {
     result
 }
 
+/// function for creating a child and adding it to the search stack
+fn add_child_to_search_stack(
+    parent_handle: AstNodeHandle,
+    child_rule: Rule,
+    start: usize,
+    end: usize,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    let child_handle = ast.add_child(parent_handle, child_rule);
+
+    // add child to search stack
+    stack.push(SearchData { start, end, node_handle: child_handle });
+}
+
+/// function for all data updates related to moving through one grammar rule and onto the next one
+fn next_rule_updates(
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+    next_rule: Rule,
+) {
+    // update current node with next rule
+    let node = match ast.get_node_mut(search_data.node_handle) {
+        Some(node) => node,
+        None => todo!(),
+    };
+    node.rule = next_rule;
+
+    // push back onto the stack
+    stack.push(SearchData {
+        start: search_data.start,
+        end: search_data.end,
+        node_handle: search_data.node_handle,
+    });
+}
+
 fn parse_expression_rule(
     tokens: &Tokens,
     search_data: &SearchData,
@@ -194,13 +231,14 @@ fn parse_expression_rule(
         Rule::Equality
     };
 
-    let child_handle = ast.add_child(search_data.node_handle, rule);
-
-    stack.push(SearchData {
-        start: search_data.start,
-        end: search_data.end,
-        node_handle: child_handle,
-    });
+    add_child_to_search_stack(
+        search_data.node_handle,
+        rule,
+        search_data.start,
+        search_data.end,
+        ast,
+        stack,
+    );
 }
 
 /// parses the for rule
@@ -275,29 +313,35 @@ fn parse_for_rule(
                 None => todo!("Syntax error"),
             };
 
-        let init_statement_handle =
-            ast.add_child(search_data.node_handle, Rule::Statement);
-        stack.push(SearchData {
-            start: lparen_index + 1,
-            end: init_semicolon_index + 1,
-            node_handle: init_statement_handle,
-        });
+        // init statement
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::Statement,
+            lparen_index + 1,
+            init_semicolon_index + 1,
+            ast,
+            stack,
+        );
 
-        let condition_statement_handle =
-            ast.add_child(search_data.node_handle, Rule::Statement);
-        stack.push(SearchData {
-            start: init_semicolon_index + 1,
-            end: condition_semicolon_index + 1,
-            node_handle: condition_statement_handle,
-        });
+        // condition statement
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::Statement,
+            init_semicolon_index + 1,
+            condition_semicolon_index + 1,
+            ast,
+            stack,
+        );
 
-        let increment_statement_handle =
-            ast.add_child(search_data.node_handle, Rule::Statement);
-        stack.push(SearchData {
-            start: condition_semicolon_index + 1,
-            end: increment_semicolon_index + 1,
-            node_handle: increment_statement_handle,
-        });
+        // increment statement
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::Statement,
+            condition_semicolon_index + 1,
+            increment_semicolon_index + 1,
+            ast,
+            stack,
+        );
     }
 
     // set up brace expression
@@ -323,13 +367,14 @@ fn parse_for_rule(
             None => todo!("Syntax error"),
         };
 
-        let child_handle =
-            ast.add_child(search_data.node_handle, Rule::BraceExpression);
-        stack.push(SearchData {
-            start: lbrace_index,
-            end: rbrace_index + 1,
-            node_handle: child_handle,
-        });
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::BraceExpression,
+            lbrace_index,
+            rbrace_index + 1,
+            ast,
+            stack,
+        );
     }
 }
 
@@ -411,33 +456,34 @@ fn parse_brace_expression_rule(
         Some(end_brace_statements) => {
             // some braces don't have brace statements
             if brace_contents_start < end_brace_statements {
-                // brace statements followed by expression
-                let brace_statements_handle = ast
-                    .add_child(search_data.node_handle, Rule::BraceStatements);
-                stack.push(SearchData {
-                    start: brace_contents_start,
-                    end: end_brace_statements,
-                    node_handle: brace_statements_handle,
-                });
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::BraceStatements,
+                    brace_contents_start,
+                    end_brace_statements,
+                    ast,
+                    stack,
+                );
             }
 
-            let expression_handle =
-                ast.add_child(search_data.node_handle, Rule::Expression);
-            stack.push(SearchData {
-                start: end_brace_statements,
-                end: brace_contents_end,
-                node_handle: expression_handle,
-            });
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                end_brace_statements,
+                brace_contents_end,
+                ast,
+                stack,
+            );
         }
         None => {
-            let child_handle =
-                ast.add_child(search_data.node_handle, Rule::Expression);
-            // expression only
-            stack.push(SearchData {
-                start: brace_contents_start,
-                end: brace_contents_end,
-                node_handle: child_handle,
-            });
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                brace_contents_start,
+                brace_contents_end,
+                ast,
+                stack,
+            );
         }
     }
 }
@@ -511,13 +557,14 @@ fn parse_brace_statements_rule(
 
     // push the preceding statements for a recursive expansion
     if search_data.start < non_recursive_start_index {
-        let recursive_handle =
-            ast.add_child(search_data.node_handle, Rule::BraceStatements);
-        stack.push(SearchData {
-            start: search_data.start,
-            end: non_recursive_start_index,
-            node_handle: recursive_handle,
-        });
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::BraceStatements,
+            search_data.start,
+            non_recursive_start_index,
+            ast,
+            stack,
+        );
     }
 
     let non_recursive_start_token = match tokens.get(non_recursive_start_index)
@@ -541,13 +588,15 @@ fn parse_brace_statements_rule(
         todo!("Syntax error")
     };
 
-    let non_recursive_handle =
-        ast.add_child(search_data.node_handle, non_recursive_rule);
-    stack.push(SearchData {
-        start: non_recursive_start_index,
-        end: non_recursive_end_index,
-        node_handle: non_recursive_handle,
-    })
+    // non recursive expansion
+    add_child_to_search_stack(
+        search_data.node_handle,
+        non_recursive_rule,
+        non_recursive_start_index,
+        non_recursive_end_index,
+        ast,
+        stack,
+    );
 }
 
 /// parse statement rule
@@ -567,22 +616,24 @@ fn parse_statement_rule(
             Some(expected_end_statement) => {
                 if *expected_end_statement == Token::EndStatement {
                     // LHS expression
-                    let child_node = ast
-                        .add_child(search_data.node_handle, Rule::Expression);
-                    stack.push(SearchData {
-                        start: search_data.start,
-                        end: assign_index, // don't include assignment token
-                        node_handle: child_node,
-                    });
+                    add_child_to_search_stack(
+                        search_data.node_handle,
+                        Rule::Expression,
+                        search_data.start,
+                        assign_index,
+                        ast,
+                        stack,
+                    );
 
                     // RHS expression
-                    let child_node = ast
-                        .add_child(search_data.node_handle, Rule::Expression);
-                    stack.push(SearchData {
-                        start: assign_index + 1,  // move past assignment
-                        end: search_data.end - 1, // don't include endstatement token
-                        node_handle: child_node,
-                    });
+                    add_child_to_search_stack(
+                        search_data.node_handle,
+                        Rule::Expression,
+                        assign_index + 1,
+                        search_data.end - 1,
+                        ast,
+                        stack,
+                    );
                 } else {
                     todo!("Syntax error");
                 }
@@ -592,13 +643,14 @@ fn parse_statement_rule(
         None => match tokens.get(search_data.end - 2) {
             Some(expected_end_statement) => {
                 if *expected_end_statement != Token::EndStatement {
-                    let child_node = ast
-                        .add_child(search_data.node_handle, Rule::Expression);
-                    stack.push(SearchData {
-                        start: search_data.start,
-                        end: search_data.end - 1,
-                        node_handle: child_node,
-                    });
+                    add_child_to_search_stack(
+                        search_data.node_handle,
+                        Rule::Expression,
+                        search_data.start,
+                        search_data.end - 1,
+                        ast,
+                        stack,
+                    );
                 } else {
                     todo!("Syntax error");
                 }
@@ -644,30 +696,37 @@ fn parse_if_else_rule(
                 Some(lbrace_index) => lbrace_index,
                 None => todo!("Syntax error"),
             };
-            let if_condition_expression =
-                ast.add_child(search_data.node_handle, Rule::Expression);
-            stack.push(SearchData {
-                start: search_data.start + 1,
-                end: if_lbrace_index,
-                node_handle: if_condition_expression,
-            });
-            let if_brace_expression =
-                ast.add_child(search_data.node_handle, Rule::BraceExpression);
-            stack.push(SearchData {
-                start: if_lbrace_index,
-                end: else_index,
-                node_handle: if_brace_expression,
-            });
+
+            // condition expression
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                search_data.start + 1,
+                if_lbrace_index,
+                ast,
+                stack,
+            );
+
+            // executed expression
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::BraceExpression,
+                if_lbrace_index,
+                else_index,
+                ast,
+                stack,
+            );
 
             // to differentiate between if condition expression and else
             // expression, we always need to add the else expression second
-            let else_brace_expression =
-                ast.add_child(search_data.node_handle, Rule::Expression);
-            stack.push(SearchData {
-                start: else_index + 1,
-                end: search_data.end,
-                node_handle: else_brace_expression,
-            });
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                else_index + 1,
+                search_data.end,
+                ast,
+                stack,
+            );
         }
         None => {
             // find the final rbrace to find the end of the if brace_expression
@@ -693,44 +752,27 @@ fn parse_if_else_rule(
                 None => todo!("Syntax error"),
             };
 
-            let if_condition_expression =
-                ast.add_child(search_data.node_handle, Rule::Expression);
-            stack.push(SearchData {
-                start: search_data.start + 1,
-                end: lbrace_index,
-                node_handle: if_condition_expression,
-            });
-            let if_brace_expression =
-                ast.add_child(search_data.node_handle, Rule::BraceExpression);
-            stack.push(SearchData {
-                start: lbrace_index,
-                end: rbrace_index + 1,
-                node_handle: if_brace_expression,
-            });
+            // condition expression
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                search_data.start + 1,
+                lbrace_index,
+                ast,
+                stack,
+            );
+
+            // executed expression
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::BraceExpression,
+                lbrace_index,
+                rbrace_index + 1,
+                ast,
+                stack,
+            );
         }
     }
-}
-
-/// function for all data updates related to moving through one grammar rule and onto the next one
-fn next_rule_updates(
-    search_data: &SearchData,
-    ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
-    next_rule: Rule,
-) {
-    // update current node with next rule
-    let node = match ast.get_node_mut(search_data.node_handle) {
-        Some(node) => node,
-        None => todo!(),
-    };
-    node.rule = next_rule;
-
-    // push back onto the stack
-    stack.push(SearchData {
-        start: search_data.start,
-        end: search_data.end,
-        node_handle: search_data.node_handle,
-    });
 }
 
 /// for parsing binary operations in an expression
@@ -815,20 +857,24 @@ fn parse_binary_op_rule(
                     None => todo!("Bad handle"),
                 }
 
-                let recursive_node =
-                    ast.add_child(search_data.node_handle, recursive_rule);
-                stack.push(SearchData {
-                    start: search_data.start,
-                    end: split_index,
-                    node_handle: recursive_node,
-                });
-                let next_rule_node =
-                    ast.add_child(search_data.node_handle, next_rule);
-                stack.push(SearchData {
-                    start: split_index + 1,
-                    end: search_data.end,
-                    node_handle: next_rule_node,
-                });
+                // add children and add them to the search stack
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    recursive_rule,
+                    search_data.start,
+                    split_index,
+                    ast,
+                    stack,
+                );
+
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    next_rule,
+                    split_index + 1,
+                    search_data.end,
+                    ast,
+                    stack,
+                );
             }
         }
         None => {
@@ -932,13 +978,14 @@ fn parse_unary_rule(
                 node.data = Some(first_token.clone());
 
                 // recursion for unary expansion
-                let child_node =
-                    ast.add_child(search_data.node_handle, Rule::Unary);
-                stack.push(SearchData {
-                    start: search_data.start + 1,
-                    end: search_data.end,
-                    node_handle: child_node,
-                });
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::Unary,
+                    search_data.start + 1,
+                    search_data.end,
+                    ast,
+                    stack,
+                );
             } else {
                 next_rule_updates(search_data, ast, stack, Rule::FunctionCall);
             }
@@ -993,18 +1040,14 @@ fn parse_function_call_rule(
                 };
 
                 if has_parens {
-                    // make function arguments child
-                    let function_arguments_handle = ast.add_child(
+                    add_child_to_search_stack(
                         search_data.node_handle,
                         Rule::FunctionArguments,
+                        search_data.start + 2,
+                        search_data.end - 1,
+                        ast,
+                        stack,
                     );
-
-                    // add child to the stack
-                    stack.push(SearchData {
-                        start: search_data.start + 2, // drop symbol and lparen
-                        end: search_data.end - 1,     // drop rparen
-                        node_handle: function_arguments_handle,
-                    });
                 }
             }
             _ => {
@@ -1016,21 +1059,6 @@ fn parse_function_call_rule(
             todo!("Syntax error? Bit weird to not find this token at all");
         }
     }
-}
-
-/// Helper function for creating a child and adding it to the search stack
-fn add_child_to_search_stack(
-    parent_handle: AstNodeHandle,
-    child_rule: Rule,
-    start: usize,
-    end: usize,
-    ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
-) {
-    let child_handle = ast.add_child(parent_handle, child_rule);
-
-    // add child to search stack
-    stack.push(SearchData { start, end, node_handle: child_handle });
 }
 
 fn parse_function_arguments_rule(
