@@ -1105,9 +1105,17 @@ fn parse_function_arguments_rule(
                                 (true, 0)
                             }
                         };
-                    (added_to_stack, prev_arg_comma_index, final_comma_index)
+                    (
+                        added_to_stack,
+                        prev_arg_comma_index + 1, // don't include the comma
+                        final_comma_index,
+                    )
                 } else {
-                    (false, final_comma_index, search_data.end)
+                    (
+                        false,
+                        final_comma_index + 1, // don't include the comma
+                        search_data.end,
+                    )
                 };
 
             if !added_to_stack {
@@ -3783,12 +3791,90 @@ mod tests {
     }
 
     #[test]
-    fn function_call_multiple_arguments() {
+    fn function_call_two_arguments() {
         let tokens =
             tokenize("test(me, please)").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         let expected_ast = {
             let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+            let args_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+
+            // "me" argument
+            {
+                // recursive arg
+                let args_handle = expected_ast
+                    .add_child(args_handle, Rule::FunctionArguments);
+                add_terminal_expression(
+                    &mut expected_ast,
+                    args_handle,
+                    Some(Token::Symbol("me".to_owned())),
+                );
+            }
+
+            // "please" argument
+            add_terminal_expression(
+                &mut expected_ast,
+                args_handle,
+                Some(Token::Symbol("please".to_owned())),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_call_multiple_arguments() {
+        let tokens = tokenize("test(me, please, thanks)")
+            .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+            let args_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+
+            // "me" and "please"
+            {
+                // recursive arg
+                let args_handle = expected_ast
+                    .add_child(args_handle, Rule::FunctionArguments);
+
+                {
+                    let args_handle = expected_ast
+                        .add_child(args_handle, Rule::FunctionArguments);
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        args_handle,
+                        Some(Token::Symbol("me".to_owned())),
+                    );
+                }
+                add_terminal_expression(
+                    &mut expected_ast,
+                    args_handle,
+                    Some(Token::Symbol("please".to_owned())),
+                );
+            }
+
+            // "thanks" argument
+            add_terminal_expression(
+                &mut expected_ast,
+                args_handle,
+                Some(Token::Symbol("thanks".to_owned())),
+            );
+
             expected_ast
         };
         check_ast_equal(&ast, &expected_ast);
@@ -3805,11 +3891,6 @@ mod tests {
     }
 
     #[test]
-    fn function_call_no_trailing_comma() {
-        unimplemented!();
-    }
-
-    #[test]
     fn function_calls_nested() {
         unimplemented!();
     }
@@ -3821,6 +3902,11 @@ mod tests {
 
     #[test]
     fn function_call_multiple_in_expression() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_call_parens_in_expression() {
         unimplemented!();
     }
 

@@ -702,4 +702,9 @@ mod tests {
         let s = "ab)d";
         unimplemented!();
     }
+
+    #[test]
+    fn tokenize_function_call() {
+        let s = "ab(d)";
+    }
 }
