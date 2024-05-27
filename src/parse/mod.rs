@@ -3765,35 +3765,45 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    /// Helper function for testing a simple single argument function called "test" with arg "me".
-    /// Factored out b/c we have a trailing comma and non-trailing comma test.
-    fn function_call_one_arg_test(tokens: Tokens) {
-        let ast = parse(&tokens);
-        let expected_ast = {
-            let mut expected_ast = Ast::new();
-            let root_handle = expected_ast.add_root(Rule::Expression);
-            let function_call_handle = expected_ast.add_child_with_data(
-                root_handle,
-                Rule::FunctionCall,
-                Some(Token::Symbol("test".to_owned())),
-            );
-            let args_handle = expected_ast
-                .add_child(function_call_handle, Rule::FunctionArguments);
-            add_terminal_expression(
-                &mut expected_ast,
-                args_handle,
-                Some(Token::Symbol("me".to_owned())),
-            );
-
-            expected_ast
-        };
-        check_ast_equal(&ast, &expected_ast);
+    /// Creates the expected tree a simple single argument function.
+    fn add_function_call_one_arg(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        function_name: String,
+        arg_name: String,
+    ) {
+        let function_call_handle = ast.add_child_with_data(
+            parent_handle,
+            Rule::FunctionCall,
+            Some(Token::Symbol(function_name)),
+        );
+        let args_handle =
+            ast.add_child(function_call_handle, Rule::FunctionArguments);
+        add_terminal_expression(
+            ast,
+            args_handle,
+            Some(Token::Symbol(arg_name)),
+        );
     }
 
     #[test]
     fn function_call_one_argument() {
         let tokens = tokenize("test(me)").expect("Unexpected tokenize error");
-        function_call_one_arg_test(tokens);
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            add_function_call_one_arg(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+                "me".to_owned(),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -3836,10 +3846,122 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    /// Helper function for testing a simple multiple argument function called "test" with args
-    /// "me", "please", and "thanks".
+    /// Creates the expected tree a simple three argument function.
     /// Factored out b/c we have a trailing comma and non-trailing comma test.
-    fn function_call_multiple_arguments_test(tokens: Tokens) {
+    fn add_function_call_multiple_arguments(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        function_name: String,
+        arg1_name: String,
+        arg2_name: String,
+        arg3_name: String,
+    ) {
+        let function_call_handle = ast.add_child_with_data(
+            parent_handle,
+            Rule::FunctionCall,
+            Some(Token::Symbol(function_name)),
+        );
+        let args_handle =
+            ast.add_child(function_call_handle, Rule::FunctionArguments);
+
+        // arg 1 and 2
+        {
+            // recursive arg
+            let args_handle =
+                ast.add_child(args_handle, Rule::FunctionArguments);
+
+            {
+                let args_handle =
+                    ast.add_child(args_handle, Rule::FunctionArguments);
+                add_terminal_expression(
+                    ast,
+                    args_handle,
+                    Some(Token::Symbol(arg1_name)),
+                );
+            }
+            add_terminal_expression(
+                ast,
+                args_handle,
+                Some(Token::Symbol(arg2_name)),
+            );
+        }
+
+        // arg 3
+        add_terminal_expression(
+            ast,
+            args_handle,
+            Some(Token::Symbol(arg3_name)),
+        );
+    }
+
+    #[test]
+    fn function_call_multiple_arguments() {
+        let tokens = tokenize("test(me, please, thanks)")
+            .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            add_function_call_multiple_arguments(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+                "me".to_owned(),
+                "please".to_owned(),
+                "thanks".to_owned(),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_call_trailing_comma_single_arg() {
+        let tokens = tokenize("test(me,)").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            add_function_call_one_arg(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+                "me".to_owned(),
+            );
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_call_trailing_comma() {
+        let tokens = tokenize("test(me, please, thanks,)")
+            .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            add_function_call_multiple_arguments(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+                "me".to_owned(),
+                "please".to_owned(),
+                "thanks".to_owned(),
+            );
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_calls_nested() {
+        let tokens =
+            tokenize("test(first_inner(a, b, c,), second_inner(d(e),))")
+                .expect("Unexpected tokenize error");
+
         let ast = parse(&tokens);
         let expected_ast = {
             let mut expected_ast = Ast::new();
@@ -3852,63 +3974,45 @@ mod tests {
             let args_handle = expected_ast
                 .add_child(function_call_handle, Rule::FunctionArguments);
 
-            // "me" and "please"
+            // arg 1
             {
-                // recursive arg
                 let args_handle = expected_ast
                     .add_child(args_handle, Rule::FunctionArguments);
-
-                {
-                    let args_handle = expected_ast
-                        .add_child(args_handle, Rule::FunctionArguments);
-                    add_terminal_expression(
-                        &mut expected_ast,
-                        args_handle,
-                        Some(Token::Symbol("me".to_owned())),
-                    );
-                }
-                add_terminal_expression(
+                let expression_handle =
+                    expected_ast.add_child(args_handle, Rule::Expression);
+                add_function_call_multiple_arguments(
                     &mut expected_ast,
-                    args_handle,
-                    Some(Token::Symbol("please".to_owned())),
+                    expression_handle,
+                    "first_inner".to_owned(),
+                    "a".to_owned(),
+                    "b".to_owned(),
+                    "c".to_owned(),
                 );
             }
 
-            // "thanks" argument
-            add_terminal_expression(
-                &mut expected_ast,
-                args_handle,
-                Some(Token::Symbol("thanks".to_owned())),
-            );
-
+            // arg 2
+            {
+                let expression_handle =
+                    expected_ast.add_child(args_handle, Rule::Expression);
+                let function_call_handle = expected_ast.add_child_with_data(
+                    expression_handle,
+                    Rule::FunctionCall,
+                    Some(Token::Symbol("second_inner".to_owned())),
+                );
+                let args_handle = expected_ast
+                    .add_child(function_call_handle, Rule::FunctionArguments);
+                let expression_handle =
+                    expected_ast.add_child(args_handle, Rule::Expression);
+                add_function_call_one_arg(
+                    &mut expected_ast,
+                    expression_handle,
+                    "d".to_owned(),
+                    "e".to_owned(),
+                );
+            }
             expected_ast
         };
         check_ast_equal(&ast, &expected_ast);
-    }
-
-    #[test]
-    fn function_call_multiple_arguments() {
-        let tokens = tokenize("test(me, please, thanks)")
-            .expect("Unexpected tokenize error");
-        function_call_multiple_arguments_test(tokens);
-    }
-
-    #[test]
-    fn function_call_trailing_comma_single_arg() {
-        let tokens = tokenize("test(me,)").expect("Unexpected tokenize error");
-        function_call_one_arg_test(tokens);
-    }
-
-    #[test]
-    fn function_call_trailing_comma() {
-        let tokens = tokenize("test(me, please, thanks,)")
-            .expect("Unexpected tokenize error");
-        function_call_multiple_arguments_test(tokens);
-    }
-
-    #[test]
-    fn function_calls_nested() {
-        unimplemented!();
     }
 
     #[test]
