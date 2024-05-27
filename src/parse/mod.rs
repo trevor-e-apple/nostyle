@@ -3765,9 +3765,9 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    #[test]
-    fn function_call_one_argument() {
-        let tokens = tokenize("test(me)").expect("Unexpected tokenize error");
+    /// Helper function for testing a simple single argument function called "test" with arg "me".
+    /// Factored out b/c we have a trailing comma and non-trailing comma test.
+    fn function_call_one_arg_test(tokens: Tokens) {
         let ast = parse(&tokens);
         let expected_ast = {
             let mut expected_ast = Ast::new();
@@ -3788,6 +3788,12 @@ mod tests {
             expected_ast
         };
         check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_call_one_argument() {
+        let tokens = tokenize("test(me)").expect("Unexpected tokenize error");
+        function_call_one_arg_test(tokens);
     }
 
     #[test]
@@ -3830,10 +3836,10 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    #[test]
-    fn function_call_multiple_arguments() {
-        let tokens = tokenize("test(me, please, thanks)")
-            .expect("Unexpected tokenize error");
+    /// Helper function for testing a simple multiple argument function called "test" with args
+    /// "me", "please", and "thanks".
+    /// Factored out b/c we have a trailing comma and non-trailing comma test.
+    fn function_call_multiple_arguments_test(tokens: Tokens) {
         let ast = parse(&tokens);
         let expected_ast = {
             let mut expected_ast = Ast::new();
@@ -3881,13 +3887,23 @@ mod tests {
     }
 
     #[test]
+    fn function_call_multiple_arguments() {
+        let tokens = tokenize("test(me, please, thanks)")
+            .expect("Unexpected tokenize error");
+        function_call_multiple_arguments_test(tokens);
+    }
+
+    #[test]
     fn function_call_trailing_comma_single_arg() {
-        unimplemented!();
+        let tokens = tokenize("test(me,)").expect("Unexpected tokenize error");
+        function_call_one_arg_test(tokens);
     }
 
     #[test]
     fn function_call_trailing_comma() {
-        unimplemented!();
+        let tokens = tokenize("test(me, please, thanks,)")
+            .expect("Unexpected tokenize error");
+        function_call_multiple_arguments_test(tokens);
     }
 
     #[test]
