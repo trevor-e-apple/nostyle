@@ -30,7 +30,7 @@ fn get_word(chars: &Vec<char>, index: usize) -> String {
             None => panic!(),
         };
 
-        if ALPHABET_CHARS.contains(c) || DIGIT_CHARS.contains(c) {
+        if ALPHABET_CHARS.contains(c) || DIGIT_CHARS.contains(c) || *c == '_' {
             index += 1;
         } else {
             break;
@@ -706,5 +706,13 @@ mod tests {
     #[test]
     fn tokenize_function_call() {
         let s = "ab(d)";
+    }
+
+    #[test]
+    fn tokenize_underscore() {
+        let s = "a_b";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a_b".to_owned()));
     }
 }
