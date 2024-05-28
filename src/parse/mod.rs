@@ -3744,6 +3744,21 @@ mod tests {
         unimplemented!();
     }
 
+    fn add_function_call_no_arg(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        function_name: String,
+    ) {
+        let function_call_handle = ast.add_child_with_data(
+            parent_handle,
+            Rule::FunctionCall,
+            Some(Token::Symbol(function_name)),
+        );
+        let args_handle =
+            ast.add_child(function_call_handle, Rule::FunctionArguments);
+        add_terminal_expression(ast, args_handle, None);
+    }
+
     #[test]
     fn function_call_no_arguments() {
         let tokens = tokenize("test()").expect("Unexpected tokenize error");
@@ -3751,15 +3766,12 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let function_call_handle = expected_ast.add_child_with_data(
-                root_handle,
-                Rule::FunctionCall,
-                Some(Token::Symbol("test".to_owned())),
-            );
-            let args_handle = expected_ast
-                .add_child(function_call_handle, Rule::FunctionArguments);
-            add_terminal_expression(&mut expected_ast, args_handle, None);
 
+            add_function_call_no_arg(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+            );
             expected_ast
         };
         check_ast_equal(&ast, &expected_ast);
@@ -4061,11 +4073,6 @@ mod tests {
     }
 
     #[test]
-    fn function_call_multiple_in_expression() {
-        unimplemented!();
-    }
-
-    #[test]
     fn function_call_parens_in_expression() {
         let tokens = tokenize("test((1 + 2), please,)")
             .expect("Unexpected tokenize error");
@@ -4166,6 +4173,81 @@ mod tests {
     /// test sequential function calls
     #[test]
     fn multiple_function_calls() {
-        unimplemented!();
+        let tokens = tokenize(
+            "{
+            a = fun_a();
+            fun_b(b);
+            fun_c(a, b, c,)
+        }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+            let brace_statements_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::BraceStatements);
+
+            // fun_a()
+            {
+                // recursive call
+                let brace_statements_handle: AstNodeHandle = expected_ast
+                    .add_child(brace_statements_handle, Rule::BraceStatements);
+                let statement_handle = expected_ast
+                    .add_child(brace_statements_handle, Rule::Statement);
+
+                // LHS
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
+                // RHS
+                {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    add_function_call_no_arg(
+                        &mut expected_ast,
+                        expression_handle,
+                        "fun_a".to_owned(),
+                    );
+                }
+            }
+
+            // fun_b(b)
+            {
+                let statement_handle = expected_ast
+                    .add_child(brace_statements_handle, Rule::Statement);
+                let expression_handle =
+                    expected_ast.add_child(statement_handle, Rule::Expression);
+                add_function_call_one_arg(
+                    &mut expected_ast,
+                    expression_handle,
+                    "fun_b".to_owned(),
+                    "b".to_owned(),
+                );
+            }
+
+            // return expression
+            {
+                let expression_handle = expected_ast
+                    .add_child(brace_expression_handle, Rule::Expression);
+                add_function_call_multiple_arguments(
+                    &mut expected_ast,
+                    expression_handle,
+                    "fun_c".to_owned(),
+                    "a".to_owned(),
+                    "b".to_owned(),
+                    "c".to_owned(),
+                );
+            }
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
     }
 }
