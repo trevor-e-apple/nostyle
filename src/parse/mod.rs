@@ -3765,7 +3765,7 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    /// Creates the expected tree a simple single argument function.
+    /// Creates the expected tree a single terminal argument (e.g. symbol or number, not an expression) function.
     fn add_function_call_one_arg(
         ast: &mut Ast,
         parent_handle: AstNodeHandle,
@@ -4017,7 +4017,47 @@ mod tests {
 
     #[test]
     fn function_call_argument_expression() {
-        unimplemented!();
+        let tokens = tokenize("test(1 + 2, please,)")
+            .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+            let args_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+
+            // 1 + 2 argument
+            {
+                // recursive arg
+                let args_handle = expected_ast
+                    .add_child(args_handle, Rule::FunctionArguments);
+
+                // 1 + 2
+                let expression_handle =
+                    expected_ast.add_child(args_handle, Rule::Expression);
+                add_expected_add_child(
+                    &mut expected_ast,
+                    expression_handle,
+                    Token::IntLiteral(1),
+                    Token::IntLiteral(2),
+                );
+            }
+
+            // "please" argument
+            add_terminal_expression(
+                &mut expected_ast,
+                args_handle,
+                Some(Token::Symbol("please".to_owned())),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -4027,7 +4067,50 @@ mod tests {
 
     #[test]
     fn function_call_parens_in_expression() {
-        unimplemented!();
+        let tokens = tokenize("test((1 + 2), please,)")
+            .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+            let args_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+
+            // (1 + 2) argument
+            {
+                // recursive arg
+                let args_handle = expected_ast
+                    .add_child(args_handle, Rule::FunctionArguments);
+
+                // (1 + 2)
+                let expression_handle =
+                    expected_ast.add_child(args_handle, Rule::Expression);
+                let expression_handle =
+                    expected_ast.add_child(expression_handle, Rule::Expression);
+                // 1 + 2
+                add_expected_add_child(
+                    &mut expected_ast,
+                    expression_handle,
+                    Token::IntLiteral(1),
+                    Token::IntLiteral(2),
+                );
+            }
+
+            // "please" argument
+            add_terminal_expression(
+                &mut expected_ast,
+                args_handle,
+                Some(Token::Symbol("please".to_owned())),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     /// test sequential function calls
