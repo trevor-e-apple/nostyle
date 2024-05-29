@@ -1,6 +1,8 @@
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Rule {
     Expression,
+    FunctionDef,
+    FunctionDefParameters,
     BraceExpression,
     BraceStatements,
     Statement,

@@ -571,6 +571,26 @@ mod tests {
         assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("forr".to_string()));
     }
 
+    /// fn is tokenized as a Function token
+    #[test]
+    fn my_fn() {
+        let s = "fn";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Function);
+    }
+
+    /// fna is tokenized as a symbol token
+    #[test]
+    fn fna() {
+        let s = "fna";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("fna".to_owned()));
+    }
+
     /// test int literal
     #[test]
     fn int_literal() {

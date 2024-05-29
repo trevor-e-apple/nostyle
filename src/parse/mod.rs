@@ -3,7 +3,9 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> brace_expression | if_else | for_loop | equality;
+expression -> function_def | brace_expression | if_else | for_loop | equality;
+function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
+function_def_parameters -> (function_def_parameters",")? SYMBOL SYMBOL;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
 statement -> (expression "=" expression ";") | (expression ";");
@@ -67,6 +69,22 @@ pub fn parse(tokens: &Tokens) -> Ast {
         match rule {
             Rule::Expression => {
                 parse_expression_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+            }
+            Rule::FunctionDef => {
+                parse_function_def_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+            }
+            Rule::FunctionDefParameters => {
+                parse_function_parameters_rule(
                     tokens,
                     &search_data,
                     &mut result,
@@ -221,14 +239,13 @@ fn parse_expression_rule(
         Some(token) => token,
         None => todo!("Parse error (panic?)"),
     };
-    let rule = if *start_token == Token::LBrace {
-        Rule::BraceExpression
-    } else if *start_token == Token::If {
-        Rule::IfElse
-    } else if *start_token == Token::For {
-        Rule::ForLoop
-    } else {
-        Rule::Equality
+
+    let rule = match start_token {
+        Token::LBrace => Rule::BraceExpression,
+        Token::If => Rule::IfElse,
+        Token::For => Rule::ForLoop,
+        Token::Function => Rule::FunctionDef,
+        _ => Rule::Equality,
     };
 
     add_child_to_search_stack(
@@ -1069,8 +1086,6 @@ fn parse_function_arguments_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    // function_arguments -> (function_arguments ",")? expression;
-
     // find the final comma in the search range
     match find_final_matching_level_token_all_groups(
         tokens,
@@ -1152,6 +1167,175 @@ fn parse_function_arguments_rule(
             );
         }
     }
+}
+
+fn parse_function_def_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    match tokens.get(search_data.start) {
+        Some(start_token) => match start_token {
+            Token::Function => {}
+            _ => {
+                todo!("Something has gone horribly wrong. You should not arrive here without a leading function token.");
+            }
+        },
+        None => {
+            todo!("Syntax error? Bit weird to not find this token at all");
+        }
+    }
+
+    let lparen_index = search_data.start + 2;
+    // check for left and right parens
+    let has_lparen: bool = match tokens.get(lparen_index) {
+        Some(possible_lparen) => {
+            if *possible_lparen == Token::LParen {
+                true
+            } else {
+                false
+            }
+        }
+        None => {
+            // if there aren't other tokens, then move on to the next rule
+            false
+        }
+    };
+    let rparen_index = search_data.end - 1;
+    let has_rparen = match tokens.get(rparen_index) {
+        Some(possible_rparen) => {
+            if *possible_rparen == Token::RParen {
+                true
+            } else {
+                false
+            }
+        }
+        None => false,
+    };
+
+    if has_lparen && has_rparen {
+        // update current node to include function name
+        let node = match ast.get_node_mut(search_data.node_handle) {
+            Some(node) => node,
+            None => todo!("node handle bad???"),
+        };
+        let function_name = match tokens.get(search_data.start + 1) {
+            Some(expected_symbol) => match expected_symbol {
+                Token::Symbol(name) => name,
+                _ => {
+                    todo!("Syntax error. Function tokens must be followed by a symbol.")
+                }
+            },
+            None => todo!(),
+        };
+        node.data = Some(Token::Symbol(function_name.clone()));
+
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::FunctionDefParameters,
+            lparen_index + 1,
+            rparen_index,
+            ast,
+            stack,
+        );
+    } else if has_lparen || has_rparen {
+        // has_lparen xor has_rparen == true
+        todo!("Syntax error");
+    } else {
+        // no parens, symbol can't be parsed as function call despite leading function token.
+        // syntax error
+        todo!("Syntax error");
+    }
+}
+
+fn parse_function_parameters_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    // find the final comma in the search range
+    // match find_final_matching_level_token_all_groups(
+    //     tokens,
+    //     &[Token::Comma],
+    //     search_data.start,
+    //     search_data.end,
+    // ) {
+    //     Some((final_comma_index, _)) => {
+    //         // find the RHS expression start and end. if there is no left hand side,
+    //         // this block of code will add to the stack in place
+    //         let (added_to_stack, rhs_start, rhs_end) =
+    //             if final_comma_index == (search_data.end - 1) {
+    //                 let (added_to_stack, prev_arg_comma_index) =
+    //                     match find_final_matching_level_token_all_groups(
+    //                         tokens,
+    //                         &[Token::Comma],
+    //                         search_data.start,
+    //                         final_comma_index,
+    //                     ) {
+    //                         Some((prev_arg_comma_index, _)) => {
+    //                             (false, prev_arg_comma_index)
+    //                         }
+    //                         None => {
+    //                             add_child_to_search_stack(
+    //                                 search_data.node_handle,
+    //                                 Rule::Expression,
+    //                                 search_data.start,
+    //                                 final_comma_index,
+    //                                 ast,
+    //                                 stack,
+    //                             );
+    //                             (true, 0)
+    //                         }
+    //                     };
+    //                 (
+    //                     added_to_stack,
+    //                     prev_arg_comma_index + 1, // don't include the comma
+    //                     final_comma_index,
+    //                 )
+    //             } else {
+    //                 (
+    //                     false,
+    //                     final_comma_index + 1, // don't include the comma
+    //                     search_data.end,
+    //                 )
+    //             };
+
+    //         if !added_to_stack {
+    //             // LHS is the recursive side
+    //             add_child_to_search_stack(
+    //                 search_data.node_handle,
+    //                 Rule::FunctionArguments,
+    //                 search_data.start,
+    //                 rhs_start,
+    //                 ast,
+    //                 stack,
+    //             );
+
+    //             // RHS is an expression
+    //             add_child_to_search_stack(
+    //                 search_data.node_handle,
+    //                 Rule::Expression,
+    //                 rhs_start,
+    //                 rhs_end,
+    //                 ast,
+    //                 stack,
+    //             );
+    //         }
+    //     }
+    //     None => {
+    //         // the entire search range must be the final expression
+    //         add_child_to_search_stack(
+    //             search_data.node_handle,
+    //             Rule::Expression,
+    //             search_data.start,
+    //             search_data.end,
+    //             ast,
+    //             stack,
+    //         );
+    //     }
+    // }
 }
 
 fn parse_primary_rule(
