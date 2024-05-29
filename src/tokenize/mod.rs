@@ -688,24 +688,43 @@ mod tests {
     #[test]
     fn tokenize_sudden_parens_in_symbol() {
         let s = "ab()d";
-        unimplemented!();
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), Token::LParen);
+        assert_eq!(*tokens.get(2).unwrap(), Token::RParen);
+        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("d".to_owned()));
     }
 
     #[test]
     fn tokenize_sudden_lparen_in_symbol() {
         let s = "ab(d";
-        unimplemented!();
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), Token::LParen);
+        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("d".to_owned()));
     }
 
     #[test]
     fn tokenize_rparen_in_symbol() {
         let s = "ab)d";
-        unimplemented!();
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), Token::RParen);
+        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("d".to_owned()));
     }
 
     #[test]
     fn tokenize_function_call() {
         let s = "ab(d)";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), Token::LParen);
+        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("d".to_owned()));
+        assert_eq!(*tokens.get(3).unwrap(), Token::RParen);
     }
 
     #[test]
