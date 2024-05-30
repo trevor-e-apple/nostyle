@@ -5,10 +5,11 @@ this grammar expands in a way that matches operator precedence
 
 expression -> function_def | brace_expression | if_else | for_loop | equality;
 function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
-function_def_parameters -> (function_def_parameters",")? SYMBOL SYMBOL;
+function_def_parameters -> (function_def_parameters",")? declaration ","?;
+declaration -> SYMBOL SYMBOL;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (brace_expression | statement | if_else);
-statement -> (expression "=" expression ";") | (expression ";");
+statement -> ((expression | declaration) "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -17,7 +18,7 @@ plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
 mult_div -> (mult_div ("*" | "/") unary) | unary;
 unary -> (("!" | "-") unary) | function_call;
 function_call -> SYMBOL"(" function_arguments ")" | primary;
-function_arguments -> (function_arguments ",")? expression;
+function_arguments -> (function_arguments ",")? expression ","?;
 primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression;
 */
 
@@ -85,6 +86,14 @@ pub fn parse(tokens: &Tokens) -> Ast {
             }
             Rule::FunctionDefParameters => {
                 parse_function_parameters_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+            }
+            Rule::Declaration => {
+                parse_declaration_rule(
                     tokens,
                     &search_data,
                     &mut result,
@@ -1255,87 +1264,77 @@ fn parse_function_parameters_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    // find the final comma in the search range
-    // match find_final_matching_level_token_all_groups(
-    //     tokens,
-    //     &[Token::Comma],
-    //     search_data.start,
-    //     search_data.end,
-    // ) {
-    //     Some((final_comma_index, _)) => {
-    //         // find the RHS expression start and end. if there is no left hand side,
-    //         // this block of code will add to the stack in place
-    //         let (added_to_stack, rhs_start, rhs_end) =
-    //             if final_comma_index == (search_data.end - 1) {
-    //                 let (added_to_stack, prev_arg_comma_index) =
-    //                     match find_final_matching_level_token_all_groups(
-    //                         tokens,
-    //                         &[Token::Comma],
-    //                         search_data.start,
-    //                         final_comma_index,
-    //                     ) {
-    //                         Some((prev_arg_comma_index, _)) => {
-    //                             (false, prev_arg_comma_index)
-    //                         }
-    //                         None => {
-    //                             add_child_to_search_stack(
-    //                                 search_data.node_handle,
-    //                                 Rule::Expression,
-    //                                 search_data.start,
-    //                                 final_comma_index,
-    //                                 ast,
-    //                                 stack,
-    //                             );
-    //                             (true, 0)
-    //                         }
-    //                     };
-    //                 (
-    //                     added_to_stack,
-    //                     prev_arg_comma_index + 1, // don't include the comma
-    //                     final_comma_index,
-    //                 )
-    //             } else {
-    //                 (
-    //                     false,
-    //                     final_comma_index + 1, // don't include the comma
-    //                     search_data.end,
-    //                 )
-    //             };
+    // get the final two symbols (the type and the parameter name)
+    match tokens.get(search_data.end - 1) {
+        Some(final_token) => {
+            // check for trailing comma
+            let final_symbol_index = match final_token {
+                Token::Comma => search_data.end - 2,
+                Token::Symbol(_) => search_data.end - 1,
+                _ => todo!("Syntax error. Expected Symbol or Comma."),
+            };
+            let declaration_start = final_symbol_index - 1;
 
-    //         if !added_to_stack {
-    //             // LHS is the recursive side
-    //             add_child_to_search_stack(
-    //                 search_data.node_handle,
-    //                 Rule::FunctionArguments,
-    //                 search_data.start,
-    //                 rhs_start,
-    //                 ast,
-    //                 stack,
-    //             );
+            // LHS is the recursive side
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::FunctionDefParameters,
+                search_data.start,
+                declaration_start,
+                ast,
+                stack,
+            );
 
-    //             // RHS is an expression
-    //             add_child_to_search_stack(
-    //                 search_data.node_handle,
-    //                 Rule::Expression,
-    //                 rhs_start,
-    //                 rhs_end,
-    //                 ast,
-    //                 stack,
-    //             );
-    //         }
-    //     }
-    //     None => {
-    //         // the entire search range must be the final expression
-    //         add_child_to_search_stack(
-    //             search_data.node_handle,
-    //             Rule::Expression,
-    //             search_data.start,
-    //             search_data.end,
-    //             ast,
-    //             stack,
-    //         );
-    //     }
-    // }
+            // RHS is a declaration
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Declaration,
+                declaration_start,
+                final_symbol_index + 1,
+                ast,
+                stack,
+            );
+        }
+        None => todo!("Syntax error"),
+    }
+}
+
+fn parse_declaration_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    // check that search data is len 2
+    if (search_data.end - search_data.start) != 2 {
+        todo!("Syntax error. Declaration rule expects length 2.");
+    }
+
+    match tokens.get(search_data.start) {
+        Some(token) => match token {
+            Token::Symbol(_) => {
+                ast.add_terminal_child(
+                    search_data.node_handle,
+                    Some(token.clone()),
+                );
+            }
+            _ => todo!("Syntax error: token was not a symbol"),
+        },
+        None => todo!("Bad search range?"),
+    }
+
+    match tokens.get(search_data.start + 1) {
+        Some(token) => match token {
+            Token::Symbol(_) => {
+                ast.add_terminal_child(
+                    search_data.node_handle,
+                    Some(token.clone()),
+                );
+            }
+            _ => todo!("Syntax error: token was not a symbol"),
+        },
+        None => todo!("Bad search range?"),
+    }
 }
 
 fn parse_primary_rule(
