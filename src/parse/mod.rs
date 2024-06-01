@@ -4433,4 +4433,35 @@ mod tests {
 
         check_ast_equal(&ast, &expected_ast);
     }
+
+    #[test]
+    fn function_call_no_arg_comma() {
+        let tokens = tokenize("test(,)");
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_definition_no_args() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_definition_one_arg() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_definition_multiple_args() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_definition_trailing_comma_one_arg() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_definition_trailing_comma_multiple_args() {
+        unimplemented!();
+    }
 }
