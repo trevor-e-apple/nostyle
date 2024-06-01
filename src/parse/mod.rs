@@ -1248,6 +1248,15 @@ fn parse_function_def_rule(
             ast,
             stack,
         );
+
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::BraceExpression,
+            rparen_index + 1,
+            search_data.end,
+            ast,
+            stack,
+        );
     } else if has_lparen || has_rparen {
         // has_lparen xor has_rparen == true
         todo!("Syntax error");
@@ -4436,13 +4445,42 @@ mod tests {
 
     #[test]
     fn function_call_no_arg_comma() {
-        let tokens = tokenize("test(,)");
+        let tokens = tokenize("test(,)").expect("Unexpected tokenize error");
         unimplemented!();
     }
 
     #[test]
     fn function_definition_no_args() {
-        unimplemented!();
+        let tokens = tokenize(
+            "
+            fn test() {
+                a + b
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_def_handle =
+                expected_ast.add_child(root_handle, Rule::FunctionDef);
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
+            add_expected_add_child(
+                &mut expected_ast,
+                expression_handle,
+                Token::Symbol("a".to_owned()),
+                Token::Symbol("b".to_owned()),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
