@@ -1196,31 +1196,34 @@ fn parse_function_def_rule(
         }
     }
 
-    let lparen_index = search_data.start + 2;
     // check for left and right parens
-    let has_lparen: bool = match tokens.get(lparen_index) {
-        Some(possible_lparen) => {
-            if *possible_lparen == Token::LParen {
-                true
-            } else {
+    let (has_lparen, lparen_index, has_rparen, rparen_index) = {
+        let lparen_index = search_data.start + 2;
+        let has_lparen: bool = match tokens.get(lparen_index) {
+            Some(possible_lparen) => {
+                if *possible_lparen == Token::LParen {
+                    true
+                } else {
+                    false
+                }
+            }
+            None => {
+                // if there aren't other tokens, then move on to the next rule
                 false
             }
-        }
-        None => {
-            // if there aren't other tokens, then move on to the next rule
-            false
-        }
-    };
-    let rparen_index = search_data.end - 1;
-    let has_rparen = match tokens.get(rparen_index) {
-        Some(possible_rparen) => {
-            if *possible_rparen == Token::RParen {
-                true
-            } else {
-                false
-            }
-        }
-        None => false,
+        };
+        let (has_rparen, rparen_index) =
+            match find_next_matching_level_token_all_groups(
+                &tokens,
+                &[Token::RParen],
+                lparen_index + 1,
+                search_data.end,
+            ) {
+                Some(index) => (true, index),
+                None => (false, 0),
+            };
+
+        (has_lparen, lparen_index, has_rparen, rparen_index)
     };
 
     if has_lparen && has_rparen {
@@ -1258,8 +1261,7 @@ fn parse_function_def_rule(
             stack,
         );
     } else if has_lparen || has_rparen {
-        // has_lparen xor has_rparen == true
-        todo!("Syntax error");
+        todo!("Syntax error: function defhas lparen but no rparen");
     } else {
         // no parens, symbol can't be parsed as function call despite leading function token.
         // syntax error
@@ -1273,38 +1275,42 @@ fn parse_function_parameters_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) {
-    // get the final two symbols (the type and the parameter name)
-    match tokens.get(search_data.end - 1) {
-        Some(final_token) => {
-            // check for trailing comma
-            let final_symbol_index = match final_token {
-                Token::Comma => search_data.end - 2,
-                Token::Symbol(_) => search_data.end - 1,
-                _ => todo!("Syntax error. Expected Symbol or Comma."),
-            };
-            let declaration_start = final_symbol_index - 1;
+    if search_data.start == search_data.end {
+        // this function has no parameters. nothing to do
+    } else {
+        // get the final two symbols (the type and the parameter name)
+        match tokens.get(search_data.end - 1) {
+            Some(final_token) => {
+                // check for trailing comma
+                let final_symbol_index = match final_token {
+                    Token::Comma => search_data.end - 2,
+                    Token::Symbol(_) => search_data.end - 1,
+                    _ => todo!("Syntax error. Expected Symbol or Comma."),
+                };
+                let declaration_start = final_symbol_index - 1;
 
-            // LHS is the recursive side
-            add_child_to_search_stack(
-                search_data.node_handle,
-                Rule::FunctionDefParameters,
-                search_data.start,
-                declaration_start,
-                ast,
-                stack,
-            );
+                // LHS is the recursive side
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::FunctionDefParameters,
+                    search_data.start,
+                    declaration_start,
+                    ast,
+                    stack,
+                );
 
-            // RHS is a declaration
-            add_child_to_search_stack(
-                search_data.node_handle,
-                Rule::Declaration,
-                declaration_start,
-                final_symbol_index + 1,
-                ast,
-                stack,
-            );
+                // RHS is a declaration
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::Declaration,
+                    declaration_start,
+                    final_symbol_index + 1,
+                    ast,
+                    stack,
+                );
+            }
+            None => todo!("Syntax error"),
         }
-        None => todo!("Syntax error"),
     }
 }
 
@@ -4450,7 +4456,7 @@ mod tests {
     }
 
     #[test]
-    fn function_definition_no_args() {
+    fn function_definition_no_params() {
         let tokens = tokenize(
             "
             fn test() {
@@ -4464,9 +4470,17 @@ mod tests {
             let mut expected_ast = Ast::new();
 
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let function_def_handle =
-                expected_ast.add_child(root_handle, Rule::FunctionDef);
+            let function_def_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionDef,
+                Some(Token::Symbol("test".to_owned())),
+            );
 
+            // no parameters, so this has no children
+            expected_ast
+                .add_child(function_def_handle, Rule::FunctionDefParameters);
+
+            // brace expression
             let brace_expression_handle = expected_ast
                 .add_child(function_def_handle, Rule::BraceExpression);
             let expression_handle = expected_ast
