@@ -93,12 +93,7 @@ pub fn parse(tokens: &Tokens) -> Ast {
                 );
             }
             Rule::Declaration => {
-                parse_declaration_rule(
-                    tokens,
-                    &search_data,
-                    &mut result,
-                    &mut stack,
-                );
+                parse_declaration_rule(tokens, &search_data, &mut result);
             }
             Rule::BraceExpression => {
                 parse_brace_expression_rule(
@@ -1318,7 +1313,6 @@ fn parse_declaration_rule(
     tokens: &Tokens,
     search_data: &SearchData,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
 ) {
     // check that search data is len 2
     if (search_data.end - search_data.start) != 2 {
@@ -4498,8 +4492,70 @@ mod tests {
     }
 
     #[test]
-    fn function_definition_one_arg() {
-        unimplemented!();
+    fn function_definition_one_param() {
+        let tokens = tokenize(
+            "
+            fn test(int32 a) {
+                a + 1
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_def_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionDef,
+                Some(Token::Symbol("test".to_owned())),
+            );
+
+            // parameters
+            {
+                let function_parameters_handle = expected_ast.add_child(
+                    function_def_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // recursive side
+                expected_ast.add_child(
+                    function_parameters_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // non-recursive side
+                {
+                    let declaration_handle = expected_ast.add_child(
+                        function_parameters_handle,
+                        Rule::Declaration,
+                    );
+                    expected_ast.add_terminal_child(
+                        declaration_handle,
+                        Some(Token::Symbol("int32".to_owned())),
+                    );
+                    expected_ast.add_terminal_child(
+                        declaration_handle,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+                }
+            }
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
+            add_expected_add_child(
+                &mut expected_ast,
+                expression_handle,
+                Token::Symbol("a".to_owned()),
+                Token::IntLiteral(1),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]

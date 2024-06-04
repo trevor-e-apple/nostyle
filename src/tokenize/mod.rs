@@ -144,14 +144,6 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
             let word = get_word(&chars, index);
             if word == "if" {
                 tokens.add_token(&mut index, Token::If, 2);
-            } else if word == "int8" {
-                tokens.add_token(&mut index, Token::Int8, 4);
-            } else if word == "int16" {
-                tokens.add_token(&mut index, Token::Int16, 5);
-            } else if word == "int32" {
-                tokens.add_token(&mut index, Token::Int32, 5);
-            } else if word == "int64" {
-                tokens.add_token(&mut index, Token::Int64, 5);
             } else {
                 let word_len = word.len();
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
@@ -170,10 +162,6 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 tokens.add_token(&mut index, Token::Function, 2);
             } else if word == "for" {
                 tokens.add_token(&mut index, Token::For, 3);
-            } else if word == "float32" {
-                tokens.add_token(&mut index, Token::Float32, 4);
-            } else if word == "float64" {
-                tokens.add_token(&mut index, Token::Float64, 5);
             } else {
                 let word_len = word.len();
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
@@ -182,20 +170,6 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
             let word = get_word(&chars, index);
             if word == "while" {
                 tokens.add_token(&mut index, Token::While, 5);
-            } else {
-                let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
-            }
-        } else if *c == 'u' {
-            let word = get_word(&chars, index);
-            if word == "uint8" {
-                tokens.add_token(&mut index, Token::UInt8, 4);
-            } else if word == "uint16" {
-                tokens.add_token(&mut index, Token::UInt16, 5);
-            } else if word == "uint32" {
-                tokens.add_token(&mut index, Token::UInt32, 5);
-            } else if word == "uint64" {
-                tokens.add_token(&mut index, Token::UInt64, 5);
             } else {
                 let word_len = word.len();
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
@@ -405,12 +379,12 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 7);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Int32);
-        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_string()));
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("int32".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_owned()));
         assert_eq!(*tokens.get(2).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_string()));
+        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_owned()));
         assert_eq!(*tokens.get(4).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("c".to_string()));
+        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("c".to_owned()));
         assert_eq!(*tokens.get(6).unwrap(), Token::EndStatement);
     }
 
@@ -421,17 +395,17 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 12);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Int32);
-        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_string()));
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("int32".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_owned()));
         assert_eq!(*tokens.get(2).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_string()));
+        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_owned()));
         assert_eq!(*tokens.get(4).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("c".to_string()));
+        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("c".to_owned()));
         assert_eq!(*tokens.get(6).unwrap(), Token::EndStatement);
-        assert_eq!(*tokens.get(7).unwrap(), Token::Int32);
-        assert_eq!(*tokens.get(8).unwrap(), Token::Symbol("d".to_string()));
+        assert_eq!(*tokens.get(7).unwrap(), Token::Symbol("int32".to_owned()));
+        assert_eq!(*tokens.get(8).unwrap(), Token::Symbol("d".to_owned()));
         assert_eq!(*tokens.get(9).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(10).unwrap(), Token::Symbol("a".to_string()));
+        assert_eq!(*tokens.get(10).unwrap(), Token::Symbol("a".to_owned()));
         assert_eq!(*tokens.get(11).unwrap(), Token::EndStatement);
     }
 
