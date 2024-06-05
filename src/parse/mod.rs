@@ -4491,6 +4491,58 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
+    /// adds a one param function as the child of the given parent
+    fn add_one_param_function(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        function_name: String,
+        param_type: String,
+        param_name: String,
+    ) {
+        let function_def_handle = ast.add_child_with_data(
+            parent_handle,
+            Rule::FunctionDef,
+            Some(Token::Symbol(function_name)),
+        );
+
+        // parameters
+        {
+            let function_parameters_handle =
+                ast.add_child(function_def_handle, Rule::FunctionDefParameters);
+
+            // recursive side
+            ast.add_child(
+                function_parameters_handle,
+                Rule::FunctionDefParameters,
+            );
+
+            // non-recursive side
+            {
+                let declaration_handle = ast
+                    .add_child(function_parameters_handle, Rule::Declaration);
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param_type)),
+                );
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param_name.clone())),
+                );
+            }
+        }
+
+        let brace_expression_handle =
+            ast.add_child(function_def_handle, Rule::BraceExpression);
+        let expression_handle =
+            ast.add_child(brace_expression_handle, Rule::Expression);
+        add_expected_add_child(
+            ast,
+            expression_handle,
+            Token::Symbol(param_name.clone()),
+            Token::IntLiteral(1),
+        );
+    }
+
     #[test]
     fn function_definition_one_param() {
         let tokens = tokenize(
@@ -4506,58 +4558,91 @@ mod tests {
             let mut expected_ast = Ast::new();
 
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let function_def_handle = expected_ast.add_child_with_data(
-                root_handle,
-                Rule::FunctionDef,
-                Some(Token::Symbol("test".to_owned())),
-            );
-
-            // parameters
-            {
-                let function_parameters_handle = expected_ast.add_child(
-                    function_def_handle,
-                    Rule::FunctionDefParameters,
-                );
-
-                // recursive side
-                expected_ast.add_child(
-                    function_parameters_handle,
-                    Rule::FunctionDefParameters,
-                );
-
-                // non-recursive side
-                {
-                    let declaration_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::Declaration,
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("int32".to_owned())),
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
-                }
-            }
-
-            let brace_expression_handle = expected_ast
-                .add_child(function_def_handle, Rule::BraceExpression);
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression);
-            add_expected_add_child(
+            add_one_param_function(
                 &mut expected_ast,
-                expression_handle,
-                Token::Symbol("a".to_owned()),
-                Token::IntLiteral(1),
+                root_handle,
+                "test".to_owned(),
+                "int32".to_owned(),
+                "a".to_owned(),
             );
-
             expected_ast
         };
         check_ast_equal(&ast, &expected_ast);
     }
 
+    /// adds a two param function as the child of the given parent
+    fn add_two_param_function(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        function_name: String,
+        param1_type: String,
+        param1_name: String,
+        param2_type: String,
+        param2_name: String,
+    ) {
+        let function_def_handle = ast.add_child_with_data(
+            parent_handle,
+            Rule::FunctionDef,
+            Some(Token::Symbol(function_name)),
+        );
+
+        // parameters
+        {
+            let function_parameters_handle =
+                ast.add_child(function_def_handle, Rule::FunctionDefParameters);
+
+            // recursive side
+            {
+                let function_parameters_handle = ast.add_child(
+                    function_parameters_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // recursive side
+                ast.add_child(
+                    function_parameters_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // non-recursive side
+                let declaration_handle = ast
+                    .add_child(function_parameters_handle, Rule::Declaration);
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param1_type)),
+                );
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param1_name.clone())),
+                );
+            }
+
+            // non-recursive side
+            {
+                let declaration_handle = ast
+                    .add_child(function_parameters_handle, Rule::Declaration);
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param2_type.clone())),
+                );
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param2_name.clone())),
+                );
+            }
+        }
+
+        let brace_expression_handle =
+            ast.add_child(function_def_handle, Rule::BraceExpression);
+        let expression_handle =
+            ast.add_child(brace_expression_handle, Rule::Expression);
+        add_expected_add_child(
+            ast,
+            expression_handle,
+            Token::Symbol(param1_name.clone()),
+            Token::Symbol(param2_name.clone()),
+        );
+    }
     #[test]
     fn function_definition_multiple_params() {
         let tokens = tokenize(
@@ -4573,75 +4658,15 @@ mod tests {
             let mut expected_ast = Ast::new();
 
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let function_def_handle = expected_ast.add_child_with_data(
-                root_handle,
-                Rule::FunctionDef,
-                Some(Token::Symbol("test".to_owned())),
-            );
-
-            // parameters
-            {
-                let function_parameters_handle = expected_ast.add_child(
-                    function_def_handle,
-                    Rule::FunctionDefParameters,
-                );
-
-                // recursive side
-                {
-                    let function_parameters_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::FunctionDefParameters,
-                    );
-
-                    // recursive side
-                    expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::FunctionDefParameters,
-                    );
-
-                    // non-recursive side
-                    let declaration_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::Declaration,
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("int32".to_owned())),
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
-                }
-
-                // non-recursive side
-                {
-                    let declaration_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::Declaration,
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("int32".to_owned())),
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
-                }
-            }
-
-            let brace_expression_handle = expected_ast
-                .add_child(function_def_handle, Rule::BraceExpression);
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression);
-            add_expected_add_child(
+            add_two_param_function(
                 &mut expected_ast,
-                expression_handle,
-                Token::Symbol("a".to_owned()),
-                Token::Symbol("b".to_owned()),
+                root_handle,
+                "test".to_owned(),
+                "int32".to_owned(),
+                "a".to_owned(),
+                "int32".to_owned(),
+                "b".to_owned(),
             );
-
             expected_ast
         };
         check_ast_equal(&ast, &expected_ast);
@@ -4649,11 +4674,57 @@ mod tests {
 
     #[test]
     fn function_definition_trailing_comma_one_arg() {
-        unimplemented!();
+        let tokens = tokenize(
+            "
+            fn test(int32 a,) {
+                a + 1
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            add_one_param_function(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+                "int32".to_owned(),
+                "a".to_owned(),
+            );
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
     fn function_definition_trailing_comma_multiple_args() {
-        unimplemented!();
+        let tokens = tokenize(
+            "
+            fn test(int32 a, float32 b,) {
+                a + b
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            add_two_param_function(
+                &mut expected_ast,
+                root_handle,
+                "test".to_owned(),
+                "int32".to_owned(),
+                "a".to_owned(),
+                "float32".to_owned(),
+                "b".to_owned(),
+            );
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 }
