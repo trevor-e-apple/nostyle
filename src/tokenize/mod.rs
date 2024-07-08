@@ -166,6 +166,14 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 let word_len = word.len();
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
             }
+        } else if *c == 'r' {
+            let word = get_word(&chars, index);
+            if word == "return" {
+                tokens.add_token(&mut index, Token::Return, 6);
+            } else {
+                let word_len = word.len();
+                tokens.add_token(&mut index, Token::Symbol(word), word_len);
+            }
         } else if *c == 'w' {
             let word = get_word(&chars, index);
             if word == "while" {
@@ -727,5 +735,28 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
         assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a_b".to_owned()));
+    }
+
+    #[test]
+    fn tokenize_return() {
+        let s = "return a;";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Return);
+        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_owned()));
+        assert_eq!(*tokens.get(2).unwrap(), Token::EndStatement);
+    }
+
+    #[test]
+    fn tokenize_r_start() {
+        let s = "return r_value;";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Return);
+        assert_eq!(
+            *tokens.get(1).unwrap(),
+            Token::Symbol("r_value".to_owned())
+        );
+        assert_eq!(*tokens.get(2).unwrap(), Token::EndStatement);
     }
 }

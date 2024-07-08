@@ -7,6 +7,7 @@ pub enum Rule {
     BraceExpression,
     BraceStatements,
     Statement,
+    ReturnStatement,
     IfElse,
     ForLoop,
     Equality,

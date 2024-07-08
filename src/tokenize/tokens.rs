@@ -24,6 +24,7 @@ pub enum Token {
     EndStatement,
     Comma,
     Dot,
+    Return,
     Symbol(String),
     IntLiteral(i64),
     FloatLiteral(f64),

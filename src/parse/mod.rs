@@ -8,7 +8,8 @@ function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
 function_def_parameters -> (function_def_parameters",")? declaration ","?;
 declaration -> SYMBOL SYMBOL;
 brace_expression -> "{" brace_statements? expression "}";
-brace_statements -> brace_statements? (brace_expression | statement | if_else);
+brace_statements -> brace_statements? (brace_expression | statement | if_else | return_statement);
+return_statement -> "return" expression ";";
 statement -> ((expression | declaration) "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
@@ -113,6 +114,14 @@ pub fn parse(tokens: &Tokens) -> Ast {
             }
             Rule::Statement => {
                 parse_statement_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+            }
+            Rule::ReturnStatement => {
+                parse_return_statement(
                     tokens,
                     &search_data,
                     &mut result,
@@ -601,6 +610,8 @@ fn parse_brace_statements_rule(
 
     let non_recursive_rule = if *non_recursive_start_token == Token::If {
         Rule::IfElse
+    } else if *non_recursive_start_token == Token::Return {
+        Rule::ReturnStatement
     } else if *non_recursive_end_token == Token::EndStatement {
         Rule::Statement
     } else if *non_recursive_end_token == Token::RBrace {
@@ -679,6 +690,33 @@ fn parse_statement_rule(
             None => todo!("Syntax error"),
         },
     }
+}
+
+fn parse_return_statement_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) {
+    let start = search_data.start + 1; // exclude Return token
+    let end = search_data.end - 1; // exclude EndStatement token
+    match tokens.get(search_data.end) {
+        Some(token) => {
+            if *token != Token::EndStatement {
+                todo!("Syntax error: missing end statement");
+            }
+        }
+        None => todo!("Syntax error"),
+    }
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::Expression,
+        start,
+        end,
+        ast,
+        stack,
+    );
 }
 
 /// parse the if_else rule
