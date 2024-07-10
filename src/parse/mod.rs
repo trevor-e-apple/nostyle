@@ -692,7 +692,7 @@ fn parse_statement_rule(
     }
 }
 
-fn parse_return_statement_rule(
+fn parse_return_statement(
     tokens: &Tokens,
     search_data: &SearchData,
     ast: &mut Ast,
@@ -4763,6 +4763,112 @@ mod tests {
             );
             expected_ast
         };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn return_statement_missing_semicolon() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn function_definition_return() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, float32 b,) {
+            return a + b;
+        }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionDef,
+                Some(Token::Symbol("test".to_owned())),
+            );
+
+            // parameters
+            {
+                let function_parameters_handle = expected_ast.add_child(
+                    function_def_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // recursive side
+                {
+                    let function_parameters_handle = expected_ast.add_child(
+                        function_parameters_handle,
+                        Rule::FunctionDefParameters,
+                    );
+
+                    // recursive side
+                    expected_ast.add_child(
+                        function_parameters_handle,
+                        Rule::FunctionDefParameters,
+                    );
+
+                    // non-recursive side
+                    let declaration_handle = expected_ast.add_child(
+                        function_parameters_handle,
+                        Rule::Declaration,
+                    );
+                    expected_ast.add_terminal_child(
+                        declaration_handle,
+                        Some(Token::Symbol("int32".to_owned())),
+                    );
+                    expected_ast.add_terminal_child(
+                        declaration_handle,
+                        Some(Token::Symbol(param1_name.clone())),
+                    );
+                }
+
+                // non-recursive side
+                {
+                    let declaration_handle = expected_ast.add_child(
+                        function_parameters_handle,
+                        Rule::Declaration,
+                    );
+                    expected_ast.add_terminal_child(
+                        declaration_handle,
+                        Some(Token::Symbol("float32".to_owned())),
+                    );
+                    expected_ast.add_terminal_child(
+                        declaration_handle,
+                        Some(Token::Symbol(param2_name.clone())),
+                    );
+                }
+            }
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let return_statement = expected_ast
+                    .add_child(brace_statements, Rule::ReturnStatement);
+                add_expected_add_child(
+                    &mut expected_ast,
+                    return_statement,
+                    Token::Symbol(param1_name.clone()),
+                    Token::Symbol(param2_name.clone()),
+                );
+            }
+
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
+
+            expected_ast
+        };
+
         check_ast_equal(&ast, &expected_ast);
     }
 }
