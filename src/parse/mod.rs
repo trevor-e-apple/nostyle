@@ -699,8 +699,8 @@ fn parse_return_statement(
     stack: &mut Vec<SearchData>,
 ) {
     let start = search_data.start + 1; // exclude Return token
-    let end = search_data.end - 1; // exclude EndStatement token
-    match tokens.get(search_data.end) {
+    let end_statement_index = search_data.end - 1;
+    match tokens.get(end_statement_index) {
         Some(token) => {
             if *token != Token::EndStatement {
                 todo!("Syntax error: missing end statement");
@@ -713,7 +713,7 @@ fn parse_return_statement(
         search_data.node_handle,
         Rule::Expression,
         start,
-        end,
+        end_statement_index,
         ast,
         stack,
     );
@@ -4855,16 +4855,21 @@ mod tests {
                     .add_child(brace_expression_handle, Rule::BraceStatements);
                 let return_statement = expected_ast
                     .add_child(brace_statements, Rule::ReturnStatement);
+                let return_expression =
+                    expected_ast.add_child(return_statement, Rule::Expression);
                 add_expected_add_child(
                     &mut expected_ast,
-                    return_statement,
+                    return_expression,
                     Token::Symbol(param1_name.clone()),
                     Token::Symbol(param2_name.clone()),
                 );
             }
 
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
 
             expected_ast
         };

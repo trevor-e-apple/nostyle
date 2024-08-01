@@ -751,7 +751,7 @@ mod tests {
     fn tokenize_r_start() {
         let s = "return r_value;";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
-        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens.len(), 3);
         assert_eq!(*tokens.get(0).unwrap(), Token::Return);
         assert_eq!(
             *tokens.get(1).unwrap(),
