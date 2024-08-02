@@ -1475,6 +1475,8 @@ fn parse_primary_rule(
 mod tests {
     use std::{env::args, println};
 
+    use ast::AstNode;
+
     use super::*;
 
     use crate::tokenize::tokenize;
@@ -2767,6 +2769,57 @@ mod tests {
         };
 
         check_ast_equal(&ast, &expected_ast);
+    }
+
+    fn add_basic_if_else(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+    ) -> (AstNodeHandle, AstNodeHandle, AstNodeHandle) {
+        let if_else_handle = ast.add_child(parent_handle, Rule::IfElse);
+
+        // condition expression
+        add_terminal_expression(
+            ast,
+            if_else_handle,
+            Some(Token::Symbol("a".to_owned())),
+        );
+
+        // executed brace_expression
+        let if_brace_statements_handle = {
+            let brace_expression =
+                ast.add_child(if_else_handle, Rule::BraceExpression);
+            // brace statements
+            let brace_statements_handle =
+                ast.add_child(brace_expression, Rule::BraceStatements);
+
+            // no ending expression
+            add_terminal_expression(ast, brace_expression, None);
+
+            brace_statements_handle
+        };
+
+        // else
+        let else_brace_statements_handle = {
+            let expression_handle =
+                ast.add_child(if_else_handle, Rule::Expression);
+            let brace_expression_handle =
+                ast.add_child(expression_handle, Rule::BraceExpression);
+
+            // statements
+            let brace_statements_handle =
+                ast.add_child(brace_expression_handle, Rule::BraceStatements);
+
+            // expression
+            add_terminal_expression(ast, brace_expression_handle, None);
+
+            brace_statements_handle
+        };
+
+        (
+            if_else_handle,
+            if_brace_statements_handle,
+            else_brace_statements_handle,
+        )
     }
 
     #[test]
@@ -4771,11 +4824,73 @@ mod tests {
         unimplemented!();
     }
 
+    /// Adds the tree to the AST for a function declaration with two arguments
+    fn add_basic_function_declaration(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+        param1_name: &String,
+        param2_name: &String,
+    ) -> AstNodeHandle {
+        let function_def_handle = ast.add_child_with_data(
+            parent_handle,
+            Rule::FunctionDef,
+            Some(Token::Symbol("test".to_owned())),
+        );
+
+        // parameters
+        {
+            let function_parameters_handle =
+                ast.add_child(function_def_handle, Rule::FunctionDefParameters);
+
+            // recursive side
+            {
+                let function_parameters_handle = ast.add_child(
+                    function_parameters_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // recursive side
+                ast.add_child(
+                    function_parameters_handle,
+                    Rule::FunctionDefParameters,
+                );
+
+                // non-recursive side
+                let declaration_handle = ast
+                    .add_child(function_parameters_handle, Rule::Declaration);
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol("int32".to_owned())),
+                );
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param1_name.clone())),
+                );
+            }
+
+            // non-recursive side
+            {
+                let declaration_handle = ast
+                    .add_child(function_parameters_handle, Rule::Declaration);
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol("int32".to_owned())),
+                );
+                ast.add_terminal_child(
+                    declaration_handle,
+                    Some(Token::Symbol(param2_name.clone())),
+                );
+            }
+        }
+
+        function_def_handle
+    }
+
     #[test]
     fn function_definition_return() {
         let tokens = tokenize(
             "
-        fn test(int32 a, float32 b,) {
+        fn test(int32 a, int32 b,) {
             return a + b;
         }",
         )
@@ -4788,63 +4903,12 @@ mod tests {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
 
-            let function_def_handle = expected_ast.add_child_with_data(
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
                 root_handle,
-                Rule::FunctionDef,
-                Some(Token::Symbol("test".to_owned())),
+                &param1_name,
+                &param2_name,
             );
-
-            // parameters
-            {
-                let function_parameters_handle = expected_ast.add_child(
-                    function_def_handle,
-                    Rule::FunctionDefParameters,
-                );
-
-                // recursive side
-                {
-                    let function_parameters_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::FunctionDefParameters,
-                    );
-
-                    // recursive side
-                    expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::FunctionDefParameters,
-                    );
-
-                    // non-recursive side
-                    let declaration_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::Declaration,
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("int32".to_owned())),
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol(param1_name.clone())),
-                    );
-                }
-
-                // non-recursive side
-                {
-                    let declaration_handle = expected_ast.add_child(
-                        function_parameters_handle,
-                        Rule::Declaration,
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol("float32".to_owned())),
-                    );
-                    expected_ast.add_terminal_child(
-                        declaration_handle,
-                        Some(Token::Symbol(param2_name.clone())),
-                    );
-                }
-            }
 
             let brace_expression_handle = expected_ast
                 .add_child(function_def_handle, Rule::BraceExpression);
@@ -4863,6 +4927,227 @@ mod tests {
                     Token::Symbol(param1_name.clone()),
                     Token::Symbol(param2_name.clone()),
                 );
+            }
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_definition_multiple_returns() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            if (a > 0) {
+                return a;
+            } else {
+                return b;
+            }
+        }",
+        )
+        .expect("Unexpected tokenize error");
+
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                let return_statement = expected_ast
+                    .add_child(brace_statements, Rule::ReturnStatement);
+                let return_expression =
+                    expected_ast.add_child(return_statement, Rule::Expression);
+            }
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_definition_early_return() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            if (a > 0) {
+                return a;
+            }
+
+            return b;
+        }",
+        )
+        .expect("Unexpected tokenize error");
+
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                let return_statement = expected_ast
+                    .add_child(brace_statements, Rule::ReturnStatement);
+                let return_expression =
+                    expected_ast.add_child(return_statement, Rule::Expression);
+            }
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_definition_final_expression() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            if (a > 0) {
+                return a;
+            }
+
+            b
+        }",
+        )
+        .expect("Unexpected tokenize error");
+
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                let return_statement = expected_ast
+                    .add_child(brace_statements, Rule::ReturnStatement);
+                let return_expression =
+                    expected_ast.add_child(return_statement, Rule::Expression);
+            }
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    /// Should result in a syntax error
+    #[test]
+    fn function_definition_early_expression() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            if (a > 0) {
+                a
+            }
+
+            return b;
+        }",
+        )
+        .expect("Unexpected tokenize error");
+
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                let return_statement = expected_ast
+                    .add_child(brace_statements, Rule::ReturnStatement);
+                let return_expression =
+                    expected_ast.add_child(return_statement, Rule::Expression);
             }
 
             add_terminal_expression(
