@@ -38,12 +38,10 @@ use self::{
     ast::{Ast, AstNodeHandle},
     rule::Rule,
     token_search::{
-        find_final_matching_level_token,
         find_final_matching_level_token_all_groups, find_final_token,
         find_matching_group_indices, find_matching_group_indices_end,
         find_next_matching_level_token,
         find_next_matching_level_token_all_groups,
-        find_prev_matching_level_token,
     },
 };
 
@@ -441,13 +439,11 @@ fn parse_brace_expression_rule(
     // there are two ways for a group of brace statements to terminate, either
     // a semicolon or an rbrace
     let end_brace_statements: Option<usize> =
-        match find_final_matching_level_token(
+        match find_final_matching_level_token_all_groups(
             tokens,
             &[Token::EndStatement],
             brace_contents_start,
             brace_contents_end,
-            &Token::LBrace,
-            &Token::RBrace,
         ) {
             Some((index, _)) => Some(index + 1),
             None => None,
@@ -4508,6 +4504,47 @@ mod tests {
     }
 
     #[test]
+    fn expression_for_loop_function() {
+        let tokens = tokenize(
+            "fn test(int32 a, int32 b) {
+                for (a = 0; a < 10; a = a + 1;) {
+                    b = 2 * b;
+                }
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let param_one = "a".to_owned();
+            let param_two = "b".to_owned();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param_one,
+                &param_two,
+            );
+
+            // brace expression
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // trailing expression
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
+            add_basic_for_loop(&mut expected_ast, expression_handle);
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
     fn function_definition_no_params() {
         let tokens = tokenize(
             "
@@ -4965,6 +5002,7 @@ mod tests {
 
     #[test]
     fn function_definition_early_return() {
+        unimplemented!();
         let tokens = tokenize(
             "
         fn test(int32 a, int32 b,) {
@@ -5020,6 +5058,7 @@ mod tests {
 
     #[test]
     fn function_definition_final_expression() {
+        unimplemented!();
         let tokens = tokenize(
             "
         fn test(int32 a, int32 b,) {
@@ -5076,6 +5115,7 @@ mod tests {
     /// Should result in a syntax error
     #[test]
     fn function_definition_early_expression() {
+        unimplemented!();
         let tokens = tokenize(
             "
         fn test(int32 a, int32 b,) {
@@ -5127,5 +5167,10 @@ mod tests {
         };
 
         check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn for_loop_return() {
+        unimplemented!();
     }
 }
