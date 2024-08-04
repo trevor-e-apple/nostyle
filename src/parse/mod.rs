@@ -8,7 +8,7 @@ function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
 function_def_parameters -> (function_def_parameters",")? declaration ","?;
 declaration -> SYMBOL SYMBOL;
 brace_expression -> "{" brace_statements? expression "}";
-brace_statements -> brace_statements? (brace_expression | statement | if_else | return_statement);
+brace_statements -> brace_statements? (statement | return_statement);
 return_statement -> "return" expression ";";
 statement -> ((expression | declaration) "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
@@ -29,6 +29,8 @@ mod token_search;
 
 use core::panic;
 use std::todo;
+
+use token_search::find_prev_matching_level_token_all_groups;
 
 use crate::tokenize::tokens::{Token, Tokens};
 
@@ -438,7 +440,7 @@ fn parse_brace_expression_rule(
 
     // there are two ways for a group of brace statements to terminate, either
     // a semicolon or an rbrace
-    let end_brace_statements: Option<usize> = {
+    let end_brace_statements: Option<usize> =
         match find_final_matching_level_token(
             tokens,
             &[Token::EndStatement],
@@ -447,40 +449,9 @@ fn parse_brace_expression_rule(
             &Token::LBrace,
             &Token::RBrace,
         ) {
-            Some((final_semicolon_index, _)) => Some(final_semicolon_index + 1),
-            None => {
-                // find final rbrace
-                match find_final_token(
-                    tokens,
-                    &Token::RBrace,
-                    brace_contents_start,
-                    brace_contents_end,
-                ) {
-                    Some(final_rbrace_index) => {
-                        if final_rbrace_index == brace_contents_end - 1 {
-                            // this rbrace is for the trailing expression
-                            // find the preceding LBrace and end brace contents there
-                            match find_prev_matching_level_token(
-                                tokens,
-                                &[Token::LBrace],
-                                brace_contents_start,
-                                final_rbrace_index,
-                                &Token::LBrace,
-                                &Token::RBrace,
-                            ) {
-                                Some(lbrace_index) => Some(lbrace_index),
-                                None => todo!("Syntax error"),
-                            }
-                        } else {
-                            // this rbrace is for the brace statements
-                            Some(final_rbrace_index + 1)
-                        }
-                    }
-                    None => None, // no semicolon or rbrace
-                }
-            }
-        }
-    };
+            Some((index, _)) => Some(index + 1),
+            None => None,
+        };
 
     match end_brace_statements {
         Some(end_brace_statements) => {
@@ -527,62 +498,30 @@ fn parse_brace_statements_rule(
 ) {
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
-        let (end_token, non_recursive_end_index): (Token, usize) = {
-            let mut non_recursive_end_data: Option<(Token, usize)> = None;
-            for index in (search_data.start..search_data.end).rev() {
-                match tokens.get(index) {
-                    Some(check_token) => {
-                        if *check_token == Token::RBrace
-                            || *check_token == Token::EndStatement
-                        {
-                            non_recursive_end_data =
-                                Some((check_token.clone(), index + 1));
-                            break;
-                        }
-                    }
-                    None => todo!("Syntax error"),
-                }
-            }
-
-            match non_recursive_end_data {
-                Some(result) => result,
-                None => todo!("Syntax error"),
-            }
-        };
-
-        // find the previous RBrace or EndStatement at the same level as the
-        // end of the terminal
-        let non_recursive_start_index = if end_token == Token::RBrace {
-            // find matching lbrace
-            match find_prev_matching_level_token(
-                tokens,
-                &[Token::LBrace],
-                search_data.start,
-                non_recursive_end_index - 1,
-                &Token::LBrace,
-                &Token::RBrace,
-            ) {
-                Some(lbrace_index) => lbrace_index,
-                None => todo!("Syntax error"),
-            }
-        } else if end_token == Token::EndStatement {
-            // find end of previous statement, if it exists
-            match find_prev_matching_level_token(
+        let non_recursive_end_index: usize =
+            match find_prev_matching_level_token_all_groups(
                 tokens,
                 &[Token::EndStatement],
                 search_data.start,
-                non_recursive_end_index - 1,
-                &Token::LBrace,
-                &Token::RBrace,
+                search_data.end,
+            ) {
+                Some(index) => index,
+                None => todo!("Syntax error"),
+            };
+
+        // find the previous EndStatement at the same level as the end of the terminal
+        let non_recursive_start_index =
+            match find_prev_matching_level_token_all_groups(
+                tokens,
+                &[Token::EndStatement],
+                search_data.start,
+                non_recursive_end_index,
             ) {
                 Some(prev_end_index) => prev_end_index + 1,
                 None => search_data.start,
-            }
-        } else {
-            todo!("This should never happen? panic?");
-        };
+            };
 
-        (non_recursive_start_index, non_recursive_end_index)
+        (non_recursive_start_index, non_recursive_end_index + 1)
     };
 
     // push the preceding statements for a recursive expansion
@@ -602,22 +541,11 @@ fn parse_brace_statements_rule(
         Some(non_recursive_start_token) => non_recursive_start_token,
         None => todo!("Syntax error"),
     };
-    let non_recursive_end_token = match tokens.get(non_recursive_end_index - 1)
-    {
-        Some(non_recursive_end_token) => non_recursive_end_token,
-        None => todo!("Syntax error"),
-    };
 
-    let non_recursive_rule = if *non_recursive_start_token == Token::If {
-        Rule::IfElse
-    } else if *non_recursive_start_token == Token::Return {
+    let non_recursive_rule = if *non_recursive_start_token == Token::Return {
         Rule::ReturnStatement
-    } else if *non_recursive_end_token == Token::EndStatement {
-        Rule::Statement
-    } else if *non_recursive_end_token == Token::RBrace {
-        Rule::BraceExpression
     } else {
-        todo!("Syntax error")
+        Rule::Statement
     };
 
     // non recursive expansion
@@ -2771,57 +2699,6 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    fn add_basic_if_else(
-        ast: &mut Ast,
-        parent_handle: AstNodeHandle,
-    ) -> (AstNodeHandle, AstNodeHandle, AstNodeHandle) {
-        let if_else_handle = ast.add_child(parent_handle, Rule::IfElse);
-
-        // condition expression
-        add_terminal_expression(
-            ast,
-            if_else_handle,
-            Some(Token::Symbol("a".to_owned())),
-        );
-
-        // executed brace_expression
-        let if_brace_statements_handle = {
-            let brace_expression =
-                ast.add_child(if_else_handle, Rule::BraceExpression);
-            // brace statements
-            let brace_statements_handle =
-                ast.add_child(brace_expression, Rule::BraceStatements);
-
-            // no ending expression
-            add_terminal_expression(ast, brace_expression, None);
-
-            brace_statements_handle
-        };
-
-        // else
-        let else_brace_statements_handle = {
-            let expression_handle =
-                ast.add_child(if_else_handle, Rule::Expression);
-            let brace_expression_handle =
-                ast.add_child(expression_handle, Rule::BraceExpression);
-
-            // statements
-            let brace_statements_handle =
-                ast.add_child(brace_expression_handle, Rule::BraceStatements);
-
-            // expression
-            add_terminal_expression(ast, brace_expression_handle, None);
-
-            brace_statements_handle
-        };
-
-        (
-            if_else_handle,
-            if_brace_statements_handle,
-            else_brace_statements_handle,
-        )
-    }
-
     #[test]
     fn if_else() {
         let tokens = tokenize(
@@ -3186,6 +3063,105 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
+    fn add_basic_for_loop(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+    ) -> AstNodeHandle {
+        let for_handle = ast.add_child(parent_handle, Rule::ForLoop);
+
+        // init statement
+        add_assignment_statement(
+            ast,
+            for_handle,
+            Token::Symbol("a".to_owned()),
+            Token::IntLiteral(0),
+        );
+
+        // condition statement
+        {
+            let condition_statement =
+                ast.add_child(for_handle, Rule::Statement);
+            let condition_expression =
+                ast.add_child(condition_statement, Rule::Expression);
+            let comparison_handle = ast.add_child_with_data(
+                condition_expression,
+                Rule::Comparison,
+                Some(Token::LessThan),
+            );
+
+            ast.add_terminal_child(
+                comparison_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            // terminal side
+            ast.add_terminal_child(
+                comparison_handle,
+                Some(Token::IntLiteral(10)),
+            );
+        }
+        // increment
+        {
+            let statement_handle = ast.add_child(for_handle, Rule::Statement);
+
+            // lhs
+            add_terminal_expression(
+                ast,
+                statement_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            // rhs
+            {
+                let expression_handle =
+                    ast.add_child(statement_handle, Rule::Expression);
+                add_expected_add_child(
+                    ast,
+                    expression_handle,
+                    Token::Symbol("a".to_owned()),
+                    Token::IntLiteral(1),
+                )
+            }
+        }
+
+        // brace_expression
+        {
+            let brace_expression =
+                ast.add_child(for_handle, Rule::BraceExpression);
+            // brace statements
+            {
+                let brace_statements =
+                    ast.add_child(brace_expression, Rule::BraceStatements);
+                let statement_handle =
+                    ast.add_child(brace_statements, Rule::Statement);
+
+                // statement lhs: assignment
+                add_terminal_expression(
+                    ast,
+                    statement_handle,
+                    Some(Token::Symbol("b".to_owned())),
+                );
+
+                // statement rhs: expression
+                {
+                    let rhs_expression =
+                        ast.add_child(statement_handle, Rule::Expression);
+                    add_expected_mult_child(
+                        ast,
+                        rhs_expression,
+                        Token::IntLiteral(2),
+                        Token::Symbol("b".to_owned()),
+                    );
+                }
+            }
+
+            // expression
+            add_terminal_expression(ast, brace_expression, None);
+        }
+
+        for_handle
+    }
+
     #[test]
     fn for_loop() {
         let tokens = tokenize(
@@ -3201,102 +3177,7 @@ mod tests {
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
-            let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
-
-            // init statement
-            add_assignment_statement(
-                &mut expected_ast,
-                for_handle,
-                Token::Symbol("a".to_owned()),
-                Token::IntLiteral(0),
-            );
-
-            // condition statement
-            {
-                let condition_statement =
-                    expected_ast.add_child(for_handle, Rule::Statement);
-                let condition_expression = expected_ast
-                    .add_child(condition_statement, Rule::Expression);
-                let comparison_handle = expected_ast.add_child_with_data(
-                    condition_expression,
-                    Rule::Comparison,
-                    Some(Token::LessThan),
-                );
-
-                expected_ast.add_terminal_child(
-                    comparison_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                );
-
-                // terminal side
-                expected_ast.add_terminal_child(
-                    comparison_handle,
-                    Some(Token::IntLiteral(10)),
-                );
-            }
-            // increment
-            {
-                let statement_handle =
-                    expected_ast.add_child(for_handle, Rule::Statement);
-
-                // lhs
-                add_terminal_expression(
-                    &mut expected_ast,
-                    statement_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                );
-
-                // rhs
-                {
-                    let expression_handle = expected_ast
-                        .add_child(statement_handle, Rule::Expression);
-                    add_expected_add_child(
-                        &mut expected_ast,
-                        expression_handle,
-                        Token::Symbol("a".to_owned()),
-                        Token::IntLiteral(1),
-                    )
-                }
-            }
-
-            // brace_expression
-            {
-                let brace_expression =
-                    expected_ast.add_child(for_handle, Rule::BraceExpression);
-                // brace statements
-                {
-                    let brace_statements = expected_ast
-                        .add_child(brace_expression, Rule::BraceStatements);
-                    let statement_handle = expected_ast
-                        .add_child(brace_statements, Rule::Statement);
-
-                    // statement lhs: assignment
-                    add_terminal_expression(
-                        &mut expected_ast,
-                        statement_handle,
-                        Some(Token::Symbol("b".to_owned())),
-                    );
-
-                    // statement rhs: expression
-                    {
-                        let rhs_expression = expected_ast
-                            .add_child(statement_handle, Rule::Expression);
-                        add_expected_mult_child(
-                            &mut expected_ast,
-                            rhs_expression,
-                            Token::IntLiteral(2),
-                            Token::Symbol("b".to_owned()),
-                        );
-                    }
-                }
-
-                // expression
-                add_terminal_expression(
-                    &mut expected_ast,
-                    brace_expression,
-                    None,
-                );
-            }
+            add_basic_for_loop(&mut expected_ast, root_handle);
 
             expected_ast
         };
@@ -4538,6 +4419,92 @@ mod tests {
     fn function_call_no_arg_comma() {
         let tokens = tokenize("test(,)").expect("Unexpected tokenize error");
         unimplemented!();
+    }
+
+    #[test]
+    fn empty_function() {
+        let tokens =
+            tokenize("fn test() {}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_def_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionDef,
+                Some(Token::Symbol("test".to_owned())),
+            );
+
+            // no parameters, so this has no children
+            expected_ast
+                .add_child(function_def_handle, Rule::FunctionDefParameters);
+
+            // brace expression
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn for_loop_function() {
+        let tokens = tokenize(
+            "fn test(int32 a, int32 b) {
+                for (a = 0; a < 10; a = a + 1;) {
+                    b = 2 * b;
+                };
+                b
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            let param_one = "a".to_owned();
+            let param_two = "b".to_owned();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param_one,
+                &param_two,
+            );
+
+            // brace expression
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            let brace_statements = expected_ast
+                .add_child(brace_expression_handle, Rule::BraceStatements);
+            let statement_handle =
+                expected_ast.add_child(brace_statements, Rule::Statement);
+            let expression_handle =
+                expected_ast.add_child(statement_handle, Rule::Expression);
+            add_basic_for_loop(&mut expected_ast, expression_handle);
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                Some(Token::Symbol("b".to_owned())),
+            );
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]

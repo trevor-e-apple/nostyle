@@ -124,6 +124,38 @@ pub fn find_final_matching_level_token(
     result
 }
 
+struct AllGroupsSearch {
+    brace_level: i32,
+    paren_level: i32,
+}
+
+impl AllGroupsSearch {
+    fn new() -> Self {
+        Self { brace_level: 0, paren_level: 0 }
+    }
+
+    /// checks check_token to see if the group levels need modification
+    fn check_for_group_tokens(&mut self, check_token: &Token) {
+        if *check_token == Token::LBrace {
+            self.brace_level += 1;
+        } else if *check_token == Token::RBrace {
+            self.brace_level -= 1;
+        } else if *check_token == Token::LParen {
+            self.paren_level += 1;
+        } else if *check_token == Token::RParen {
+            self.paren_level -= 1;
+        }
+    }
+
+    fn at_starting_level(&self) -> bool {
+        self.paren_level == 0 && self.brace_level == 0
+    }
+
+    fn has_escaped(&self) -> bool {
+        self.paren_level < 0 || self.brace_level < 0
+    }
+}
+
 /// Finds the next matching token and ignores both braces and parentheses group markers.
 ///
 /// Returns a tuple of the index that token that was found
@@ -136,26 +168,18 @@ pub fn find_final_matching_level_token_all_groups(
 ) -> Option<(usize, Token)> {
     let mut result: Option<(usize, Token)> = None;
 
-    let mut brace_level = 0;
-    let mut paren_level = 0;
+    let mut group_levels = AllGroupsSearch::new();
     for index in starts_at..ends_at {
         if let Some(check_token) = tokens.get(index) {
-            if *check_token == Token::LBrace {
-                brace_level += 1;
-            } else if *check_token == Token::RBrace {
-                brace_level -= 1;
-            } else if *check_token == Token::LParen {
-                paren_level += 1;
-            } else if *check_token == Token::RParen {
-                paren_level -= 1;
-            } else if brace_level == 0
-                && paren_level == 0
+            group_levels.check_for_group_tokens(check_token);
+
+            if group_levels.at_starting_level()
                 && matching_tokens.contains(check_token)
             {
                 result = Some((index, check_token.clone()));
             }
 
-            if brace_level < 0 || paren_level < 0 {
+            if group_levels.has_escaped() {
                 // we have moved outside of the grouping that starts_at was in
                 return None;
             }
@@ -210,24 +234,16 @@ pub fn find_next_matching_level_token_all_groups(
     starts_at: usize,
     ends_at: usize,
 ) -> Option<usize> {
-    let mut brace_level = 0;
-    let mut paren_level = 0;
+    let mut group_levels = AllGroupsSearch::new();
 
     for index in starts_at..ends_at {
         if let Some(check_token) = tokens.get(index) {
-            if brace_level == 0
-                && paren_level == 0
+            if group_levels.at_starting_level()
                 && matching_tokens.contains(check_token)
             {
                 return Some(index);
-            } else if *check_token == Token::LParen {
-                paren_level += 1;
-            } else if *check_token == Token::RParen {
-                paren_level -= 1;
-            } else if *check_token == Token::LBrace {
-                brace_level += 1;
-            } else if *check_token == Token::RBrace {
-                brace_level -= 1;
+            } else {
+                group_levels.check_for_group_tokens(check_token);
             }
         } else {
             return None;
@@ -260,6 +276,36 @@ pub fn find_prev_matching_level_token(
                 current_level -= 1;
             } else if *check_token == *group_end_token {
                 current_level += 1;
+            }
+        } else {
+            return None;
+        }
+    }
+
+    None
+}
+
+/// finds the index of the token previous token before ends_at and after
+/// starts_at (starts_at <= index < ends_at) that is at the same grouping level
+/// as ends_at
+///
+/// returns None if not found
+pub fn find_prev_matching_level_token_all_groups(
+    tokens: &Tokens,
+    matching_tokens: &[Token],
+    starts_at: usize,
+    ends_at: usize,
+) -> Option<usize> {
+    let mut group_levels = AllGroupsSearch::new();
+
+    for index in (starts_at..ends_at).rev() {
+        if let Some(check_token) = tokens.get(index) {
+            if group_levels.at_starting_level()
+                && matching_tokens.contains(check_token)
+            {
+                return Some(index);
+            } else {
+                group_levels.check_for_group_tokens(check_token);
             }
         } else {
             return None;
