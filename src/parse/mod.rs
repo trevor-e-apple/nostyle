@@ -5081,14 +5081,111 @@ mod tests {
     }
 
     #[test]
-    fn function_definition_early_return() {
-        unimplemented!();
+    fn function_definition_if_else() {
         let tokens = tokenize(
             "
         fn test(int32 a, int32 b,) {
             if (a > 0) {
-                return a;
+                a
+            } else {
+                b
             }
+        }",
+        )
+        .expect("Unexpected tokenize error");
+
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
+            let if_else_handle =
+                expected_ast.add_child(expression_handle, Rule::IfElse);
+
+            // condition
+            {
+                let condition_expression_handle =
+                    expected_ast.add_child(if_else_handle, Rule::Expression);
+
+                // b/c of the parens, we actually have two expressions in a row
+                let condition_expression_handle = expected_ast
+                    .add_child(condition_expression_handle, Rule::Expression);
+
+                let equality_handle = expected_ast.add_child_with_data(
+                    condition_expression_handle,
+                    Rule::Comparison,
+                    Some(Token::GreaterThan),
+                );
+
+                // LHS
+                expected_ast.add_child_with_data(
+                    equality_handle,
+                    Rule::Terminal,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
+                // RHS
+                expected_ast.add_child_with_data(
+                    equality_handle,
+                    Rule::Terminal,
+                    Some(Token::IntLiteral(0)),
+                );
+            }
+
+            // if side
+            {
+                let brace_expression_handle = expected_ast
+                    .add_child(if_else_handle, Rule::BraceExpression);
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+            }
+
+            // else side
+            {
+                let expression_handle =
+                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let brace_expression_handle = expected_ast
+                    .add_child(expression_handle, Rule::BraceExpression);
+
+                add_terminal_expression(
+                    &mut expected_ast,
+                    brace_expression_handle,
+                    Some(Token::Symbol("b".to_owned())),
+                );
+            }
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    fn function_definition_early_return() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            if a > 0 {
+                return a;
+            };
 
             return b;
         }",
@@ -5118,10 +5215,78 @@ mod tests {
                 let brace_statements = expected_ast
                     .add_child(brace_expression_handle, Rule::BraceStatements);
 
-                let return_statement = expected_ast
-                    .add_child(brace_statements, Rule::ReturnStatement);
-                let return_expression =
-                    expected_ast.add_child(return_statement, Rule::Expression);
+                // first statement
+                {
+                    let brace_statements = expected_ast
+                        .add_child(brace_statements, Rule::BraceStatements);
+                    let statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::Statement);
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    let if_else_handle =
+                        expected_ast.add_child(expression_handle, Rule::IfElse);
+
+                    // condition
+                    {
+                        let condition_expression_handle = expected_ast
+                            .add_child(if_else_handle, Rule::Expression);
+                        let equality_handle = expected_ast.add_child_with_data(
+                            condition_expression_handle,
+                            Rule::Comparison,
+                            Some(Token::GreaterThan),
+                        );
+
+                        // LHS
+                        expected_ast.add_child_with_data(
+                            equality_handle,
+                            Rule::Terminal,
+                            Some(Token::Symbol("a".to_owned())),
+                        );
+
+                        // RHS
+                        expected_ast.add_child_with_data(
+                            equality_handle,
+                            Rule::Terminal,
+                            Some(Token::IntLiteral(0)),
+                        );
+                    }
+
+                    // if side
+                    {
+                        let brace_expression_handle = expected_ast
+                            .add_child(if_else_handle, Rule::BraceExpression);
+                        let brace_statements_handle = expected_ast.add_child(
+                            brace_expression_handle,
+                            Rule::BraceStatements,
+                        );
+                        let return_statement_handle = expected_ast.add_child(
+                            brace_statements_handle,
+                            Rule::ReturnStatement,
+                        );
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            return_statement_handle,
+                            Some(Token::Symbol("a".to_owned())),
+                        );
+
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            brace_expression_handle,
+                            None,
+                        );
+                    }
+                }
+
+                // second statement
+                {
+                    let return_statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::ReturnStatement);
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        return_statement_handle,
+                        Some(Token::Symbol("b".to_owned())),
+                    );
+                }
             }
 
             add_terminal_expression(
@@ -5251,6 +5416,39 @@ mod tests {
 
     #[test]
     fn for_loop_return() {
+        unimplemented!();
+    }
+
+    /// should result in a syntax error
+    #[test]
+    fn multiple_expressions() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            {
+                a
+            }
+
+            {
+                b
+            }
+        }",
+        )
+        .expect("Unexpected tokenize error");
+        unimplemented!();
+    }
+
+    /// technically valid syntax, but results in dead code
+    #[test]
+    fn return_then_expression() {
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            return a;
+            b
+        }",
+        )
+        .expect("Unexpected tokenize error");
         unimplemented!();
     }
 }
