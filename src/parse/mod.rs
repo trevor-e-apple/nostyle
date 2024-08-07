@@ -712,24 +712,13 @@ fn parse_if_else_rule(
             );
         }
         None => {
-            // find the final rbrace to find the end of the if brace_expression
-            let rbrace_index = match find_final_token(
-                tokens,
-                &Token::RBrace,
-                search_data.start + 1,
-                search_data.end,
-            ) {
-                Some(rbrace_index) => rbrace_index,
-                None => todo!("Syntax error"),
-            };
-
             // find the matching lbrace for this rbrace
             let lbrace_index = match find_matching_group_indices_end(
                 tokens,
                 &Token::LBrace,
                 &Token::RBrace,
                 search_data.start,
-                rbrace_index,
+                search_data.end,
             ) {
                 Some(lbrace_index) => lbrace_index,
                 None => todo!("Syntax error"),
@@ -750,7 +739,7 @@ fn parse_if_else_rule(
                 search_data.node_handle,
                 Rule::BraceExpression,
                 lbrace_index,
-                rbrace_index + 1,
+                search_data.end,
                 ast,
                 stack,
             );
@@ -5413,8 +5402,8 @@ mod tests {
 
     /// Should result in a syntax error
     #[test]
+    #[should_panic]
     fn function_definition_early_expression() {
-        unimplemented!();
         let tokens = tokenize(
             "
         fn test(int32 a, int32 b,) {
@@ -5428,44 +5417,7 @@ mod tests {
         .expect("Unexpected tokenize error");
 
         let ast = parse(&tokens);
-        let expected_ast = {
-            let param1_name = "a".to_owned();
-            let param2_name = "b".to_owned();
-
-            let mut expected_ast = Ast::new();
-            let root_handle = expected_ast.add_root(Rule::Expression);
-
-            let function_def_handle = add_basic_function_declaration(
-                &mut expected_ast,
-                root_handle,
-                &param1_name,
-                &param2_name,
-            );
-
-            let brace_expression_handle = expected_ast
-                .add_child(function_def_handle, Rule::BraceExpression);
-
-            // brace statements
-            {
-                let brace_statements = expected_ast
-                    .add_child(brace_expression_handle, Rule::BraceStatements);
-
-                let return_statement = expected_ast
-                    .add_child(brace_statements, Rule::ReturnStatement);
-                let return_expression =
-                    expected_ast.add_child(return_statement, Rule::Expression);
-            }
-
-            add_terminal_expression(
-                &mut expected_ast,
-                brace_expression_handle,
-                None,
-            );
-
-            expected_ast
-        };
-
-        check_ast_equal(&ast, &expected_ast);
+        ast.print();
     }
 
     #[test]
