@@ -5303,13 +5303,12 @@ mod tests {
 
     #[test]
     fn function_definition_final_expression() {
-        unimplemented!();
         let tokens = tokenize(
             "
         fn test(int32 a, int32 b,) {
-            if (a > 0) {
+            if a > 0 {
                 return a;
-            }
+            };
 
             b
         }",
@@ -5339,16 +5338,71 @@ mod tests {
                 let brace_statements = expected_ast
                     .add_child(brace_expression_handle, Rule::BraceStatements);
 
-                let return_statement = expected_ast
-                    .add_child(brace_statements, Rule::ReturnStatement);
-                let return_expression =
-                    expected_ast.add_child(return_statement, Rule::Expression);
+                // first statement
+                {
+                    let statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::Statement);
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    let if_else_handle =
+                        expected_ast.add_child(expression_handle, Rule::IfElse);
+
+                    // condition
+                    {
+                        let condition_expression_handle = expected_ast
+                            .add_child(if_else_handle, Rule::Expression);
+                        let equality_handle = expected_ast.add_child_with_data(
+                            condition_expression_handle,
+                            Rule::Comparison,
+                            Some(Token::GreaterThan),
+                        );
+
+                        // LHS
+                        expected_ast.add_child_with_data(
+                            equality_handle,
+                            Rule::Terminal,
+                            Some(Token::Symbol("a".to_owned())),
+                        );
+
+                        // RHS
+                        expected_ast.add_child_with_data(
+                            equality_handle,
+                            Rule::Terminal,
+                            Some(Token::IntLiteral(0)),
+                        );
+                    }
+
+                    // if side
+                    {
+                        let brace_expression_handle = expected_ast
+                            .add_child(if_else_handle, Rule::BraceExpression);
+                        let brace_statements_handle = expected_ast.add_child(
+                            brace_expression_handle,
+                            Rule::BraceStatements,
+                        );
+                        let return_statement_handle = expected_ast.add_child(
+                            brace_statements_handle,
+                            Rule::ReturnStatement,
+                        );
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            return_statement_handle,
+                            Some(Token::Symbol("a".to_owned())),
+                        );
+
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            brace_expression_handle,
+                            None,
+                        );
+                    }
+                }
             }
 
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
-                None,
+                Some(Token::Symbol("b".to_owned())),
             );
 
             expected_ast
