@@ -436,8 +436,6 @@ fn parse_brace_expression_rule(
     let brace_contents_start = search_data.start + 1;
     let brace_contents_end = search_data.end - 1;
 
-    // there are two ways for a group of brace statements to terminate, either
-    // a semicolon or an rbrace
     let end_brace_statements: Option<usize> =
         match find_final_matching_level_token_all_groups(
             tokens,
@@ -1319,6 +1317,14 @@ fn parse_primary_rule(
                 | Token::IntLiteral(_)
                 | Token::FloatLiteral(_)
                 | Token::StringLiteral(_) => {
+                    if (search_data.end - search_data.start) != 1 {
+                        todo!(
+                            concat!(
+                                "Syntax error: primary did not begin with grouping token,",
+                                "but contained more than one token."
+                            )
+                        );
+                    }
                     // update current primary to terminal
                     let node = match ast.get_node_mut(search_data.node_handle) {
                         Some(node) => node,
@@ -5427,6 +5433,7 @@ mod tests {
 
     /// should result in a syntax error
     #[test]
+    #[should_panic]
     fn multiple_expressions() {
         let tokens = tokenize(
             "
@@ -5441,7 +5448,8 @@ mod tests {
         }",
         )
         .expect("Unexpected tokenize error");
-        unimplemented!();
+        let ast = parse(&tokens);
+        ast.print();
     }
 
     /// technically valid syntax, but results in dead code
