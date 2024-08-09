@@ -3055,7 +3055,7 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
-    fn add_basic_for_loop(
+    fn add_for_loop_declaration(
         ast: &mut Ast,
         parent_handle: AstNodeHandle,
     ) -> AstNodeHandle {
@@ -3115,6 +3115,15 @@ mod tests {
                 )
             }
         }
+
+        for_handle
+    }
+
+    fn add_basic_for_loop(
+        ast: &mut Ast,
+        parent_handle: AstNodeHandle,
+    ) -> AstNodeHandle {
+        let for_handle = add_for_loop_declaration(ast, parent_handle);
 
         // brace_expression
         {
@@ -5428,7 +5437,84 @@ mod tests {
 
     #[test]
     fn for_loop_return() {
-        unimplemented!();
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            for (a = 0; a < 10; a = a + 1;) {
+                return b;
+            };
+        }
+        ",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let statement_handle =
+                    expected_ast.add_child(brace_statements, Rule::Statement);
+                let expression_handle =
+                    expected_ast.add_child(statement_handle, Rule::Expression);
+
+                let for_handle = add_for_loop_declaration(
+                    &mut expected_ast,
+                    expression_handle,
+                );
+                // for loop brace_expression
+                {
+                    let brace_expression = expected_ast
+                        .add_child(for_handle, Rule::BraceExpression);
+                    // brace statements
+                    {
+                        let brace_statements = expected_ast
+                            .add_child(brace_expression, Rule::BraceStatements);
+                        let return_statement_handle = expected_ast
+                            .add_child(brace_statements, Rule::ReturnStatement);
+
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            return_statement_handle,
+                            Some(Token::Symbol("b".to_owned())),
+                        );
+                    }
+
+                    // expression
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        brace_expression,
+                        None,
+                    );
+                }
+            }
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     /// should result in a syntax error
