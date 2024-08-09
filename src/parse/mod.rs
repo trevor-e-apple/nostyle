@@ -5463,6 +5463,52 @@ mod tests {
         }",
         )
         .expect("Unexpected tokenize error");
-        unimplemented!();
+
+        let ast = parse(&tokens);
+
+        let expected_ast = {
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
+
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &param1_name,
+                &param2_name,
+            );
+
+            let brace_expression_handle = expected_ast
+                .add_child(function_def_handle, Rule::BraceExpression);
+
+            // brace statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression_handle, Rule::BraceStatements);
+
+                // first statement
+                {
+                    let return_statement_handle = expected_ast
+                        .add_child(brace_statements, Rule::ReturnStatement);
+                    add_terminal_expression(
+                        &mut expected_ast,
+                        return_statement_handle,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+                }
+            }
+
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                Some(Token::Symbol("b".to_owned())),
+            );
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
     }
 }
