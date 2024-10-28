@@ -99,6 +99,10 @@ impl Ast {
     /// whether or not two ast's are equivalent
     #[cfg(test)]
     pub fn equivalent(a: &Self, b: &Self) -> bool {
+        if a.nodes.len() == 0 && b.nodes.len() == 0 {
+            return true;
+        }
+
         let a_root = if let Some(a_root) = a.get_root() {
             a_root
         } else {

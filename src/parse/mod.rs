@@ -56,6 +56,11 @@ struct SearchData {
 pub fn parse(tokens: &Tokens) -> Ast {
     let mut result = Ast::new();
 
+    // Handle special case where empty list of tokens is passed in
+    if tokens.len() == 0 {
+        return result;
+    }
+
     let root_handle = result.add_root(Rule::Expression);
 
     let mut stack: Vec<SearchData> = vec![SearchData {

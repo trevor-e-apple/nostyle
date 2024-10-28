@@ -121,8 +121,11 @@ mod tests {
     /// test empty parse
     #[test]
     fn empty_parse() {
-        let tokens = tokenize("");
-        unimplemented!();
+        let tokens = tokenize("").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = Ast::new();
+
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
