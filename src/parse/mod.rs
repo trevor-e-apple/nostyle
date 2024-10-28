@@ -39,7 +39,7 @@ use self::{
     ast::{Ast, AstNodeHandle},
     rule::Rule,
     token_search::{
-        find_final_matching_level_token_all_groups, find_final_token,
+        find_final_matching_level_token_all_groups,
         find_matching_group_indices, find_matching_group_indices_end,
         find_next_matching_level_token,
         find_next_matching_level_token_all_groups,
