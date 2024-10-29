@@ -825,6 +825,10 @@ fn parse_binary_op_rule(
                     end: search_data.end,
                     node_handle: search_data.node_handle,
                 });
+            } else if split_index == search_data.start {
+                // there are no leading tokens for the binary op, therefore this cannot
+                // -- be parsed as a binary op. therefore, pass on to the next rule
+                next_rule_updates(search_data, ast, stack, next_rule);
             } else {
                 // update the token data in the expanding node
                 match ast.get_node_mut(search_data.node_handle) {

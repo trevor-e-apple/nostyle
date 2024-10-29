@@ -2440,20 +2440,16 @@ mod tests {
     }
 
     #[test]
-    fn basic_parse_error() {
-        unimplemented!();
-    }
-
-    #[test]
     fn binary_op_and_assign() {
         unimplemented!();
     }
 
     #[test]
+    #[should_panic]
     fn binary_op_repeat() {
         // binary ops cannot repeat, should be parsing error
-        let tokens = tokenize("a +* b");
-        unimplemented!();
+        let tokens = tokenize("a +* b").expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     #[test]
