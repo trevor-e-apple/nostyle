@@ -1394,7 +1394,7 @@ fn parse_primary_rule(
                         None => todo!("panic?"),
                     }
                 }
-                _ => todo!("Syntax error"),
+                _ => todo!("Syntax error, unexpected token"),
             },
             None => todo!("Syntax error"),
         }
