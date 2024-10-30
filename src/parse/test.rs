@@ -153,8 +153,10 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn brace_mismatch() {
-        unimplemented!();
+        let tokens = tokenize("{open").expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     /// test the parse of a single basic token
