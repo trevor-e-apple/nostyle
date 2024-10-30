@@ -3080,8 +3080,27 @@ mod tests {
 
     #[test]
     fn function_call_no_arg_comma() {
+        // TODO: a warning here may be a good idea
         let tokens = tokenize("test(,)").expect("Unexpected tokenize error");
-        unimplemented!();
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let function_call_handle = expected_ast.add_child_with_data(
+                root_handle,
+                Rule::FunctionCall,
+                Some(Token::Symbol("test".to_owned())),
+            );
+
+            let function_arguments_handle = expected_ast
+                .add_child(function_call_handle, Rule::FunctionArguments);
+            let expression_handle = expected_ast
+                .add_child(function_arguments_handle, Rule::Expression);
+            expected_ast.add_terminal_child(expression_handle, None);
+
+            expected_ast
+        };
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
