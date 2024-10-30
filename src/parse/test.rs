@@ -130,8 +130,20 @@ mod tests {
 
     #[test]
     fn empty_braces() {
-        let tokens = tokenize("{}");
-        unimplemented!();
+        let tokens = tokenize("{}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression_handle =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+            let expression_handle = expected_ast
+                .add_child(brace_expression_handle, Rule::Expression);
+            expected_ast.add_terminal_child(expression_handle, None);
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
