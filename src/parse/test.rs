@@ -2611,13 +2611,17 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn trailing_binary_op() {
-        unimplemented!();
+        let tokens = tokenize("a +").expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     #[test]
+    #[should_panic]
     fn trailing_minus() {
-        unimplemented!();
+        let tokens = tokenize("a -").expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     fn add_function_call_no_arg(
