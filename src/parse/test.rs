@@ -204,8 +204,10 @@ mod tests {
 
     /// test for mismatched parens
     #[test]
+    #[should_panic]
     fn paren_mismatch() {
-        unimplemented!();
+        let tokens = tokenize("(open").expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     #[test]
@@ -2558,7 +2560,54 @@ mod tests {
 
     #[test]
     fn statement_lhs_is_function() {
-        unimplemented!();
+        let tokens =
+            tokenize("{fun(a) = 1;}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression);
+            let brace_expression =
+                expected_ast.add_child(root_handle, Rule::BraceExpression);
+
+            // statements
+            {
+                let brace_statements = expected_ast
+                    .add_child(brace_expression, Rule::BraceStatements);
+                let statement_handle =
+                    expected_ast.add_child(brace_statements, Rule::Statement);
+
+                // LHS
+                {
+                    let expression_handle = expected_ast
+                        .add_child(statement_handle, Rule::Expression);
+                    let fun_call_handle = expected_ast.add_child_with_data(
+                        expression_handle,
+                        Rule::FunctionCall,
+                        Some(Token::Symbol("fun".to_owned())),
+                    );
+                    let fun_arg_handle = expected_ast
+                        .add_child(fun_call_handle, Rule::FunctionArguments);
+                    let expression_handle = expected_ast
+                        .add_child(fun_arg_handle, Rule::Expression);
+                    expected_ast.add_terminal_child(
+                        expression_handle,
+                        Some(Token::Symbol("a".to_owned())),
+                    );
+                }
+
+                // RHS
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement_handle,
+                    Some(Token::IntLiteral(1)),
+                );
+            }
+            // expression
+            add_terminal_expression(&mut expected_ast, brace_expression, None);
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
     }
 
     #[test]
@@ -3510,8 +3559,16 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn return_statement_missing_semicolon() {
-        unimplemented!();
+        let tokens = tokenize(
+            "
+        fn test(int32 a, int32 b,) {
+            return a + b
+        }",
+        )
+        .expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     /// Adds the tree to the AST for a function declaration with two arguments
