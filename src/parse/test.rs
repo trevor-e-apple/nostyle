@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
     use std::println;
+    use std::time::SystemTime;
 
+    use crate::parse::ast_dot::render_to;
     use crate::parse::*;
 
     use crate::tokenize::tokenize;
@@ -115,7 +118,21 @@ mod tests {
         ast.print();
         println!("expected_ast:");
         expected_ast.print();
-        assert!(Ast::equivalent(ast, expected_ast));
+        let equivalent = Ast::equivalent(ast, expected_ast);
+        if !equivalent {
+            let now = SystemTime::now();
+            let file_name = format!(
+                "{:?}.dot",
+                now.duration_since(SystemTime::UNIX_EPOCH)
+                    .expect("Unexpected failure to get system time")
+                    .as_secs()
+            );
+            let mut file =
+                File::create(&file_name).expect("Unable to create dot file");
+            render_to(&mut file);
+            println!("Dot file name: {}", file_name);
+        }
+        assert!(equivalent);
     }
 
     /// test empty parse
