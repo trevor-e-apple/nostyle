@@ -4,7 +4,6 @@ mod tests {
     use std::println;
     use std::time::SystemTime;
 
-    use crate::parse::ast_dot::render_to;
     use crate::parse::*;
 
     use crate::tokenize::tokenize;
@@ -120,17 +119,34 @@ mod tests {
         expected_ast.print();
         let equivalent = Ast::equivalent(ast, expected_ast);
         if !equivalent {
+            // write out dot file for comparing asts
+
             let now = SystemTime::now();
-            let file_name = format!(
-                "{:?}.dot",
-                now.duration_since(SystemTime::UNIX_EPOCH)
-                    .expect("Unexpected failure to get system time")
-                    .as_secs()
-            );
-            let mut file =
-                File::create(&file_name).expect("Unable to create dot file");
-            render_to(&mut file);
-            println!("Dot file name: {}", file_name);
+            let seconds_since = now
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .expect("Unexpected failure to get system time")
+                .as_secs();
+            {
+                let file_name = format!("ast_{:?}.dot", seconds_since);
+                let mut file = File::create(&file_name)
+                    .expect("Unable to create dot file");
+                match dot::render(ast, &mut file) {
+                    Ok(_) => println!("Ast dot file name: {}", file_name),
+                    Err(_) => println!("Error creating ast dot file"),
+                };
+            }
+
+            {
+                let file_name = format!("expected_ast_{:?}.dot", seconds_since);
+                let mut file = File::create(&file_name)
+                    .expect("Unable to create dot file");
+                match dot::render(expected_ast, &mut file) {
+                    Ok(_) => {
+                        println!("Expected ast dot file name: {}", file_name)
+                    }
+                    Err(_) => println!("Error creating ast dot file"),
+                };
+            }
         }
         assert!(equivalent);
     }

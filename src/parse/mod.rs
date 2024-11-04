@@ -24,7 +24,6 @@ primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" |
 */
 
 pub mod ast;
-pub mod ast_dot;
 pub mod rule;
 mod test;
 mod token_search;

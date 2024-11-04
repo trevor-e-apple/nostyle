@@ -249,11 +249,25 @@ impl<'a> dot::Labeller<'a, AstNodeHandle, AstEdge> for Ast {
     }
 
     fn node_id(&'a self, node_handle: &AstNodeHandle) -> dot::Id<'a> {
+        match dot::Id::new(format!("N{:?}", node_handle.index)) {
+            Ok(dot_id) => dot_id,
+            Err(error) => {
+                println!("{:?}", error);
+                todo!()
+            }
+        }
+    }
+
+    fn node_label<'b>(
+        &'b self,
+        node_handle: &AstNodeHandle,
+    ) -> dot::LabelText<'b> {
         let node = self
             .get_node(*node_handle)
             .expect("Unexpected failure to get node");
-        dot::Id::new(format!("Rule: {:?}, Data: {:?}", node.rule, node.data))
-            .unwrap()
+        dot::LabelText::LabelStr(
+            format!("Rule: {:?}, Data: {:?}", node.rule, node.data).into(),
+        )
     }
 }
 
@@ -277,9 +291,19 @@ impl<'a> dot::GraphWalk<'a, AstNodeHandle, AstEdge> for Ast {
         stack.push(root);
         loop {
             let node_handle = match stack.pop() {
-                Some(_) => todo!(),
+                Some(node_handle) => node_handle,
                 None => break,
             };
+
+            let node = match self.get_node(node_handle) {
+                Some(node) => node,
+                None => continue,
+            };
+
+            for child in &node.children {
+                edges.push((node_handle, *child));
+                stack.push(*child);
+            }
         }
         Cow::Owned(edges)
     }
