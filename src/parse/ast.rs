@@ -1,6 +1,10 @@
+use std::borrow::Cow;
+
 use crate::tokenize::tokens::Token;
 
 use super::rule::Rule;
+
+type AstEdge = (AstNodeHandle, AstNodeHandle);
 
 pub struct Ast {
     nodes: Vec<AstNode>,
@@ -235,5 +239,56 @@ impl PartialEq for AstNode {
             // rules don't match
             false
         }
+    }
+}
+
+impl<'a> dot::Labeller<'a, AstNodeHandle, AstEdge> for Ast {
+    fn graph_id(&'a self) -> dot::Id<'a> {
+        // TODO: hard-coded since not used?
+        dot::Id::new("graphid").unwrap()
+    }
+
+    fn node_id(&'a self, node_handle: &AstNodeHandle) -> dot::Id<'a> {
+        let node = self
+            .get_node(*node_handle)
+            .expect("Unexpected failure to get node");
+        dot::Id::new(format!("Rule: {:?}, Data: {:?}", node.rule, node.data))
+            .unwrap()
+    }
+}
+
+impl<'a> dot::GraphWalk<'a, AstNodeHandle, AstEdge> for Ast {
+    fn nodes(&self) -> dot::Nodes<'a, AstNodeHandle> {
+        let mut nodes = Vec::with_capacity(self.nodes.len());
+        for index in 0..self.nodes.len() {
+            nodes.push(AstNodeHandle { index });
+        }
+        Cow::Owned(nodes)
+    }
+
+    fn edges(&'a self) -> dot::Edges<'a, AstEdge> {
+        let mut stack: Vec<AstNodeHandle> = Vec::new();
+        let mut edges: Vec<AstEdge> = Vec::with_capacity(2 * self.nodes.len());
+        let root = match self.get_root() {
+            Some(root) => root,
+            None => return Cow::Owned(edges),
+        };
+
+        stack.push(root);
+        loop {
+            let node_handle = match stack.pop() {
+                Some(_) => todo!(),
+                None => break,
+            };
+        }
+        Cow::Owned(edges)
+    }
+
+    fn source(&self, e: &AstEdge) -> AstNodeHandle {
+        e.0
+    }
+
+    fn target(&self, e: &AstEdge) -> AstNodeHandle {
+        e.1
     }
 }
