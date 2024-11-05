@@ -129,6 +129,25 @@ fn get_num_token(
     }
 }
 
+fn binary_op_composable_token(
+    chars: &Vec<char>,
+    index: &mut usize,
+    tokens: &mut Tokens,
+    token: Token,
+    compose_token: Token,
+) {
+    match chars.get(*index + 1) {
+        Some(next_char) => {
+            if *next_char == '=' {
+                tokens.add_token(index, compose_token, 2);
+            } else {
+                tokens.add_token(index, token, 1);
+            }
+        }
+        None => tokens.add_token(index, token, 1),
+    }
+}
+
 /// tokenize the input data
 pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
     let mut tokens = Tokens::new();
@@ -183,13 +202,37 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 tokens.add_token(&mut index, Token::Symbol(word), word_len);
             }
         } else if *c == '+' {
-            tokens.add_token(&mut index, Token::Plus, 1);
+            binary_op_composable_token(
+                &chars,
+                &mut index,
+                &mut tokens,
+                Token::Plus,
+                Token::PlusEquals,
+            );
         } else if *c == '-' {
-            tokens.add_token(&mut index, Token::Minus, 1);
+            binary_op_composable_token(
+                &chars,
+                &mut index,
+                &mut tokens,
+                Token::Minus,
+                Token::MinusEquals,
+            );
         } else if *c == '*' {
-            tokens.add_token(&mut index, Token::Times, 1);
+            binary_op_composable_token(
+                &chars,
+                &mut index,
+                &mut tokens,
+                Token::Times,
+                Token::TimesEquals,
+            );
         } else if *c == '/' {
-            tokens.add_token(&mut index, Token::Divide, 1);
+            binary_op_composable_token(
+                &chars,
+                &mut index,
+                &mut tokens,
+                Token::Divide,
+                Token::DivideEquals,
+            );
         } else if *c == '=' {
             match chars.get(index + 1) {
                 Some(next_char) => {
