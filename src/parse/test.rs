@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::fs::File;
+    use std::path::Path;
     use std::println;
     use std::time::SystemTime;
 
@@ -110,6 +111,25 @@ mod tests {
         ast.add_terminal_child(equality_handle, Some(b));
     }
 
+    fn write_ast_dot(ast: &Ast, ast_name: &str, seconds_since: u64) {
+        let file_name = {
+            let mut file_name = format!("{}_{}.dot", ast_name, seconds_since);
+            let mut attempt = 0;
+            while Path::new(&file_name).exists() {
+                file_name =
+                    format!("{}_{}_{}.dot", ast_name, seconds_since, attempt);
+                attempt += 1;
+            }
+            file_name
+        };
+        let mut file =
+            File::create(&file_name).expect("Unable to create dot file");
+        match dot::render(ast, &mut file) {
+            Ok(_) => println!("Ast dot file name: {}", file_name),
+            Err(_) => println!("Error creating ast dot file"),
+        };
+    }
+
     /// helper function for tests to compare two asts and print out some info
     /// if they don't match
     fn check_ast_equal(ast: &Ast, expected_ast: &Ast) {
@@ -126,27 +146,9 @@ mod tests {
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .expect("Unexpected failure to get system time")
                 .as_secs();
-            {
-                let file_name = format!("ast_{:?}.dot", seconds_since);
-                let mut file = File::create(&file_name)
-                    .expect("Unable to create dot file");
-                match dot::render(ast, &mut file) {
-                    Ok(_) => println!("Ast dot file name: {}", file_name),
-                    Err(_) => println!("Error creating ast dot file"),
-                };
-            }
 
-            {
-                let file_name = format!("expected_ast_{:?}.dot", seconds_since);
-                let mut file = File::create(&file_name)
-                    .expect("Unable to create dot file");
-                match dot::render(expected_ast, &mut file) {
-                    Ok(_) => {
-                        println!("Expected ast dot file name: {}", file_name)
-                    }
-                    Err(_) => println!("Error creating ast dot file"),
-                };
-            }
+            write_ast_dot(ast, "ast", seconds_since);
+            write_ast_dot(expected_ast, "expected_ast", seconds_since);
         }
         assert!(equivalent);
     }
@@ -2534,7 +2536,22 @@ mod tests {
 
     #[test]
     fn binary_op_and_assign() {
-        unimplemented!();
+        let tokens = tokenize("a += b;").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast = {
+            let mut expected_ast = Ast::new();
+
+            expected_ast
+        };
+
+        check_ast_equal(&ast, &expected_ast);
+    }
+
+    #[test]
+    #[should_panic]
+    fn binary_op_and_assign_no_statement() {
+        let tokens = tokenize("a += b").expect("Unexpected tokenize error");
+        parse(&tokens);
     }
 
     #[test]
