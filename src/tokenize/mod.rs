@@ -802,4 +802,34 @@ mod tests {
         );
         assert_eq!(*tokens.get(2).unwrap(), Token::EndStatement);
     }
+
+    fn binary_comp_test(binary_comp_op: String, token: Token) {
+        let s = format!("a {} b;", binary_comp_op);
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a".to_owned()));
+        assert_eq!(*tokens.get(1).unwrap(), token);
+        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("b".to_owned()));
+        assert_eq!(*tokens.get(3).unwrap(), Token::EndStatement);
+    }
+
+    #[test]
+    fn tokenize_plus_equals() {
+        binary_comp_test("+=".to_owned(), Token::PlusEquals);
+    }
+
+    #[test]
+    fn tokenize_minus_equals() {
+        binary_comp_test("-=".to_owned(), Token::MinusEquals);
+    }
+
+    #[test]
+    fn tokenize_times_equals() {
+        binary_comp_test("*=".to_owned(), Token::TimesEquals);
+    }
+
+    #[test]
+    fn tokenize_div_equals() {
+        binary_comp_test("/=".to_owned(), Token::DivideEquals);
+    }
 }
