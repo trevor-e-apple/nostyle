@@ -2534,53 +2534,84 @@ mod tests {
         check_ast_equal(&ast, &expected_ast);
     }
 
+    /// Constructs expected ast for binary op and assignment composition
+    fn binary_op_and_assign_expected_ast(rule: Rule, data: Token) -> Ast {
+        let mut expected_ast = Ast::new();
+
+        let root = expected_ast.add_root(Rule::Expression);
+        let brace_expression =
+            expected_ast.add_child(root, Rule::BraceExpression);
+
+        let brace_statements =
+            expected_ast.add_child(brace_expression, Rule::BraceStatements);
+        {
+            let statement =
+                expected_ast.add_child(brace_statements, Rule::Statement);
+
+            // LHS
+            add_terminal_expression(
+                &mut expected_ast,
+                statement,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            // RHS
+            let rhs = expected_ast.add_child(statement, Rule::Expression);
+            let binary_op_node_handle =
+                expected_ast.add_child_with_data(rhs, rule, Some(data));
+            add_terminal_expression(
+                &mut expected_ast,
+                binary_op_node_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+            add_terminal_expression(
+                &mut expected_ast,
+                binary_op_node_handle,
+                Some(Token::Symbol("b".to_owned())),
+            );
+        }
+
+        add_terminal_expression(&mut expected_ast, brace_expression, None);
+
+        expected_ast
+    }
+
     #[test]
     fn binary_op_and_assign() {
         let tokens = tokenize("{a += b;}").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
-        let expected_ast = {
-            let mut expected_ast = Ast::new();
+        let expected_ast =
+            binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Plus);
 
-            let root = expected_ast.add_root(Rule::Expression);
-            let brace_expression =
-                expected_ast.add_child(root, Rule::BraceExpression);
+        check_ast_equal(&ast, &expected_ast);
+    }
 
-            let brace_statements =
-                expected_ast.add_child(brace_expression, Rule::BraceStatements);
-            {
-                let statement =
-                    expected_ast.add_child(brace_statements, Rule::Statement);
+    #[test]
+    fn binary_op_and_assign_minus() {
+        let tokens = tokenize("{a -= b;}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast =
+            binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Minus);
 
-                // LHS
-                add_terminal_expression(
-                    &mut expected_ast,
-                    statement,
-                    Some(Token::Symbol("a".to_owned())),
-                );
+        check_ast_equal(&ast, &expected_ast);
+    }
 
-                // RHS
-                let rhs = expected_ast.add_child(statement, Rule::Expression);
-                let plus_minus = expected_ast.add_child_with_data(
-                    rhs,
-                    Rule::PlusMinus,
-                    Some(Token::Plus),
-                );
-                add_terminal_expression(
-                    &mut expected_ast,
-                    plus_minus,
-                    Some(Token::Symbol("a".to_owned())),
-                );
-                add_terminal_expression(
-                    &mut expected_ast,
-                    plus_minus,
-                    Some(Token::Symbol("b".to_owned())),
-                );
-            }
+    #[test]
+    fn binary_op_and_assign_times() {
+        let tokens = tokenize("{a *= b;}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast =
+            binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Times);
 
-            add_terminal_expression(&mut expected_ast, brace_expression, None);
+        check_ast_equal(&ast, &expected_ast);
+    }
 
-            expected_ast
-        };
+    #[test]
+    fn binary_op_and_assign_div() {
+        let tokens = tokenize("{a /= b;}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens);
+        let expected_ast =
+            binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Divide);
 
         check_ast_equal(&ast, &expected_ast);
     }
