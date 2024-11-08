@@ -2536,10 +2536,48 @@ mod tests {
 
     #[test]
     fn binary_op_and_assign() {
-        let tokens = tokenize("a += b;").expect("Unexpected tokenize error");
+        let tokens = tokenize("{a += b;}").expect("Unexpected tokenize error");
         let ast = parse(&tokens);
         let expected_ast = {
             let mut expected_ast = Ast::new();
+
+            let root = expected_ast.add_root(Rule::Expression);
+            let brace_expression =
+                expected_ast.add_child(root, Rule::BraceExpression);
+
+            let brace_statements =
+                expected_ast.add_child(brace_expression, Rule::BraceStatements);
+            {
+                let statement =
+                    expected_ast.add_child(brace_statements, Rule::Statement);
+
+                // LHS
+                add_terminal_expression(
+                    &mut expected_ast,
+                    statement,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+
+                // RHS
+                let rhs = expected_ast.add_child(statement, Rule::Expression);
+                let plus_minus = expected_ast.add_child_with_data(
+                    rhs,
+                    Rule::PlusMinus,
+                    Some(Token::Plus),
+                );
+                add_terminal_expression(
+                    &mut expected_ast,
+                    plus_minus,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+                add_terminal_expression(
+                    &mut expected_ast,
+                    plus_minus,
+                    Some(Token::Symbol("b".to_owned())),
+                );
+            }
+
+            add_terminal_expression(&mut expected_ast, brace_expression, None);
 
             expected_ast
         };

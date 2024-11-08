@@ -10,7 +10,12 @@ declaration -> SYMBOL SYMBOL;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (statement | return_statement);
 return_statement -> "return" expression ";";
-statement -> ((expression | declaration) "=" expression ";") | (expression ";");
+statement -> plus_equals_statement | minus_equals_statement | times_equals_statement | div_equals_statement | assign_statment;
+plus_equals_statement -> ((expression | declaration) "+=" expression ";") | (expression ";");
+minus_equals_statement -> ((expression | declaration) "-=" expression ";") | (expression ";");
+times_equals_statement -> ((expression | declaration) "*=" expression ";") | (expression ";");
+div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expression ";");
+assign_statement -> ((expression | declaration) "=" expression ";") | (expression ";");
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -559,6 +564,55 @@ fn parse_brace_statements_rule(
     );
 }
 
+// TODO: document me!
+fn binary_comp_statement(
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+    assign_index: usize,
+    composite_rule: Rule,
+    composite_token: Token,
+) {
+    // LHS of statement
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::Expression,
+        search_data.start,
+        assign_index,
+        ast,
+        stack,
+    );
+
+    // Statement RHS. Requires some scaffolding to set up a consistent parse with non-composed version
+    let rhs_expression =
+        ast.add_child(search_data.node_handle, Rule::Expression);
+    let rhs_op_node = ast.add_child_with_data(
+        rhs_expression,
+        composite_rule,
+        Some(composite_token),
+    );
+
+    // LHS (same as statement LHS)
+    add_child_to_search_stack(
+        rhs_op_node,
+        Rule::Expression,
+        search_data.start,
+        assign_index,
+        ast,
+        stack,
+    );
+
+    // RHS (everything past the binary op and assignment token)
+    add_child_to_search_stack(
+        rhs_op_node,
+        Rule::Expression,
+        assign_index + 1,
+        search_data.end - 1,
+        ast,
+        stack,
+    );
+}
+
 /// parse statement rule
 fn parse_statement_rule(
     tokens: &Tokens,
@@ -568,34 +622,90 @@ fn parse_statement_rule(
 ) {
     match find_next_matching_level_token_all_groups(
         tokens,
-        &[Token::Assign],
+        &[
+            Token::Assign,
+            Token::PlusEquals,
+            Token::MinusEquals,
+            Token::TimesEquals,
+            Token::DivideEquals,
+        ],
         search_data.start,
         search_data.end,
     ) {
         Some(assign_index) => match tokens.get(search_data.end - 1) {
             Some(expected_end_statement) => {
-                if *expected_end_statement == Token::EndStatement {
-                    // LHS expression
-                    add_child_to_search_stack(
-                        search_data.node_handle,
-                        Rule::Expression,
-                        search_data.start,
-                        assign_index,
-                        ast,
-                        stack,
-                    );
-
-                    // RHS expression
-                    add_child_to_search_stack(
-                        search_data.node_handle,
-                        Rule::Expression,
-                        assign_index + 1,
-                        search_data.end - 1,
-                        ast,
-                        stack,
-                    );
-                } else {
+                if *expected_end_statement != Token::EndStatement {
                     todo!("Syntax error");
+                }
+
+                let assign_token = match tokens.get(assign_index) {
+                    Some(assign_token) => assign_token,
+                    None => panic!("Could not get assign token"),
+                };
+
+                match assign_token {
+                    Token::Assign => {
+                        // LHS expression
+                        add_child_to_search_stack(
+                            search_data.node_handle,
+                            Rule::Expression,
+                            search_data.start,
+                            assign_index,
+                            ast,
+                            stack,
+                        );
+
+                        // RHS expression
+                        add_child_to_search_stack(
+                            search_data.node_handle,
+                            Rule::Expression,
+                            assign_index + 1,
+                            search_data.end - 1,
+                            ast,
+                            stack,
+                        );
+                    }
+                    Token::PlusEquals => {
+                        binary_comp_statement(
+                            search_data,
+                            ast,
+                            stack,
+                            assign_index,
+                            Rule::PlusMinus,
+                            Token::Plus,
+                        );
+                    }
+                    Token::MinusEquals => {
+                        binary_comp_statement(
+                            search_data,
+                            ast,
+                            stack,
+                            assign_index,
+                            Rule::PlusMinus,
+                            Token::Minus,
+                        );
+                    }
+                    Token::TimesEquals => {
+                        binary_comp_statement(
+                            search_data,
+                            ast,
+                            stack,
+                            assign_index,
+                            Rule::MultDiv,
+                            Token::Times,
+                        );
+                    }
+                    Token::DivideEquals => {
+                        binary_comp_statement(
+                            search_data,
+                            ast,
+                            stack,
+                            assign_index,
+                            Rule::MultDiv,
+                            Token::Divide,
+                        );
+                    }
+                    _ => panic!("Unexpected assign token"),
                 }
             }
             None => todo!("Syntax error?"),
