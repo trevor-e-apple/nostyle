@@ -29,6 +29,7 @@ primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" |
 */
 
 pub mod ast;
+pub mod error;
 pub mod rule;
 mod test;
 mod token_search;
@@ -36,12 +37,14 @@ mod token_search;
 use core::panic;
 use std::todo;
 
+use error::ParseErrorType;
 use token_search::find_prev_matching_level_token_all_groups;
 
 use crate::tokenize::tokens::{Token, Tokens};
 
 use self::{
     ast::{Ast, AstNodeHandle},
+    error::ParseError,
     rule::Rule,
     token_search::{
         find_final_matching_level_token_all_groups,
@@ -58,7 +61,7 @@ struct SearchData {
 }
 
 /// parses tokens and returns an abstract syntax tree
-pub fn parse(tokens: &Tokens) -> Ast {
+pub fn parse(tokens: &Tokens) -> Result<Ast, ParseError> {
     let mut result = Ast::new();
 
     // Handle special case where empty list of tokens is passed in
@@ -213,7 +216,7 @@ pub fn parse(tokens: &Tokens) -> Ast {
         }
     }
 
-    result
+    Ok(result)
 }
 
 /// function for creating a child and adding it to the search stack
@@ -261,7 +264,7 @@ fn parse_expression_rule(
 ) {
     let start_token = match tokens.get(search_data.start) {
         Some(token) => token,
-        None => todo!("Parse error (panic?)"),
+        None => panic!("Search data start not found."),
     };
 
     let rule = match start_token {
@@ -288,14 +291,18 @@ fn parse_for_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> ParseError {
     match tokens.get(search_data.end - 1) {
         Some(end_token) => {
             if *end_token != Token::RBrace {
-                todo!("Syntax error")
+                return ParseError {
+                    line_number: 0,
+                    info: "Missing rbrace at the end of 'for' loop".to_owned(),
+                    type_data: ParseErrorType::General,
+                };
             }
         }
-        None => todo!("Syntax error"),
+        None => panic!("Search data end greater than token len."),
     }
 
     let lparen_index = search_data.start + 1;

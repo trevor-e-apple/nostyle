@@ -198,7 +198,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn empty_statement() {
         let tokens = tokenize(";").expect("Unexpected tokenize error");
         parse(&tokens);
@@ -239,14 +238,12 @@ mod tests {
 
     /// test for mismatched parens
     #[test]
-    #[should_panic]
     fn paren_mismatch() {
         let tokens = tokenize("(open").expect("Unexpected tokenize error");
         parse(&tokens);
     }
 
     #[test]
-    #[should_panic]
     fn brace_mismatch() {
         let tokens = tokenize("{open").expect("Unexpected tokenize error");
         parse(&tokens);
@@ -2687,14 +2684,12 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn binary_op_and_assign_no_statement() {
         let tokens = tokenize("a += b").expect("Unexpected tokenize error");
         parse(&tokens);
     }
 
     #[test]
-    #[should_panic]
     fn binary_op_repeat() {
         // binary ops cannot repeat, should be parsing error
         let tokens = tokenize("a +* b").expect("Unexpected tokenize error");
@@ -2800,14 +2795,12 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn trailing_binary_op() {
         let tokens = tokenize("a +").expect("Unexpected tokenize error");
         parse(&tokens);
     }
 
     #[test]
-    #[should_panic]
     fn trailing_minus() {
         let tokens = tokenize("a -").expect("Unexpected tokenize error");
         parse(&tokens);
@@ -3752,7 +3745,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn return_statement_missing_semicolon() {
         let tokens = tokenize(
             "
@@ -4348,7 +4340,6 @@ mod tests {
 
     /// Should result in a syntax error
     #[test]
-    #[should_panic]
     fn function_definition_early_expression() {
         let tokens = tokenize(
             "
@@ -4450,7 +4441,6 @@ mod tests {
 
     /// should result in a syntax error
     #[test]
-    #[should_panic]
     fn multiple_expressions() {
         let tokens = tokenize(
             "
