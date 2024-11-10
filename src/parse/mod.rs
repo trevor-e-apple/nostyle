@@ -35,7 +35,7 @@ mod test;
 mod token_search;
 
 use core::panic;
-use std::todo;
+use std::{default, todo};
 
 use error::ParseErrorType;
 use token_search::find_prev_matching_level_token_all_groups;
@@ -61,12 +61,13 @@ struct SearchData {
 }
 
 /// parses tokens and returns an abstract syntax tree
-pub fn parse(tokens: &Tokens) -> Result<Ast, ParseError> {
+pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
     let mut result = Ast::new();
+    let mut parse_errors: Vec<ParseError> = Vec::new();
 
     // Handle special case where empty list of tokens is passed in
     if tokens.len() == 0 {
-        return result;
+        return Ok(result);
     }
 
     let root_handle = result.add_root(Rule::Expression);
@@ -151,7 +152,16 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, ParseError> {
                 );
             }
             Rule::ForLoop => {
-                parse_for_rule(tokens, &search_data, &mut result, &mut stack);
+                let parse_result = parse_for_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                );
+                match parse_result.type_data {
+                    ParseErrorType::NoError => {}
+                    ParseErrorType::General => parse_errors.push(parse_result),
+                }
             }
             Rule::Equality => {
                 parse_equality_rule(
@@ -216,7 +226,11 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, ParseError> {
         }
     }
 
-    Ok(result)
+    if parse_errors.len() > 0 {
+        Err(parse_errors)
+    } else {
+        Ok(result)
+    }
 }
 
 /// function for creating a child and adding it to the search stack
@@ -311,10 +325,14 @@ fn parse_for_rule(
     match tokens.get(lparen_index) {
         Some(expected_lparen) => {
             if *expected_lparen != Token::LParen {
-                todo!("Syntax error")
+                return ParseError {
+                    line_number: 0,
+                    info: "Missing lparen after 'for'".to_owned(),
+                    type_data: ParseErrorType::General,
+                };
             }
         }
-        None => todo!("Syntax error"),
+        None => panic!("Expected lparen index is out of range of tokens."),
     }
 
     let rparen_index = match find_matching_group_indices(
@@ -325,83 +343,93 @@ fn parse_for_rule(
         search_data.end,
     ) {
         Some(rparen_index) => rparen_index,
-        None => todo!("Syntax error"),
+        None => {
+            return ParseError {
+                line_number: 0,
+                info: "Missing matching rparen for 'for' statements".to_owned(),
+                type_data: ParseErrorType::General,
+            };
+        }
     };
 
     // set up init, condition, increment statements
-    {
-        let init_semicolon_index =
-            match find_next_matching_level_token_all_groups(
-                tokens,
-                &[Token::EndStatement],
-                lparen_index + 1,
-                rparen_index,
-            ) {
-                Some(index) => index,
-                None => todo!("Syntax error"),
-            };
-        let condition_semicolon_index =
-            match find_next_matching_level_token_all_groups(
-                tokens,
-                &[Token::EndStatement],
-                init_semicolon_index + 1,
-                rparen_index,
-            ) {
-                Some(index) => index,
-                None => todo!("Syntax error"),
-            };
-        let increment_semicolon_index =
-            match find_next_matching_level_token_all_groups(
-                tokens,
-                &[Token::EndStatement],
-                condition_semicolon_index + 1,
-                rparen_index,
-            ) {
-                Some(index) => index,
-                None => todo!("Syntax error"),
-            };
+    let (
+        init_semicolon_index,
+        condition_semicolon_index,
+        increment_semicolon_index,
+    ) =
+        {
+            let init_semicolon_index =
+                match find_next_matching_level_token_all_groups(
+                    tokens,
+                    &[Token::EndStatement],
+                    lparen_index + 1,
+                    rparen_index,
+                ) {
+                    Some(index) => index,
+                    None => {
+                        return ParseError {
+                            line_number: 0,
+                            info: "Missing init statement in 'for' statements"
+                                .to_owned(),
+                            type_data: ParseErrorType::General,
+                        }
+                    }
+                };
+            let condition_semicolon_index =
+                match find_next_matching_level_token_all_groups(
+                    tokens,
+                    &[Token::EndStatement],
+                    init_semicolon_index + 1,
+                    rparen_index,
+                ) {
+                    Some(index) => index,
+                    None => return ParseError {
+                        line_number: 0,
+                        info: "Missing condition statement in 'for' statements"
+                            .to_owned(),
+                        type_data: ParseErrorType::General,
+                    },
+                };
+            let increment_semicolon_index =
+                match find_next_matching_level_token_all_groups(
+                    tokens,
+                    &[Token::EndStatement],
+                    condition_semicolon_index + 1,
+                    rparen_index,
+                ) {
+                    Some(index) => index,
+                    None => return ParseError {
+                        line_number: 0,
+                        info: "Missing increment statement in 'for' statements"
+                            .to_owned(),
+                        type_data: ParseErrorType::General,
+                    },
+                };
 
-        // init statement
-        add_child_to_search_stack(
-            search_data.node_handle,
-            Rule::Statement,
-            lparen_index + 1,
-            init_semicolon_index + 1,
-            ast,
-            stack,
-        );
-
-        // condition statement
-        add_child_to_search_stack(
-            search_data.node_handle,
-            Rule::Statement,
-            init_semicolon_index + 1,
-            condition_semicolon_index + 1,
-            ast,
-            stack,
-        );
-
-        // increment statement
-        add_child_to_search_stack(
-            search_data.node_handle,
-            Rule::Statement,
-            condition_semicolon_index + 1,
-            increment_semicolon_index + 1,
-            ast,
-            stack,
-        );
-    }
+            (
+                init_semicolon_index,
+                condition_semicolon_index,
+                increment_semicolon_index,
+            )
+        };
 
     // set up brace expression
-    {
+    let (expression_lbrace_index, expression_rbrace_index) = {
         let lbrace_index = rparen_index + 1;
         match tokens.get(lbrace_index) {
             Some(expected_lbrace) => {
                 if *expected_lbrace != Token::LBrace {
-                    todo!("Syntax error");
+                    return ParseError {
+                        line_number: 0,
+                        info:
+                            "Missing expected lbrace after for loop statements"
+                                .to_owned(),
+                        type_data: ParseErrorType::General,
+                    };
                 }
             }
-            None => todo!("Syntax error"),
+            None => panic!("Lbrace not found."),
         }
 
         let rbrace_index = match find_matching_group_indices(
@@ -412,18 +440,54 @@ fn parse_for_rule(
             search_data.end,
         ) {
             Some(rbrace_index) => rbrace_index,
-            None => todo!("Syntax error"),
+            None => panic!("Rbrace not found"),
         };
 
-        add_child_to_search_stack(
-            search_data.node_handle,
-            Rule::BraceExpression,
-            lbrace_index,
-            rbrace_index + 1,
-            ast,
-            stack,
-        );
-    }
+        (lbrace_index, rbrace_index)
+    };
+
+    // mutate ast and search stacks after we have confirmed that no errors have been hit
+
+    // init statement
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::Statement,
+        lparen_index + 1,
+        init_semicolon_index + 1,
+        ast,
+        stack,
+    );
+
+    // condition statement
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::Statement,
+        init_semicolon_index + 1,
+        condition_semicolon_index + 1,
+        ast,
+        stack,
+    );
+
+    // increment statement
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::Statement,
+        condition_semicolon_index + 1,
+        increment_semicolon_index + 1,
+        ast,
+        stack,
+    );
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::BraceExpression,
+        expression_lbrace_index,
+        expression_rbrace_index + 1,
+        ast,
+        stack,
+    );
+
+    return ParseError { ..Default::default() };
 }
 
 /// parses the brace expression rule
