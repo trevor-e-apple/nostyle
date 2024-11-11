@@ -35,9 +35,8 @@ mod test;
 mod token_search;
 
 use core::panic;
-use std::{default, todo};
+use std::todo;
 
-use error::ParseErrorType;
 use token_search::find_prev_matching_level_token_all_groups;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -112,28 +111,37 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                 parse_declaration_rule(tokens, &search_data, &mut result);
             }
             Rule::BraceExpression => {
-                parse_brace_expression_rule(
+                match parse_brace_expression_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => todo!(),
+                    Err(_) => todo!(),
+                }
             }
             Rule::BraceStatements => {
-                parse_brace_statements_rule(
+                match parse_brace_statements_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => todo!(),
+                    Err(_) => todo!(),
+                }
             }
             Rule::Statement => {
-                parse_statement_rule(
+                match parse_statement_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => todo!(),
+                    Err(_) => todo!(),
+                };
             }
             Rule::ReturnStatement => {
                 parse_return_statement(
@@ -152,15 +160,14 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                 );
             }
             Rule::ForLoop => {
-                let parse_result = parse_for_rule(
+                match parse_for_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
-                match parse_result.type_data {
-                    ParseErrorType::NoError => {}
-                    ParseErrorType::General => parse_errors.push(parse_result),
+                ) {
+                    Ok(_) => todo!(),
+                    Err(_) => todo!(),
                 }
             }
             Rule::Equality => {
@@ -275,10 +282,16 @@ fn parse_expression_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     let start_token = match tokens.get(search_data.start) {
         Some(token) => token,
-        None => panic!("Search data start not found."),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Can not parse 'expression' rule (empty tokens)"
+                    .to_owned(),
+            })
+        }
     };
 
     let rule = match start_token {
@@ -297,6 +310,8 @@ fn parse_expression_rule(
         ast,
         stack,
     );
+
+    Ok(())
 }
 
 /// parses the for rule
@@ -305,18 +320,22 @@ fn parse_for_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) -> ParseError {
+) -> Result<(), ParseError> {
     match tokens.get(search_data.end - 1) {
         Some(end_token) => {
             if *end_token != Token::RBrace {
-                return ParseError {
+                return Err(ParseError {
                     line_number: 0,
                     info: "Missing rbrace at the end of 'for' loop".to_owned(),
-                    type_data: ParseErrorType::General,
-                };
+                });
             }
         }
-        None => panic!("Search data end greater than token len."),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Can not parse 'for' rule (empty tokens)".to_owned(),
+            });
+        }
     }
 
     let lparen_index = search_data.start + 1;
@@ -325,14 +344,18 @@ fn parse_for_rule(
     match tokens.get(lparen_index) {
         Some(expected_lparen) => {
             if *expected_lparen != Token::LParen {
-                return ParseError {
+                return Err(ParseError {
                     line_number: 0,
                     info: "Missing lparen after 'for'".to_owned(),
-                    type_data: ParseErrorType::General,
-                };
+                });
             }
         }
-        None => panic!("Expected lparen index is out of range of tokens."),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Missing lparen after 'for'".to_owned(),
+            });
+        }
     }
 
     let rparen_index = match find_matching_group_indices(
@@ -344,11 +367,10 @@ fn parse_for_rule(
     ) {
         Some(rparen_index) => rparen_index,
         None => {
-            return ParseError {
+            return Err(ParseError {
                 line_number: 0,
                 info: "Missing matching rparen for 'for' statements".to_owned(),
-                type_data: ParseErrorType::General,
-            };
+            });
         }
     };
 
@@ -368,12 +390,11 @@ fn parse_for_rule(
                 ) {
                     Some(index) => index,
                     None => {
-                        return ParseError {
+                        return Err(ParseError {
                             line_number: 0,
                             info: "Missing init statement in 'for' statements"
                                 .to_owned(),
-                            type_data: ParseErrorType::General,
-                        }
+                        });
                     }
                 };
             let condition_semicolon_index =
@@ -384,12 +405,11 @@ fn parse_for_rule(
                     rparen_index,
                 ) {
                     Some(index) => index,
-                    None => return ParseError {
+                    None => return Err(ParseError {
                         line_number: 0,
                         info: "Missing condition statement in 'for' statements"
                             .to_owned(),
-                        type_data: ParseErrorType::General,
-                    },
+                    }),
                 };
             let increment_semicolon_index =
                 match find_next_matching_level_token_all_groups(
@@ -399,12 +419,11 @@ fn parse_for_rule(
                     rparen_index,
                 ) {
                     Some(index) => index,
-                    None => return ParseError {
+                    None => return Err(ParseError {
                         line_number: 0,
                         info: "Missing increment statement in 'for' statements"
                             .to_owned(),
-                        type_data: ParseErrorType::General,
-                    },
+                    }),
                 };
 
             (
@@ -420,16 +439,21 @@ fn parse_for_rule(
         match tokens.get(lbrace_index) {
             Some(expected_lbrace) => {
                 if *expected_lbrace != Token::LBrace {
-                    return ParseError {
+                    return Err(ParseError {
                         line_number: 0,
                         info:
                             "Missing expected lbrace after for loop statements"
                                 .to_owned(),
-                        type_data: ParseErrorType::General,
-                    };
+                    });
                 }
             }
-            None => panic!("Lbrace not found."),
+            None => {
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Missing expected lbrace after for loop statements"
+                        .to_owned(),
+                });
+            }
         }
 
         let rbrace_index = match find_matching_group_indices(
@@ -440,7 +464,12 @@ fn parse_for_rule(
             search_data.end,
         ) {
             Some(rbrace_index) => rbrace_index,
-            None => panic!("Rbrace not found"),
+            None => {
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Could not find expected rbrace".to_owned(),
+                })
+            }
         };
 
         (lbrace_index, rbrace_index)
@@ -487,7 +516,7 @@ fn parse_for_rule(
         stack,
     );
 
-    return ParseError { ..Default::default() };
+    return Ok(());
 }
 
 /// parses the brace expression rule
@@ -496,23 +525,36 @@ fn parse_brace_expression_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     let first_token = match tokens.get(search_data.start) {
         Some(token) => token,
-        None => todo!("Syntax error"),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Missing expected lbrace at start of brace expression"
+                    .to_owned(),
+            })
+        }
     };
 
     if *first_token != Token::LBrace {
-        todo!("Syntax error");
+        return Err(ParseError {
+            line_number: 0,
+            info: "Missing expected lbrace at start of brace expression"
+                .to_owned(),
+        });
     }
 
     let final_token = match tokens.get(search_data.end - 1) {
         Some(token) => token,
-        None => todo!("Syntax error"),
+        None => panic!("Search data end index out of range."),
     };
 
     if *final_token != Token::RBrace {
-        todo!("Syntax error");
+        return Err(ParseError {
+            line_number: 0,
+            info: "Missing rbrace at end of brace expression".to_owned(),
+        });
     }
 
     let brace_contents_start = search_data.start + 1;
@@ -563,6 +605,8 @@ fn parse_brace_expression_rule(
             );
         }
     }
+
+    Ok(())
 }
 
 /// parse brace_statements rule
@@ -571,7 +615,7 @@ fn parse_brace_statements_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
         let non_recursive_end_index: usize =
@@ -582,7 +626,12 @@ fn parse_brace_statements_rule(
                 search_data.end,
             ) {
                 Some(index) => index,
-                None => todo!("Syntax error"),
+                None => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "Could not find expected end statement in brace statements".to_owned(),
+                    });
+                }
             };
 
         // find the previous EndStatement at the same level as the end of the terminal
@@ -615,7 +664,12 @@ fn parse_brace_statements_rule(
     let non_recursive_start_token = match tokens.get(non_recursive_start_index)
     {
         Some(non_recursive_start_token) => non_recursive_start_token,
-        None => todo!("Syntax error"),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Non recursive brace statement out of range".to_owned(),
+            });
+        }
     };
 
     let non_recursive_rule = if *non_recursive_start_token == Token::Return {
@@ -633,6 +687,8 @@ fn parse_brace_statements_rule(
         ast,
         stack,
     );
+
+    Ok(())
 }
 
 // TODO: document me!
@@ -690,7 +746,8 @@ fn parse_statement_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
+    // Find assign token to split on
     match find_next_matching_level_token_all_groups(
         tokens,
         &[
@@ -703,102 +760,140 @@ fn parse_statement_rule(
         search_data.start,
         search_data.end,
     ) {
-        Some(assign_index) => match tokens.get(search_data.end - 1) {
-            Some(expected_end_statement) => {
-                if *expected_end_statement != Token::EndStatement {
-                    todo!("Syntax error");
+        Some(assign_index) => {
+            // Hand the assignment statement case
+            match tokens.get(search_data.end - 1) {
+                Some(expected_end_statement) => {
+                    if *expected_end_statement != Token::EndStatement {
+                        return Err(ParseError {
+                            line_number: 0,
+                            info: "Missing expected end statement token"
+                                .to_owned(),
+                        });
+                    }
+
+                    let assign_token = match tokens.get(assign_index) {
+                        Some(assign_token) => assign_token,
+                        None => {
+                            // the assign token *should* always be there since it was found by
+                            // -- find_next_matching_level_token_all_groups. Panic instead of error.
+                            panic!("Missing assign token");
+                        }
+                    };
+
+                    // Handle various kinds of assignment tokens
+                    match assign_token {
+                        Token::Assign => {
+                            // LHS expression
+                            add_child_to_search_stack(
+                                search_data.node_handle,
+                                Rule::Expression,
+                                search_data.start,
+                                assign_index,
+                                ast,
+                                stack,
+                            );
+
+                            // RHS expression
+                            add_child_to_search_stack(
+                                search_data.node_handle,
+                                Rule::Expression,
+                                assign_index + 1,
+                                search_data.end - 1,
+                                ast,
+                                stack,
+                            );
+                        }
+                        Token::PlusEquals => {
+                            binary_comp_statement(
+                                search_data,
+                                ast,
+                                stack,
+                                assign_index,
+                                Rule::PlusMinus,
+                                Token::Plus,
+                            );
+                        }
+                        Token::MinusEquals => {
+                            binary_comp_statement(
+                                search_data,
+                                ast,
+                                stack,
+                                assign_index,
+                                Rule::PlusMinus,
+                                Token::Minus,
+                            );
+                        }
+                        Token::TimesEquals => {
+                            binary_comp_statement(
+                                search_data,
+                                ast,
+                                stack,
+                                assign_index,
+                                Rule::MultDiv,
+                                Token::Times,
+                            );
+                        }
+                        Token::DivideEquals => {
+                            binary_comp_statement(
+                                search_data,
+                                ast,
+                                stack,
+                                assign_index,
+                                Rule::MultDiv,
+                                Token::Divide,
+                            );
+                        }
+                        _ => {
+                            // panics instead of returning an error b/c the find error case
+                            // is already handled
+                            panic!("Unexpected token for assignment");
+                        }
+                    }
                 }
+                None => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "No end statement (end of tokens).".to_owned(),
+                    });
+                }
+            }
+        }
+        None => {
+            // Handle the non-assignment statement case
 
-                let assign_token = match tokens.get(assign_index) {
-                    Some(assign_token) => assign_token,
-                    None => panic!("Could not get assign token"),
-                };
-
-                match assign_token {
-                    Token::Assign => {
-                        // LHS expression
+            // TODO: why is this - 2 instead of - 1? add a comment explaining?
+            // -- Should be caught during code coverage...
+            match tokens.get(search_data.end - 2) {
+                Some(expected_end_statement) => {
+                    if *expected_end_statement != Token::EndStatement {
                         add_child_to_search_stack(
                             search_data.node_handle,
                             Rule::Expression,
                             search_data.start,
-                            assign_index,
-                            ast,
-                            stack,
-                        );
-
-                        // RHS expression
-                        add_child_to_search_stack(
-                            search_data.node_handle,
-                            Rule::Expression,
-                            assign_index + 1,
                             search_data.end - 1,
                             ast,
                             stack,
                         );
+                    } else {
+                        return Err(ParseError {
+                            line_number: 0,
+                            info: "Missing expected end statement.".to_owned(),
+                        });
                     }
-                    Token::PlusEquals => {
-                        binary_comp_statement(
-                            search_data,
-                            ast,
-                            stack,
-                            assign_index,
-                            Rule::PlusMinus,
-                            Token::Plus,
-                        );
-                    }
-                    Token::MinusEquals => {
-                        binary_comp_statement(
-                            search_data,
-                            ast,
-                            stack,
-                            assign_index,
-                            Rule::PlusMinus,
-                            Token::Minus,
-                        );
-                    }
-                    Token::TimesEquals => {
-                        binary_comp_statement(
-                            search_data,
-                            ast,
-                            stack,
-                            assign_index,
-                            Rule::MultDiv,
-                            Token::Times,
-                        );
-                    }
-                    Token::DivideEquals => {
-                        binary_comp_statement(
-                            search_data,
-                            ast,
-                            stack,
-                            assign_index,
-                            Rule::MultDiv,
-                            Token::Divide,
-                        );
-                    }
-                    _ => panic!("Unexpected assign token"),
+                }
+                None => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "No end statement found (end of tokens)."
+                            .to_owned(),
+                    });
                 }
             }
-            None => todo!("Syntax error?"),
-        },
-        None => match tokens.get(search_data.end - 2) {
-            Some(expected_end_statement) => {
-                if *expected_end_statement != Token::EndStatement {
-                    add_child_to_search_stack(
-                        search_data.node_handle,
-                        Rule::Expression,
-                        search_data.start,
-                        search_data.end - 1,
-                        ast,
-                        stack,
-                    );
-                } else {
-                    todo!("Syntax error");
-                }
-            }
-            None => todo!("Syntax error"),
-        },
+        }
     }
+
+    Ok(())
 }
 
 fn parse_return_statement(
