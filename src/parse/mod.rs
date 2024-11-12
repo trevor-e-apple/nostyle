@@ -901,16 +901,24 @@ fn parse_return_statement(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     let start = search_data.start + 1; // exclude Return token
     let end_statement_index = search_data.end - 1;
     match tokens.get(end_statement_index) {
         Some(token) => {
             if *token != Token::EndStatement {
-                todo!("Syntax error: missing end statement");
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Syntax error: missing end statement".to_owned(),
+                });
             }
         }
-        None => todo!("Syntax error"),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Syntax error: missing end statement".to_owned(),
+            })
+        }
     }
 
     add_child_to_search_stack(
@@ -921,6 +929,8 @@ fn parse_return_statement(
         ast,
         stack,
     );
+
+    Ok(())
 }
 
 /// parse the if_else rule
@@ -929,14 +939,22 @@ fn parse_if_else_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     match tokens.get(search_data.start) {
         Some(expected_if) => {
             if *expected_if != Token::If {
-                todo!("Syntax error");
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Missing if keyword".to_owned(),
+                });
             }
         }
-        None => todo!("Syntax error"),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Missing if keyword".to_owned(),
+            })
+        }
     }
 
     // check if we have an if-else or just an if
@@ -957,7 +975,12 @@ fn parse_if_else_rule(
                 else_index,
             ) {
                 Some(lbrace_index) => lbrace_index,
-                None => todo!("Syntax error"),
+                None => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "Missing lbrace".to_owned(),
+                    });
+                }
             };
 
             // condition expression
@@ -1001,7 +1024,12 @@ fn parse_if_else_rule(
                 search_data.end,
             ) {
                 Some(lbrace_index) => lbrace_index,
-                None => todo!("Syntax error"),
+                None => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "Missing lbrace".to_owned(),
+                    })
+                }
             };
 
             // condition expression
@@ -1025,6 +1053,8 @@ fn parse_if_else_rule(
             );
         }
     }
+
+    Ok(())
 }
 
 /// for parsing binary operations in an expression
@@ -1036,7 +1066,7 @@ fn parse_binary_op_rule(
     next_rule: Rule,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     match find_final_matching_level_token_all_groups(
         tokens,
         matching_tokens,
@@ -1092,7 +1122,7 @@ fn parse_binary_op_rule(
                 // modify current node with next rule
                 let node = match ast.get_node_mut(search_data.node_handle) {
                     Some(node) => node,
-                    None => todo!(),
+                    None => panic!("Bad handle"),
                 };
                 node.rule = next_rule;
                 // push back onto the stack
@@ -1111,7 +1141,7 @@ fn parse_binary_op_rule(
                     Some(node) => {
                         node.data = Some(binary_op_token);
                     }
-                    None => todo!("Bad handle"),
+                    None => panic!("Bad handle"),
                 }
 
                 // add children and add them to the search stack
@@ -1138,6 +1168,8 @@ fn parse_binary_op_rule(
             next_rule_updates(search_data, ast, stack, next_rule);
         }
     }
+
+    Ok(())
 }
 
 // parses the equality rule
@@ -1146,7 +1178,7 @@ fn parse_equality_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
         search_data,
@@ -1164,7 +1196,7 @@ fn parse_comparison_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
         search_data,
@@ -1187,7 +1219,7 @@ fn parse_plus_minus_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
         search_data,
@@ -1205,7 +1237,7 @@ fn parse_mult_div_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
         search_data,
@@ -1222,15 +1254,14 @@ fn parse_unary_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     match tokens.get(search_data.start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
-                println!("{:?}", first_token);
                 // add data to current node
                 let node = match ast.get_node_mut(search_data.node_handle) {
                     Some(node) => node,
-                    None => todo!(),
+                    None => panic!("Bad handle"),
                 };
                 node.data = Some(first_token.clone());
 
@@ -1247,8 +1278,15 @@ fn parse_unary_rule(
                 next_rule_updates(search_data, ast, stack, Rule::FunctionCall);
             }
         }
-        None => todo!("Syntax error"),
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Empty unary rule".to_owned(),
+            });
+        }
     }
+
+    Ok(())
 }
 
 fn parse_function_call_rule(
@@ -1256,7 +1294,7 @@ fn parse_function_call_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     match tokens.get(search_data.start) {
         Some(start_token) => match start_token {
             Token::Symbol(_) => {
@@ -1303,7 +1341,17 @@ fn parse_function_call_rule(
                     );
                 } else if has_lparen || has_rparen {
                     // has_lparen xor has_rparen == true
-                    todo!("Syntax error");
+                    if has_lparen {
+                        return Err(ParseError {
+                            line_number: 0,
+                            info: "Missing rparen for function call".to_owned(),
+                        });
+                    } else {
+                        return Err(ParseError {
+                            line_number: 0,
+                            info: "Missing lparen for function call".to_owned(),
+                        });
+                    }
                 } else {
                     // no parens, symbol can't be parsed as function call
                     next_rule_updates(search_data, ast, stack, Rule::Primary);
@@ -1315,9 +1363,14 @@ fn parse_function_call_rule(
             }
         },
         None => {
-            todo!("Syntax error? Bit weird to not find this token at all");
+            return Err(ParseError {
+                line_number: 0,
+                info: "Empty function call rule".to_owned(),
+            });
         }
     }
+
+    Ok(())
 }
 
 fn parse_function_arguments_rule(
@@ -1325,7 +1378,7 @@ fn parse_function_arguments_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     // find the final comma in the search range
     match find_final_matching_level_token_all_groups(
         tokens,
@@ -1407,6 +1460,8 @@ fn parse_function_arguments_rule(
             );
         }
     }
+
+    Ok(())
 }
 
 fn parse_function_def_rule(
@@ -1414,16 +1469,22 @@ fn parse_function_def_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     match tokens.get(search_data.start) {
         Some(start_token) => match start_token {
             Token::Function => {}
             _ => {
-                todo!("Something has gone horribly wrong. You should not arrive here without a leading function token.");
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Missing expected function def token".to_owned(),
+                });
             }
         },
         None => {
-            todo!("Syntax error? Bit weird to not find this token at all");
+            return Err(ParseError {
+                line_number: 0,
+                info: "Missing expected function def token".to_owned(),
+            });
         }
     }
 
@@ -1457,47 +1518,67 @@ fn parse_function_def_rule(
         (has_lparen, lparen_index, has_rparen, rparen_index)
     };
 
-    if has_lparen && has_rparen {
-        // update current node to include function name
-        let node = match ast.get_node_mut(search_data.node_handle) {
-            Some(node) => node,
-            None => todo!("node handle bad???"),
-        };
-        let function_name = match tokens.get(search_data.start + 1) {
-            Some(expected_symbol) => match expected_symbol {
-                Token::Symbol(name) => name,
-                _ => {
-                    todo!("Syntax error. Function tokens must be followed by a symbol.")
-                }
-            },
-            None => todo!(),
-        };
-        node.data = Some(Token::Symbol(function_name.clone()));
-
-        add_child_to_search_stack(
-            search_data.node_handle,
-            Rule::FunctionDefParameters,
-            lparen_index + 1,
-            rparen_index,
-            ast,
-            stack,
-        );
-
-        add_child_to_search_stack(
-            search_data.node_handle,
-            Rule::BraceExpression,
-            rparen_index + 1,
-            search_data.end,
-            ast,
-            stack,
-        );
-    } else if has_lparen || has_rparen {
-        todo!("Syntax error: function defhas lparen but no rparen");
-    } else {
-        // no parens, symbol can't be parsed as function call despite leading function token.
-        // syntax error
-        todo!("Syntax error");
+    if has_lparen && !has_rparen {
+        return Err(ParseError {
+            line_number: 0,
+            info: "Function def has no rparen".to_owned(),
+        });
+    } else if !has_lparen && has_rparen {
+        return Err(ParseError {
+            line_number: 0,
+            info: "Function def has no lparen".to_owned(),
+        });
+    } else if !has_lparen && !has_rparen {
+        return Err(ParseError {
+            line_number: 0,
+            info: "Function def has no parens".to_owned(),
+        });
     }
+
+    // update current node to include function name
+    let node = match ast.get_node_mut(search_data.node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+    let function_name = match tokens.get(search_data.start + 1) {
+        Some(expected_symbol) => match expected_symbol {
+            Token::Symbol(name) => name,
+            _ => {
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Function tokens must be followed by a symbol."
+                        .to_owned(),
+                });
+            }
+        },
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Function tokens must be followed by a symbol".to_owned(),
+            })
+        }
+    };
+    node.data = Some(Token::Symbol(function_name.clone()));
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::FunctionDefParameters,
+        lparen_index + 1,
+        rparen_index,
+        ast,
+        stack,
+    );
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::BraceExpression,
+        rparen_index + 1,
+        search_data.end,
+        ast,
+        stack,
+    );
+
+    Ok(())
 }
 
 fn parse_function_parameters_rule(
