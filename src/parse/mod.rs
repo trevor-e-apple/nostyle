@@ -1586,54 +1586,71 @@ fn parse_function_parameters_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     if search_data.start == search_data.end {
         // this function has no parameters. nothing to do
-    } else {
-        // get the final two symbols (the type and the parameter name)
-        match tokens.get(search_data.end - 1) {
-            Some(final_token) => {
-                // check for trailing comma
-                let final_symbol_index = match final_token {
-                    Token::Comma => search_data.end - 2,
-                    Token::Symbol(_) => search_data.end - 1,
-                    _ => todo!("Syntax error. Expected Symbol or Comma."),
-                };
-                let declaration_start = final_symbol_index - 1;
+        return Ok(());
+    }
 
-                // LHS is the recursive side
-                add_child_to_search_stack(
-                    search_data.node_handle,
-                    Rule::FunctionDefParameters,
-                    search_data.start,
-                    declaration_start,
-                    ast,
-                    stack,
-                );
+    // get the final two symbols (the type and the parameter name)
+    match tokens.get(search_data.end - 1) {
+        Some(final_token) => {
+            // check for trailing comma
+            let final_symbol_index = match final_token {
+                Token::Comma => search_data.end - 2,
+                Token::Symbol(_) => search_data.end - 1,
+                _ => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "Syntax error. Expected Symbol or Comma."
+                            .to_owned(),
+                    });
+                }
+            };
+            let declaration_start = final_symbol_index - 1;
 
-                // RHS is a declaration
-                add_child_to_search_stack(
-                    search_data.node_handle,
-                    Rule::Declaration,
-                    declaration_start,
-                    final_symbol_index + 1,
-                    ast,
-                    stack,
-                );
-            }
-            None => todo!("Syntax error"),
+            // LHS is the recursive side
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::FunctionDefParameters,
+                search_data.start,
+                declaration_start,
+                ast,
+                stack,
+            );
+
+            // RHS is a declaration
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Declaration,
+                declaration_start,
+                final_symbol_index + 1,
+                ast,
+                stack,
+            );
+        }
+        None => {
+            return Err(ParseError {
+                line_number: 0,
+                info: "Function parameters token out of range".to_owned(),
+            });
         }
     }
+
+    Ok(())
 }
 
 fn parse_declaration_rule(
     tokens: &Tokens,
     search_data: &SearchData,
     ast: &mut Ast,
-) {
+) -> Result<(), ParseError> {
     // check that search data is len 2
     if (search_data.end - search_data.start) != 2 {
-        todo!("Syntax error. Declaration rule expects length 2.");
+        return Err(ParseError {
+            line_number: 0,
+            info: "Declaration rule has more than two tokens.".to_owned(),
+        });
     }
 
     match tokens.get(search_data.start) {
@@ -1644,9 +1661,17 @@ fn parse_declaration_rule(
                     Some(token.clone()),
                 );
             }
-            _ => todo!("Syntax error: token was not a symbol"),
+            _ => {
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "First token in declaration is not a symbol"
+                        .to_owned(),
+                })
+            }
         },
-        None => todo!("Bad search range?"),
+        None => panic!(
+            "This can not occur as the search length has already been checked."
+        ),
     }
 
     match tokens.get(search_data.start + 1) {
@@ -1657,10 +1682,20 @@ fn parse_declaration_rule(
                     Some(token.clone()),
                 );
             }
-            _ => todo!("Syntax error: token was not a symbol"),
+            _ => {
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Second token in declaration is not a symbol"
+                        .to_owned(),
+                })
+            }
         },
-        None => todo!("Bad search range?"),
+        None => panic!(
+            "This can not occur as the search length has already been checked."
+        ),
     }
+
+    Ok(())
 }
 
 fn parse_primary_rule(
@@ -1668,7 +1703,7 @@ fn parse_primary_rule(
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
-) {
+) -> Result<(), ParseError> {
     if search_data.start == search_data.end {
         // handle empty expression case
         let node = match ast.get_node_mut(search_data.node_handle) {
@@ -1685,17 +1720,17 @@ fn parse_primary_rule(
                 | Token::FloatLiteral(_)
                 | Token::StringLiteral(_) => {
                     if (search_data.end - search_data.start) != 1 {
-                        todo!(
-                            concat!(
-                                "Syntax error: primary did not begin with grouping token,",
-                                "but contained more than one token."
-                            )
-                        );
+                        return Err(ParseError {
+                            line_number: 0,
+                            info: "Primary did not begin with grouping token but contained multiple tokens".to_owned(),
+                        });
                     }
                     // update current primary to terminal
                     let node = match ast.get_node_mut(search_data.node_handle) {
                         Some(node) => node,
-                        None => todo!(),
+                        None => {
+                            panic!("Missing node handle")
+                        }
                     };
                     node.rule = Rule::Terminal;
                     node.data = Some(token.clone());
@@ -1704,7 +1739,7 @@ fn parse_primary_rule(
                     // update current node to expression rule
                     let node = match ast.get_node_mut(search_data.node_handle) {
                         Some(node) => node,
-                        None => todo!(),
+                        None => panic!("Missing node handle"),
                     };
                     node.rule = Rule::Expression;
 
@@ -1720,17 +1755,25 @@ fn parse_primary_rule(
                                     node_handle: search_data.node_handle,
                                 });
                             } else {
-                                todo!("Syntax error (mismatched parens)")
+                                return Err(ParseError {
+                                    line_number: 0,
+                                    info: "Mismatched parens".to_owned(),
+                                });
                             }
                         }
-                        None => todo!("panic?"),
+                        None => {
+                            return Err(ParseError {
+                                line_number: 0,
+                                info: "Mismatched parens".to_owned(),
+                            });
+                        }
                     }
                 }
                 Token::LBrace => {
                     // update current node to BraceExpression rule
                     let node = match ast.get_node_mut(search_data.node_handle) {
                         Some(node) => node,
-                        None => todo!(),
+                        None => panic!("Missing node handle"),
                     };
                     node.rule = Rule::BraceExpression;
 
@@ -1745,15 +1788,35 @@ fn parse_primary_rule(
                                     node_handle: search_data.node_handle,
                                 });
                             } else {
-                                todo!("Syntax error (mismatched braces)")
+                                return Err(ParseError {
+                                    line_number: 0,
+                                    info: "Mismatched braces".to_owned(),
+                                });
                             }
                         }
-                        None => todo!("panic?"),
+                        None => {
+                            return Err(ParseError {
+                                line_number: 0,
+                                info: "Mismatched braces".to_owned(),
+                            })
+                        }
                     }
                 }
-                _ => todo!("Syntax error, unexpected token"),
+                _ => {
+                    return Err(ParseError {
+                        line_number: 0,
+                        info: "Unexpected token".to_owned(),
+                    })
+                }
             },
-            None => todo!("Syntax error"),
+            None => {
+                return Err(ParseError {
+                    line_number: 0,
+                    info: "Empty primary rule".to_owned(),
+                })
+            }
         }
     }
+
+    Ok(())
 }
