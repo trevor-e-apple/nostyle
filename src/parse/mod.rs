@@ -79,36 +79,49 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
     while let Some(search_data) = stack.pop() {
         let rule = match result.get_node(search_data.node_handle) {
             Some(node) => node.rule,
-            None => todo!("Panic?"),
+            None => panic!("Missing node handle"),
         };
 
         match rule {
             Rule::Expression => {
-                parse_expression_rule(
+                match parse_expression_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::FunctionDef => {
-                parse_function_def_rule(
+                match parse_function_def_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
             }
             Rule::FunctionDefParameters => {
-                parse_function_parameters_rule(
+                match parse_function_parameters_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
             }
             Rule::Declaration => {
-                parse_declaration_rule(tokens, &search_data, &mut result);
+                match parse_declaration_rule(tokens, &search_data, &mut result)
+                {
+                    Ok(_) => todo!(),
+                    Err(error) => parse_errors.push(error),
+                }
             }
             Rule::BraceExpression => {
                 match parse_brace_expression_rule(
@@ -117,8 +130,8 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     &mut result,
                     &mut stack,
                 ) {
-                    Ok(_) => todo!(),
-                    Err(_) => todo!(),
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
                 }
             }
             Rule::BraceStatements => {
@@ -128,8 +141,8 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     &mut result,
                     &mut stack,
                 ) {
-                    Ok(_) => todo!(),
-                    Err(_) => todo!(),
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
                 }
             }
             Rule::Statement => {
@@ -139,25 +152,31 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     &mut result,
                     &mut stack,
                 ) {
-                    Ok(_) => todo!(),
-                    Err(_) => todo!(),
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
                 };
             }
             Rule::ReturnStatement => {
-                parse_return_statement(
+                match parse_return_statement(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::IfElse => {
-                parse_if_else_rule(
+                match parse_if_else_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
             }
             Rule::ForLoop => {
                 match parse_for_rule(
@@ -166,68 +185,97 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     &mut result,
                     &mut stack,
                 ) {
-                    Ok(_) => todo!(),
-                    Err(_) => todo!(),
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
                 }
             }
             Rule::Equality => {
-                parse_equality_rule(
+                match parse_equality_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::Comparison => {
-                parse_comparison_rule(
+                match parse_comparison_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::PlusMinus => {
-                parse_plus_minus_rule(
+                match parse_plus_minus_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::MultDiv => {
-                parse_mult_div_rule(
+                match parse_mult_div_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::Unary => {
-                parse_unary_rule(tokens, &search_data, &mut result, &mut stack);
+                match parse_unary_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::FunctionCall => {
-                parse_function_call_rule(
+                match parse_function_call_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::FunctionArguments => {
-                parse_function_arguments_rule(
+                match parse_function_arguments_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::Primary => {
-                parse_primary_rule(
+                match parse_primary_rule(
                     tokens,
                     &search_data,
                     &mut result,
                     &mut stack,
-                );
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
             }
             Rule::Terminal => {}
         }

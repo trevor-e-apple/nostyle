@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn empty_parse() {
         let tokens = tokenize("").expect("Unexpected tokenize error");
-        let ast = parse(&tokens);
+        let ast = parse(&tokens).expect("Unexpected parse error");
         let expected_ast = Ast::new();
 
         check_ast_equal(&ast, &expected_ast);
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn empty_braces() {
         let tokens = tokenize("{}").expect("Unexpected tokenize error");
-        let ast = parse(&tokens);
+        let ast = parse(&tokens).expect("Unexpected parse error");
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn empty_parens() {
         let tokens = tokenize("()").expect("Unexpected tokenize error");
-        let ast = parse(&tokens);
+        let ast = parse(&tokens).expect("Unexpected parse error");
         let expected_ast = {
             let mut expected_ast = Ast::new();
             let root_handle = expected_ast.add_root(Rule::Expression);
@@ -200,7 +200,16 @@ mod tests {
     #[test]
     fn empty_statement() {
         let tokens = tokenize(";").expect("Unexpected tokenize error");
-        parse(&tokens);
+        match parse(&tokens) {
+            Ok(_) => assert!(false),
+            Err(errors) => {
+                assert_eq!(errors.len(), 1);
+
+                let error = errors.get(0).expect("What the");
+                // TODO: line number check
+                // TODO: check error message?
+            }
+        }
     }
 
     #[test]
