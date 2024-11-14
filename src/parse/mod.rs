@@ -119,7 +119,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::Declaration => {
                 match parse_declaration_rule(tokens, &search_data, &mut result)
                 {
-                    Ok(_) => todo!(),
+                    Ok(_) => {}
                     Err(error) => parse_errors.push(error),
                 }
             }
