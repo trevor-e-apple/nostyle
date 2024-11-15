@@ -38,9 +38,9 @@ pub enum Token {
 #[derive(Clone, Debug)]
 pub enum TokenizeErrorType {
     General,
-    IntParse,
-    FloatParse,
-    StringParse,
+    Int,
+    Float,
+    String,
 }
 
 #[derive(Clone, Debug)]

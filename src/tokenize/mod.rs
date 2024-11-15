@@ -72,7 +72,7 @@ fn get_int_literal_token(
         Ok(value) => Ok((Token::IntLiteral(value), num_literal_string.len())),
         Err(_) => Err(TokenizeError {
             line_number,
-            type_data: TokenizeErrorType::IntParse,
+            type_data: TokenizeErrorType::Int,
         }),
     }
 }
@@ -113,7 +113,7 @@ fn get_num_token(
             }
             Err(_) => Err(TokenizeError {
                 line_number,
-                type_data: TokenizeErrorType::FloatParse,
+                type_data: TokenizeErrorType::Float,
             }),
         }
     } else {
@@ -123,7 +123,7 @@ fn get_num_token(
             }
             Err(_) => Err(TokenizeError {
                 line_number,
-                type_data: TokenizeErrorType::IntParse,
+                type_data: TokenizeErrorType::Int,
             }),
         }
     }
@@ -360,7 +360,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
             } else {
                 tokenize_errors.push(TokenizeError {
                     line_number,
-                    type_data: TokenizeErrorType::StringParse,
+                    type_data: TokenizeErrorType::String,
                 });
                 index = end;
             }
@@ -538,15 +538,15 @@ mod tests {
                 assert!(false);
                 return;
             }
-            TokenizeErrorType::IntParse => {
+            TokenizeErrorType::Int => {
                 assert!(false);
                 return;
             }
-            TokenizeErrorType::FloatParse => {
+            TokenizeErrorType::Float => {
                 assert!(false);
                 return;
             }
-            TokenizeErrorType::StringParse => {}
+            TokenizeErrorType::String => {}
         }
     }
 
