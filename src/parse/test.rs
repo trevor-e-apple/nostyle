@@ -2732,6 +2732,35 @@ mod tests {
     }
 
     #[test]
+    fn multiple_errors() {
+        let tokens =
+            tokenize("{a +* b; a +* b;}").expect("Unexpected tokenize error");
+        match parse(&tokens) {
+            Ok(_) => {
+                assert!(false);
+            }
+            Err(errors) => {
+                assert_eq!(errors.len(), 2);
+            }
+        }
+    }
+
+    #[test]
+    fn multiple_errors_valid() {
+        // multiple errors as well as valid statements
+        let tokens = tokenize("{a = b; a +* b; b +/ c; b = a;}")
+            .expect("Unexpected tokenize error");
+        match parse(&tokens) {
+            Ok(_) => {
+                assert!(false);
+            }
+            Err(errors) => {
+                assert_eq!(errors.len(), 2);
+            }
+        }
+    }
+
+    #[test]
     fn statement_lhs_is_expression() {
         let tokens = tokenize("{{a} = 1;}").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse errror");
