@@ -51,11 +51,12 @@ pub struct TokenizeError {
 
 pub struct Tokens {
     data: Vec<Token>,
+    line_numbers: Vec<usize>,
 }
 
 impl Tokens {
     pub fn new() -> Self {
-        Self { data: vec![] }
+        Self { data: vec![], line_numbers: vec![] }
     }
 
     /// for use in the tokenizer. makes sure that developers can't add new
@@ -64,9 +65,11 @@ impl Tokens {
         &mut self,
         index: &mut usize,
         token: Token,
+        line_number: usize,
         advance_by: usize,
     ) {
         self.data.push(token);
+        self.line_numbers.push(line_number);
         *index += advance_by;
     }
 
@@ -76,9 +79,11 @@ impl Tokens {
         &mut self,
         index: &mut usize,
         token: Token,
+        line_number: usize,
         set_to: usize,
     ) {
         self.data.push(token);
+        self.line_numbers.push(line_number);
         *index = set_to;
     }
 

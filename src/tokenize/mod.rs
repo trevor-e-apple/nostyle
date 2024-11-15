@@ -134,17 +134,18 @@ fn binary_op_composable_token(
     index: &mut usize,
     tokens: &mut Tokens,
     token: Token,
+    line_number: usize,
     compose_token: Token,
 ) {
     match chars.get(*index + 1) {
         Some(next_char) => {
             if *next_char == '=' {
-                tokens.add_token(index, compose_token, 2);
+                tokens.add_token(index, compose_token, line_number, 2);
             } else {
-                tokens.add_token(index, token, 1);
+                tokens.add_token(index, token, line_number, 1);
             }
         }
-        None => tokens.add_token(index, token, 1),
+        None => tokens.add_token(index, token, line_number, 1),
     }
 }
 
@@ -162,44 +163,69 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
         if *c == 'i' {
             let word = get_word(&chars, index);
             if word == "if" {
-                tokens.add_token(&mut index, Token::If, 2);
+                tokens.add_token(&mut index, Token::If, line_number, 2);
             } else {
                 let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
+                tokens.add_token(
+                    &mut index,
+                    Token::Symbol(word),
+                    line_number,
+                    word_len,
+                );
             }
         } else if *c == 'e' {
             let word = get_word(&chars, index);
             if word == "else" {
-                tokens.add_token(&mut index, Token::Else, 4);
+                tokens.add_token(&mut index, Token::Else, line_number, 4);
             } else {
                 let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
+                tokens.add_token(
+                    &mut index,
+                    Token::Symbol(word),
+                    line_number,
+                    word_len,
+                );
             }
         } else if *c == 'f' {
             let word = get_word(&chars, index);
             if word == "fn" {
-                tokens.add_token(&mut index, Token::Function, 2);
+                tokens.add_token(&mut index, Token::Function, line_number, 2);
             } else if word == "for" {
-                tokens.add_token(&mut index, Token::For, 3);
+                tokens.add_token(&mut index, Token::For, line_number, 3);
             } else {
                 let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
+                tokens.add_token(
+                    &mut index,
+                    Token::Symbol(word),
+                    line_number,
+                    word_len,
+                );
             }
         } else if *c == 'r' {
             let word = get_word(&chars, index);
             if word == "return" {
-                tokens.add_token(&mut index, Token::Return, 6);
+                tokens.add_token(&mut index, Token::Return, line_number, 6);
             } else {
                 let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
+                tokens.add_token(
+                    &mut index,
+                    Token::Symbol(word),
+                    line_number,
+                    word_len,
+                );
             }
         } else if *c == 'w' {
             let word = get_word(&chars, index);
             if word == "while" {
-                tokens.add_token(&mut index, Token::While, 5);
+                tokens.add_token(&mut index, Token::While, line_number, 5);
             } else {
                 let word_len = word.len();
-                tokens.add_token(&mut index, Token::Symbol(word), word_len);
+                tokens.add_token(
+                    &mut index,
+                    Token::Symbol(word),
+                    line_number,
+                    word_len,
+                );
             }
         } else if *c == '+' {
             binary_op_composable_token(
@@ -207,6 +233,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 &mut index,
                 &mut tokens,
                 Token::Plus,
+                line_number,
                 Token::PlusEquals,
             );
         } else if *c == '-' {
@@ -215,6 +242,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 &mut index,
                 &mut tokens,
                 Token::Minus,
+                line_number,
                 Token::MinusEquals,
             );
         } else if *c == '*' {
@@ -223,6 +251,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 &mut index,
                 &mut tokens,
                 Token::Times,
+                line_number,
                 Token::TimesEquals,
             );
         } else if *c == '/' {
@@ -231,42 +260,72 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 &mut index,
                 &mut tokens,
                 Token::Divide,
+                line_number,
                 Token::DivideEquals,
             );
         } else if *c == '=' {
             match chars.get(index + 1) {
                 Some(next_char) => {
                     if *next_char == '=' {
-                        tokens.add_token(&mut index, Token::BoolEquals, 2);
+                        tokens.add_token(
+                            &mut index,
+                            Token::BoolEquals,
+                            line_number,
+                            2,
+                        );
                     } else {
-                        tokens.add_token(&mut index, Token::Assign, 1);
+                        tokens.add_token(
+                            &mut index,
+                            Token::Assign,
+                            line_number,
+                            1,
+                        );
                     }
                 }
-                None => tokens.add_token(&mut index, Token::Assign, 1),
+                None => {
+                    tokens.add_token(&mut index, Token::Assign, line_number, 1)
+                }
             }
         } else if *c == '!' {
             match chars.get(index + 1) {
                 Some(next_char) => {
                     if *next_char == '=' {
-                        tokens.add_token(&mut index, Token::NotEquals, 2);
+                        tokens.add_token(
+                            &mut index,
+                            Token::NotEquals,
+                            line_number,
+                            2,
+                        );
                     } else {
-                        tokens.add_token(&mut index, Token::Not, 1);
+                        tokens.add_token(
+                            &mut index,
+                            Token::Not,
+                            line_number,
+                            1,
+                        );
                     }
                 }
-                None => tokens.add_token(&mut index, Token::Not, 1),
+                None => {
+                    tokens.add_token(&mut index, Token::Not, line_number, 1)
+                }
             }
         } else if *c == '{' {
-            tokens.add_token(&mut index, Token::LBrace, 1);
+            tokens.add_token(&mut index, Token::LBrace, line_number, 1);
         } else if *c == '}' {
-            tokens.add_token(&mut index, Token::RBrace, 1);
+            tokens.add_token(&mut index, Token::RBrace, line_number, 1);
         } else if *c == '(' {
-            tokens.add_token(&mut index, Token::LParen, 1);
+            tokens.add_token(&mut index, Token::LParen, line_number, 1);
         } else if *c == ')' {
-            tokens.add_token(&mut index, Token::RParen, 1);
+            tokens.add_token(&mut index, Token::RParen, line_number, 1);
         } else if ALPHABET_CHARS.contains(c) {
             let word = get_word(&chars, index);
             let word_len = word.len();
-            tokens.add_token(&mut index, Token::Symbol(word), word_len);
+            tokens.add_token(
+                &mut index,
+                Token::Symbol(word),
+                line_number,
+                word_len,
+            );
         } else if DIGIT_CHARS.contains(c) {
             if *c == '0' {
                 match chars.get(index + 1) {
@@ -292,6 +351,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                                 Ok((token, string_len)) => tokens.add_token(
                                     &mut index,
                                     token,
+                                    line_number,
                                     string_len + 2, // + 2 for the literal prefix indicating the base
                                 ),
                                 Err(error) => {
@@ -303,22 +363,31 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                             match get_num_token(&chars, index, line_number) {
                                 Ok((token, string_len)) => {
                                     tokens.add_token(
-                                        &mut index, token, string_len,
+                                        &mut index,
+                                        token,
+                                        line_number,
+                                        string_len,
                                     );
                                 }
                                 Err(_) => todo!(),
                             }
                         }
                     }
-                    None => {
-                        tokens.add_token(&mut index, Token::IntLiteral(0), 1)
-                    }
+                    None => tokens.add_token(
+                        &mut index,
+                        Token::IntLiteral(0),
+                        line_number,
+                        1,
+                    ),
                 }
             } else {
                 match get_num_token(&chars, index, line_number) {
-                    Ok((token, string_len)) => {
-                        tokens.add_token(&mut index, token, string_len)
-                    }
+                    Ok((token, string_len)) => tokens.add_token(
+                        &mut index,
+                        token,
+                        line_number,
+                        string_len,
+                    ),
                     Err(err) => {
                         tokenize_errors.push(err);
                         index += 1;
@@ -355,6 +424,7 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 tokens.add_token_set_index(
                     &mut index,
                     Token::StringLiteral(string),
+                    line_number,
                     end + 1,
                 );
             } else {
@@ -365,20 +435,35 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                 index = end;
             }
         } else if *c == ';' {
-            tokens.add_token(&mut index, Token::EndStatement, 1);
+            tokens.add_token(&mut index, Token::EndStatement, line_number, 1);
         } else if *c == ',' {
-            tokens.add_token(&mut index, Token::Comma, 1);
+            tokens.add_token(&mut index, Token::Comma, line_number, 1);
         } else if *c == '<' {
             match chars.get(index + 1) {
                 Some(next_char) => {
                     if *next_char == '=' {
-                        tokens.add_token(&mut index, Token::LessThanOrEqual, 2);
+                        tokens.add_token(
+                            &mut index,
+                            Token::LessThanOrEqual,
+                            line_number,
+                            2,
+                        );
                     } else {
-                        tokens.add_token(&mut index, Token::LessThan, 1);
+                        tokens.add_token(
+                            &mut index,
+                            Token::LessThan,
+                            line_number,
+                            1,
+                        );
                     }
                 }
                 None => {
-                    tokens.add_token(&mut index, Token::LessThan, 1);
+                    tokens.add_token(
+                        &mut index,
+                        Token::LessThan,
+                        line_number,
+                        1,
+                    );
                 }
             };
         } else if *c == '>' {
@@ -388,18 +473,29 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                         tokens.add_token(
                             &mut index,
                             Token::GreaterThanOrEqual,
+                            line_number,
                             2,
                         );
                     } else {
-                        tokens.add_token(&mut index, Token::GreaterThan, 1);
+                        tokens.add_token(
+                            &mut index,
+                            Token::GreaterThan,
+                            line_number,
+                            1,
+                        );
                     }
                 }
                 None => {
-                    tokens.add_token(&mut index, Token::GreaterThan, 1);
+                    tokens.add_token(
+                        &mut index,
+                        Token::GreaterThan,
+                        line_number,
+                        1,
+                    );
                 }
             };
         } else if *c == '.' {
-            tokens.add_token(&mut index, Token::Dot, 1);
+            tokens.add_token(&mut index, Token::Dot, line_number, 1);
         } else if *c == '\n' {
             line_number += 1;
             index += 1;
