@@ -448,6 +448,11 @@ fn parse_for_rule(
         }
     };
 
+    let rparen_line_number = match tokens.get(rparen_index) {
+        Some((_, line_number)) => line_number,
+        None => panic!("This should never happen"),
+    };
+
     // set up init, condition, increment statements
     let (
         init_semicolon_index,
@@ -466,7 +471,7 @@ fn parse_for_rule(
                     None => {
                         return Err(ParseError {
                             start_line,
-                            end_line: rparen_index,
+                            end_line: rparen_line_number,
                             info: "Missing init statement in 'for' statements"
                                 .to_owned(),
                         });
@@ -482,7 +487,7 @@ fn parse_for_rule(
                     Some(index) => index,
                     None => return Err(ParseError {
                         start_line,
-                        end_line: rparen_index,
+                        end_line: rparen_line_number,
                         info: "Missing condition statement in 'for' statements"
                             .to_owned(),
                     }),
@@ -496,7 +501,8 @@ fn parse_for_rule(
                 ) {
                     Some(index) => index,
                     None => return Err(ParseError {
-                        line_number: 0,
+                        start_line,
+                        end_line: rparen_line_number,
                         info: "Missing increment statement in 'for' statements"
                             .to_owned(),
                     }),
