@@ -87,8 +87,23 @@ impl Tokens {
         *index = set_to;
     }
 
-    pub fn get(&self, index: usize) -> Option<&Token> {
-        self.data.get(index)
+    pub fn get(&self, index: usize) -> Option<(Token, usize)> {
+        match self.data.get(index) {
+            Some(token) => {
+                // token and line number are always added and removed together
+                let line_number =
+                    unsafe { *self.line_numbers.get_unchecked(index) };
+                Some((*token, line_number))
+            }
+            None => None,
+        }
+    }
+
+    pub fn get_final_line(&self) -> Option<usize> {
+        match self.line_numbers.get(self.line_numbers.len()) {
+            Some(line_number) => Some(*line_number),
+            None => None,
+        }
     }
 
     pub fn len(&self) -> usize {

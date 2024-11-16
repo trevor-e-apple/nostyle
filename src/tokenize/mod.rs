@@ -526,13 +526,16 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 7);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("int32".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_owned()));
-        assert_eq!(*tokens.get(2).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_owned()));
-        assert_eq!(*tokens.get(4).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("c".to_owned()));
-        assert_eq!(*tokens.get(6).unwrap(), Token::EndStatement);
+        assert_eq!(
+            tokens.get(0).unwrap(),
+            (Token::Symbol("int32".to_owned()), 0)
+        );
+        assert_eq!(tokens.get(1).unwrap(), (Token::Symbol("a".to_owned()), 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Assign, 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("b".to_owned()), 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::Plus, 0));
+        assert_eq!(tokens.get(5).unwrap(), (Token::Symbol("c".to_owned()), 0));
+        assert_eq!(tokens.get(6).unwrap(), (Token::EndStatement, 0));
     }
 
     /// test that tokenizing across multiple lines is handled correctly
@@ -542,18 +545,24 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 12);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("int32".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_owned()));
-        assert_eq!(*tokens.get(2).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_owned()));
-        assert_eq!(*tokens.get(4).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("c".to_owned()));
-        assert_eq!(*tokens.get(6).unwrap(), Token::EndStatement);
-        assert_eq!(*tokens.get(7).unwrap(), Token::Symbol("int32".to_owned()));
-        assert_eq!(*tokens.get(8).unwrap(), Token::Symbol("d".to_owned()));
-        assert_eq!(*tokens.get(9).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(10).unwrap(), Token::Symbol("a".to_owned()));
-        assert_eq!(*tokens.get(11).unwrap(), Token::EndStatement);
+        assert_eq!(
+            tokens.get(0).unwrap(),
+            (Token::Symbol("int32".to_owned()), 0)
+        );
+        assert_eq!(tokens.get(1).unwrap(), (Token::Symbol("a".to_owned()), 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Assign, 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("b".to_owned()), 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::Plus, 0));
+        assert_eq!(tokens.get(5).unwrap(), (Token::Symbol("c".to_owned()), 0));
+        assert_eq!(tokens.get(6).unwrap(), (Token::EndStatement, 0));
+        assert_eq!(
+            tokens.get(7).unwrap(),
+            (Token::Symbol("int32".to_owned()), 0)
+        );
+        assert_eq!(tokens.get(8).unwrap(), (Token::Symbol("d".to_owned()), 0));
+        assert_eq!(tokens.get(9).unwrap(), (Token::Assign, 0));
+        assert_eq!(tokens.get(10).unwrap(), (Token::Symbol("a".to_owned()), 0));
+        assert_eq!(tokens.get(11).unwrap(), (Token::EndStatement, 0));
     }
 
     /// test for assignment and equals (equivalence) working
@@ -563,14 +572,14 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 8);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a".to_string()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::Assign);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("b".to_string()));
-        assert_eq!(*tokens.get(3).unwrap(), Token::EndStatement);
-        assert_eq!(*tokens.get(4).unwrap(), Token::Symbol("a".to_string()));
-        assert_eq!(*tokens.get(5).unwrap(), Token::BoolEquals);
-        assert_eq!(*tokens.get(6).unwrap(), Token::Symbol("b".to_string()));
-        assert_eq!(*tokens.get(7).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_string()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Assign, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("b".to_string()), 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::EndStatement, 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::Symbol("a".to_string()), 0));
+        assert_eq!(tokens.get(5).unwrap(), (Token::BoolEquals, 0));
+        assert_eq!(tokens.get(6).unwrap(), (Token::Symbol("b".to_string()), 0));
+        assert_eq!(tokens.get(7).unwrap(), (Token::EndStatement, 0));
     }
 
     /// tests for ! and != being tokenized correctly
@@ -580,11 +589,11 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 5);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Not);
-        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_string()));
-        assert_eq!(*tokens.get(2).unwrap(), Token::NotEquals);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("b".to_string()));
-        assert_eq!(*tokens.get(4).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Not, 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Symbol("a".to_string()), 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::NotEquals, 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("b".to_string()), 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::EndStatement, 0));
     }
 
     /// test for sequential unary operators being tokenized correctly
@@ -594,11 +603,11 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 5);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Minus);
-        assert_eq!(*tokens.get(1).unwrap(), Token::Minus);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Minus);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("a".to_string()));
-        assert_eq!(*tokens.get(4).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Minus, 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Minus, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Minus, 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("a".to_string()), 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::EndStatement, 0));
     }
 
     /// test for tokenizing symbols and operators without spaces
@@ -608,9 +617,9 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a".to_string()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("b".to_string()));
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_string()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Plus, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("b".to_string()), 0));
     }
 
     /// basic test for whether or not the line number is correct in a tokenize
@@ -653,13 +662,13 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 7);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Not);
-        assert_eq!(*tokens.get(1).unwrap(), Token::Not);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Not);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("a".to_string()));
-        assert_eq!(*tokens.get(4).unwrap(), Token::NotEquals);
-        assert_eq!(*tokens.get(5).unwrap(), Token::Symbol("b".to_string()));
-        assert_eq!(*tokens.get(6).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Not, 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Not, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Not, 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("a".to_string()), 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::NotEquals, 0));
+        assert_eq!(tokens.get(5).unwrap(), (Token::Symbol("b".to_string()), 0));
+        assert_eq!(tokens.get(6).unwrap(), (Token::EndStatement, 0));
     }
 
     /// 'fo' is tokenized as a symbol, not a 'for'
@@ -669,7 +678,10 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("fo".to_string()));
+        assert_eq!(
+            tokens.get(0).unwrap(),
+            (Token::Symbol("fo".to_string()), 0)
+        );
     }
 
     /// 'for' is tokenized as a 'for', not a symbol
@@ -679,7 +691,7 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::For);
+        assert_eq!(tokens.get(0).unwrap(), (Token::For, 0));
     }
 
     /// 'forr' is tokenized as a symbol
@@ -689,7 +701,10 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("forr".to_string()));
+        assert_eq!(
+            tokens.get(0).unwrap(),
+            (Token::Symbol("forr".to_string()), 0)
+        );
     }
 
     /// fn is tokenized as a Function token
@@ -699,7 +714,7 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Function);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Function, 0));
     }
 
     /// fna is tokenized as a symbol token
@@ -709,7 +724,10 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("fna".to_owned()));
+        assert_eq!(
+            tokens.get(0).unwrap(),
+            (Token::Symbol("fna".to_owned()), 0)
+        );
     }
 
     /// test int literal
@@ -719,9 +737,9 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::IntLiteral(11));
-        assert_eq!(*tokens.get(1).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(2).unwrap(), Token::IntLiteral(23));
+        assert_eq!(tokens.get(0).unwrap(), (Token::IntLiteral(11), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Plus, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::IntLiteral(23), 0));
     }
 
     /// test float literal
@@ -731,11 +749,11 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 5);
-        assert_eq!(*tokens.get(0).unwrap(), Token::FloatLiteral(1.2));
-        assert_eq!(*tokens.get(1).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(2).unwrap(), Token::FloatLiteral(3.45));
-        assert_eq!(*tokens.get(3).unwrap(), Token::Plus);
-        assert_eq!(*tokens.get(4).unwrap(), Token::FloatLiteral(6.789));
+        assert_eq!(tokens.get(0).unwrap(), (Token::FloatLiteral(1.2), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Plus, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::FloatLiteral(3.45), 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Plus, 0));
+        assert_eq!(tokens.get(4).unwrap(), (Token::FloatLiteral(6.789), 0));
     }
 
     /// test negative numeric literal
@@ -745,8 +763,8 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 2);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Minus);
-        assert_eq!(*tokens.get(1).unwrap(), Token::IntLiteral(1));
+        assert_eq!(tokens.get(0).unwrap(), (Token::Minus, 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::IntLiteral(1), 0));
     }
 
     /// test for hex literal with lower case
@@ -756,7 +774,7 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::IntLiteral(0xabcdef));
+        assert_eq!(tokens.get(0).unwrap(), (Token::IntLiteral(0xabcdef), 0));
     }
 
     /// test for hex literal with caps
@@ -766,7 +784,7 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::IntLiteral(0xabcdef));
+        assert_eq!(tokens.get(0).unwrap(), (Token::IntLiteral(0xabcdef), 0));
     }
 
     /// test for a binary literal
@@ -776,7 +794,7 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
 
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::IntLiteral(0b0101));
+        assert_eq!(tokens.get(0).unwrap(), (Token::IntLiteral(0b0101), 0));
     }
 
     /// test string literal
@@ -786,8 +804,8 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
         assert_eq!(
-            *tokens.get(0).unwrap(),
-            Token::StringLiteral("my string".to_string())
+            tokens.get(0).unwrap(),
+            (Token::StringLiteral("my string".to_string()), 0)
         );
     }
 
@@ -798,8 +816,8 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
         assert_eq!(
-            *tokens.get(0).unwrap(),
-            Token::StringLiteral("".to_string())
+            tokens.get(0).unwrap(),
+            (Token::StringLiteral("".to_string()), 0)
         );
     }
 
@@ -810,8 +828,8 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
         assert_eq!(
-            *tokens.get(0).unwrap(),
-            Token::StringLiteral("a\nb".to_string())
+            tokens.get(0).unwrap(),
+            (Token::StringLiteral("a\nb".to_string()), 0)
         );
     }
 
@@ -821,9 +839,9 @@ mod tests {
         let s = "{0}";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::LBrace);
-        assert_eq!(*tokens.get(1).unwrap(), Token::IntLiteral(0));
-        assert_eq!(*tokens.get(2).unwrap(), Token::RBrace);
+        assert_eq!(tokens.get(0).unwrap(), (Token::LBrace, 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::IntLiteral(0), 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::RBrace, 0));
     }
 
     #[test]
@@ -831,10 +849,10 @@ mod tests {
         let s = "ab()d";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 4);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::LParen);
-        assert_eq!(*tokens.get(2).unwrap(), Token::RParen);
-        assert_eq!(*tokens.get(3).unwrap(), Token::Symbol("d".to_owned()));
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("ab".to_owned()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::LParen, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::RParen, 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("d".to_owned()), 0));
     }
 
     #[test]
@@ -842,9 +860,9 @@ mod tests {
         let s = "ab(d";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::LParen);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("d".to_owned()));
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("ab".to_owned()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::LParen, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("d".to_owned()), 0));
     }
 
     #[test]
@@ -852,9 +870,9 @@ mod tests {
         let s = "ab)d";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::RParen);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("d".to_owned()));
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("ab".to_owned()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::RParen, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("d".to_owned()), 0));
     }
 
     #[test]
@@ -862,10 +880,10 @@ mod tests {
         let s = "ab(d)";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 4);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("ab".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), Token::LParen);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("d".to_owned()));
-        assert_eq!(*tokens.get(3).unwrap(), Token::RParen);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("ab".to_owned()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::LParen, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("d".to_owned()), 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::RParen, 0));
     }
 
     #[test]
@@ -873,7 +891,7 @@ mod tests {
         let s = "a_b";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a_b".to_owned()));
+        assert_eq!(tokens.get(0).unwrap(), Token::Symbol("a_b".to_owned()));
     }
 
     #[test]
@@ -881,9 +899,9 @@ mod tests {
         let s = "return a;";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Return);
-        assert_eq!(*tokens.get(1).unwrap(), Token::Symbol("a".to_owned()));
-        assert_eq!(*tokens.get(2).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Return, 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Symbol("a".to_owned()), 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::EndStatement, 0));
     }
 
     #[test]
@@ -891,22 +909,22 @@ mod tests {
         let s = "return r_value;";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 3);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Return);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Return, 0));
         assert_eq!(
-            *tokens.get(1).unwrap(),
-            Token::Symbol("r_value".to_owned())
+            tokens.get(1).unwrap(),
+            (Token::Symbol("r_value".to_owned()), 0)
         );
-        assert_eq!(*tokens.get(2).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(2).unwrap(), (Token::EndStatement, 0));
     }
 
     fn binary_comp_test(binary_comp_op: String, token: Token) {
         let s = format!("a {} b;", binary_comp_op);
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 4);
-        assert_eq!(*tokens.get(0).unwrap(), Token::Symbol("a".to_owned()));
-        assert_eq!(*tokens.get(1).unwrap(), token);
-        assert_eq!(*tokens.get(2).unwrap(), Token::Symbol("b".to_owned()));
-        assert_eq!(*tokens.get(3).unwrap(), Token::EndStatement);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (token, 0));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("b".to_owned()), 0));
+        assert_eq!(tokens.get(3).unwrap(), (Token::EndStatement, 0));
     }
 
     #[test]
@@ -927,5 +945,19 @@ mod tests {
     #[test]
     fn tokenize_div_equals() {
         binary_comp_test("/=".to_owned(), Token::DivideEquals);
+    }
+
+    #[test]
+    fn multiline() {
+        let s = "a
+            b
+            c
+            d";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 0));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Symbol("b".to_owned()), 1));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("c".to_owned()), 2));
+        assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("d".to_owned()), 3));
     }
 }

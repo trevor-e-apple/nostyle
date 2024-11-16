@@ -325,22 +325,38 @@ fn next_rule_updates(
     });
 }
 
+fn make_final_line_error(
+    tokens: &Tokens,
+    start_line: usize,
+    info: String,
+) -> ParseError {
+    match tokens.get_final_line() {
+        Some(final_line) => {
+            return ParseError { start_line, end_line: final_line, info };
+        }
+        None => {
+            return ParseError { start_line: 0, end_line: 0, info };
+        }
+    }
+}
+
 fn parse_expression_rule(
     tokens: &Tokens,
     search_data: &SearchData,
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    let start_token = match tokens.get(search_data.start) {
-        Some(token) => token,
-        None => {
-            return Err(ParseError {
-                line_number: 0,
-                info: "Can not parse 'expression' rule (empty tokens)"
-                    .to_owned(),
-            })
-        }
-    };
+    let (start_token, start_token_line_number) =
+        match tokens.get(search_data.start) {
+            Some(token) => token,
+            None => {
+                return Err(make_final_line_error(
+                    tokens,
+                    0,
+                    "Can not parse 'expression' rule (empty tokens)".to_owned(),
+                ));
+            }
+        };
 
     let rule = match start_token {
         Token::LBrace => Rule::BraceExpression,
@@ -369,20 +385,27 @@ fn parse_for_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
+    let (_, start_line) = match tokens.get(search_data.start) {
+        Some(data) => data,
+        None => panic!("This should never happen?"),
+    };
+
     match tokens.get(search_data.end - 1) {
-        Some(end_token) => {
-            if *end_token != Token::RBrace {
+        Some((end_token, line_number)) => {
+            if end_token != Token::RBrace {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line: line_number,
                     info: "Missing rbrace at the end of 'for' loop".to_owned(),
                 });
             }
         }
         None => {
-            return Err(ParseError {
-                line_number: 0,
-                info: "Can not parse 'for' rule (empty tokens)".to_owned(),
-            });
+            return Err(make_final_line_error(
+                tokens,
+                start_line,
+                "Can not parse 'for' rule (empty tokens)".to_owned(),
+            ));
         }
     }
 
@@ -390,19 +413,21 @@ fn parse_for_rule(
 
     // check for leading lparen
     match tokens.get(lparen_index) {
-        Some(expected_lparen) => {
-            if *expected_lparen != Token::LParen {
+        Some((expected_lparen, line_number)) => {
+            if expected_lparen != Token::LParen {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line: line_number,
                     info: "Missing lparen after 'for'".to_owned(),
                 });
             }
         }
         None => {
-            return Err(ParseError {
-                line_number: 0,
-                info: "Missing lparen after 'for'".to_owned(),
-            });
+            return Err(make_final_line_error(
+                tokens,
+                start_line,
+                "Missing lparen after 'for'".to_owned(),
+            ));
         }
     }
 
@@ -415,10 +440,11 @@ fn parse_for_rule(
     ) {
         Some(rparen_index) => rparen_index,
         None => {
-            return Err(ParseError {
-                line_number: 0,
-                info: "Missing matching rparen for 'for' statements".to_owned(),
-            });
+            return Err(make_final_line_error(
+                tokens,
+                start_line,
+                "Missing matching rparen for 'for' statements".to_owned(),
+            ));
         }
     };
 
@@ -439,7 +465,8 @@ fn parse_for_rule(
                     Some(index) => index,
                     None => {
                         return Err(ParseError {
-                            line_number: 0,
+                            start_line,
+                            end_line: rparen_index,
                             info: "Missing init statement in 'for' statements"
                                 .to_owned(),
                         });
@@ -454,7 +481,8 @@ fn parse_for_rule(
                 ) {
                     Some(index) => index,
                     None => return Err(ParseError {
-                        line_number: 0,
+                        start_line,
+                        end_line: rparen_index,
                         info: "Missing condition statement in 'for' statements"
                             .to_owned(),
                     }),

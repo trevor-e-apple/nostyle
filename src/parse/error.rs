@@ -1,5 +1,6 @@
 #[derive(Clone, Debug, Default)]
 pub struct ParseError {
-    pub line_number: usize,
+    pub start_line: usize,
+    pub end_line: usize,
     pub info: String,
 }
