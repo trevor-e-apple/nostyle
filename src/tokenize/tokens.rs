@@ -99,10 +99,17 @@ impl Tokens {
         }
     }
 
-    pub fn get_final_line(&self) -> Option<usize> {
-        match self.line_numbers.get(self.line_numbers.len()) {
+    pub fn get_line_number(&self, index: usize) -> Option<usize> {
+        match self.line_numbers.get(index) {
             Some(line_number) => Some(*line_number),
             None => None,
+        }
+    }
+
+    pub fn get_final_line(&self) -> usize {
+        match self.line_numbers.get(self.line_numbers.len()) {
+            Some(line_number) => *line_number,
+            None => 0,
         }
     }
 

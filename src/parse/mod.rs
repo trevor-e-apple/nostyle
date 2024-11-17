@@ -330,14 +330,7 @@ fn make_final_line_error(
     start_line: usize,
     info: String,
 ) -> ParseError {
-    match tokens.get_final_line() {
-        Some(final_line) => {
-            return ParseError { start_line, end_line: final_line, info };
-        }
-        None => {
-            return ParseError { start_line: 0, end_line: 0, info };
-        }
-    }
+    return ParseError { start_line, end_line: tokens.get_final_line(), info };
 }
 
 fn parse_expression_rule(
@@ -519,10 +512,11 @@ fn parse_for_rule(
     let (expression_lbrace_index, expression_rbrace_index) = {
         let lbrace_index = rparen_index + 1;
         match tokens.get(lbrace_index) {
-            Some(expected_lbrace) => {
-                if *expected_lbrace != Token::LBrace {
+            Some((expected_lbrace, line_number)) => {
+                if expected_lbrace != Token::LBrace {
                     return Err(ParseError {
-                        line_number: 0,
+                        start_line,
+                        end_line: line_number,
                         info:
                             "Missing expected lbrace after for loop statements"
                                 .to_owned(),
@@ -531,7 +525,8 @@ fn parse_for_rule(
             }
             None => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line: start_line,
                     info: "Missing expected lbrace after for loop statements"
                         .to_owned(),
                 });
@@ -548,7 +543,8 @@ fn parse_for_rule(
             Some(rbrace_index) => rbrace_index,
             None => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line: start_line,
                     info: "Could not find expected rbrace".to_owned(),
                 })
             }
@@ -608,33 +604,44 @@ fn parse_brace_expression_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    let first_token = match tokens.get(search_data.start) {
+    // check for first token
+    let (first_token, start_line) = match tokens.get(search_data.start) {
         Some(token) => token,
         None => {
+            let final_line = tokens.get_final_line();
             return Err(ParseError {
-                line_number: 0,
+                start_line: final_line,
+                end_line: final_line,
                 info: "Missing expected lbrace at start of brace expression"
                     .to_owned(),
-            })
+            });
         }
     };
 
-    if *first_token != Token::LBrace {
+    if first_token != Token::LBrace {
         return Err(ParseError {
-            line_number: 0,
+            start_line,
+            end_line: start_line,
             info: "Missing expected lbrace at start of brace expression"
                 .to_owned(),
         });
     }
 
-    let final_token = match tokens.get(search_data.end - 1) {
+    let (final_token, final_line) = match tokens.get(search_data.end - 1) {
         Some(token) => token,
-        None => panic!("Search data end index out of range."),
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line: start_line,
+                info: "Missing rbrace at end of brace expression".to_owned(),
+            })
+        }
     };
 
-    if *final_token != Token::RBrace {
+    if final_token != Token::RBrace {
         return Err(ParseError {
-            line_number: 0,
+            start_line,
+            end_line: start_line,
             info: "Missing rbrace at end of brace expression".to_owned(),
         });
     }
@@ -698,6 +705,17 @@ fn parse_brace_statements_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
+    let start_line = match tokens.get_line_number(search_data.start) {
+        Some(line_number) => line_number,
+        None => panic!("Cannot parse empty tokens as brace statments"),
+    };
+    let end_line = match tokens.get_line_number(search_data.end - 1) {
+        Some(line_number) => line_number,
+        None => {
+            panic!("Bad parse range.");
+        }
+    };
+
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
         let non_recursive_end_index: usize =
@@ -710,10 +728,11 @@ fn parse_brace_statements_rule(
                 Some(index) => index,
                 None => {
                     return Err(ParseError {
-                        line_number: 0,
+                        start_line,
+                        end_line,
                         info: "Could not find expected end statement in brace statements".to_owned(),
-                    });
-                }
+                    })
+                },
             };
 
         // find the previous EndStatement at the same level as the end of the terminal
@@ -731,6 +750,19 @@ fn parse_brace_statements_rule(
         (non_recursive_start_index, non_recursive_end_index + 1)
     };
 
+    let (non_recursive_start_token, _) = match tokens
+        .get(non_recursive_start_index)
+    {
+        Some(non_recursive_start_token) => non_recursive_start_token,
+        None => panic!("Unexpected non recursive brace statements start index"),
+    };
+
+    let non_recursive_rule = if non_recursive_start_token == Token::Return {
+        Rule::ReturnStatement
+    } else {
+        Rule::Statement
+    };
+
     // push the preceding statements for a recursive expansion
     if search_data.start < non_recursive_start_index {
         add_child_to_search_stack(
@@ -742,23 +774,6 @@ fn parse_brace_statements_rule(
             stack,
         );
     }
-
-    let non_recursive_start_token = match tokens.get(non_recursive_start_index)
-    {
-        Some(non_recursive_start_token) => non_recursive_start_token,
-        None => {
-            return Err(ParseError {
-                line_number: 0,
-                info: "Non recursive brace statement out of range".to_owned(),
-            });
-        }
-    };
-
-    let non_recursive_rule = if *non_recursive_start_token == Token::Return {
-        Rule::ReturnStatement
-    } else {
-        Rule::Statement
-    };
 
     // non recursive expansion
     add_child_to_search_stack(
@@ -829,6 +844,17 @@ fn parse_statement_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
+    let start_line = match tokens.get_line_number(search_data.start) {
+        Some(line_number) => line_number,
+        None => panic!("Cannot parse empty tokens as statement"),
+    };
+    let end_line = match tokens.get_line_number(search_data.end - 1) {
+        Some(line_number) => line_number,
+        None => {
+            panic!("Bad parse range.");
+        }
+    };
+
     // Find assign token to split on
     match find_next_matching_level_token_all_groups(
         tokens,
@@ -845,17 +871,18 @@ fn parse_statement_rule(
         Some(assign_index) => {
             // Hand the assignment statement case
             match tokens.get(search_data.end - 1) {
-                Some(expected_end_statement) => {
-                    if *expected_end_statement != Token::EndStatement {
+                Some((expected_end_statement, line_number)) => {
+                    if expected_end_statement != Token::EndStatement {
                         return Err(ParseError {
-                            line_number: 0,
+                            start_line: line_number,
+                            end_line: line_number,
                             info: "Missing expected end statement token"
                                 .to_owned(),
                         });
                     }
 
                     let assign_token = match tokens.get(assign_index) {
-                        Some(assign_token) => assign_token,
+                        Some((assign_token, _)) => assign_token,
                         None => {
                             // the assign token *should* always be there since it was found by
                             // -- find_next_matching_level_token_all_groups. Panic instead of error.
@@ -935,7 +962,8 @@ fn parse_statement_rule(
                 }
                 None => {
                     return Err(ParseError {
-                        line_number: 0,
+                        start_line,
+                        end_line,
                         info: "No end statement (end of tokens).".to_owned(),
                     });
                 }
@@ -947,8 +975,11 @@ fn parse_statement_rule(
             // TODO: why is this - 2 instead of - 1? add a comment explaining?
             // -- Should be caught during code coverage...
             match tokens.get(search_data.end - 2) {
-                Some(expected_end_statement) => {
-                    if *expected_end_statement != Token::EndStatement {
+                Some((
+                    expected_end_statement,
+                    expected_end_statement_line_number,
+                )) => {
+                    if expected_end_statement != Token::EndStatement {
                         add_child_to_search_stack(
                             search_data.node_handle,
                             Rule::Expression,
@@ -959,14 +990,16 @@ fn parse_statement_rule(
                         );
                     } else {
                         return Err(ParseError {
-                            line_number: 0,
-                            info: "Missing expected end statement.".to_owned(),
+                            start_line: expected_end_statement_line_number,
+                            end_line: expected_end_statement_line_number,
+                            info: "Missing expected end statement".to_owned(),
                         });
                     }
                 }
                 None => {
                     return Err(ParseError {
-                        line_number: 0,
+                        start_line,
+                        end_line,
                         info: "No end statement found (end of tokens)."
                             .to_owned(),
                     });
