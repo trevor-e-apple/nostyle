@@ -99,6 +99,10 @@ impl Tokens {
         }
     }
 
+    pub fn get_token(&self, index: usize) -> Option<&Token> {
+        self.data.get(index)
+    }
+
     pub fn get_line_number(&self, index: usize) -> Option<usize> {
         match self.line_numbers.get(index) {
             Some(line_number) => Some(*line_number),

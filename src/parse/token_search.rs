@@ -13,7 +13,7 @@ pub fn find_matching_group_indices(
     let mut rtokens_found = 0;
 
     for index in (starts_at + 1)..ends_at {
-        if let Some(token) = tokens.get(index) {
+        if let Some(token) = tokens.get_token(index) {
             if *token == *ltoken {
                 ltokens_found += 1;
             } else if *token == *rtoken {
@@ -44,7 +44,7 @@ pub fn find_matching_group_indices_end(
     let mut rtokens_found = 1;
 
     for index in (starts_at..(ends_at - 1)).rev() {
-        if let Some(token) = tokens.get(index) {
+        if let Some(token) = tokens.get_token(index) {
             if *token == *ltoken {
                 ltokens_found += 1;
             } else if *token == *rtoken {
@@ -72,7 +72,7 @@ pub fn find_final_token(
     ends_at: usize,
 ) -> Option<usize> {
     for index in (starts_at..ends_at).rev() {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if *check_token == *token {
                 return Some(index);
             }
@@ -101,7 +101,7 @@ pub fn find_final_matching_level_token(
 
     let mut current_level = 0;
     for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if *check_token == *group_start_token {
                 current_level += 1;
             } else if *check_token == *group_end_token {
@@ -170,7 +170,7 @@ pub fn find_final_matching_level_token_all_groups(
 
     let mut group_levels = AllGroupsSearch::new();
     for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             group_levels.check_for_group_tokens(check_token);
 
             if group_levels.at_starting_level()
@@ -207,7 +207,7 @@ pub fn find_next_matching_level_token(
     let mut current_level = 0;
 
     for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if current_level == 0 && matching_tokens.contains(check_token) {
                 return Some(index);
             } else if *check_token == *group_start_token {
@@ -237,7 +237,7 @@ pub fn find_next_matching_level_token_all_groups(
     let mut group_levels = AllGroupsSearch::new();
 
     for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if group_levels.at_starting_level()
                 && matching_tokens.contains(check_token)
             {
@@ -269,7 +269,7 @@ pub fn find_prev_matching_level_token(
     let mut current_level = 0;
 
     for index in (starts_at..ends_at).rev() {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if current_level == 0 && matching_tokens.contains(check_token) {
                 return Some(index);
             } else if *check_token == *group_start_token {
@@ -299,7 +299,7 @@ pub fn find_prev_matching_level_token_all_groups(
     let mut group_levels = AllGroupsSearch::new();
 
     for index in (starts_at..ends_at).rev() {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if group_levels.at_starting_level()
                 && matching_tokens.contains(check_token)
             {
@@ -323,7 +323,7 @@ pub fn find_next_token(
     ends_at: usize,
 ) -> Option<usize> {
     for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if *check_token == *token {
                 return Some(index);
             }
@@ -341,7 +341,7 @@ pub fn find_next_tokens(
     ends_at: usize,
 ) -> Option<usize> {
     for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get(index) {
+        if let Some(check_token) = tokens.get_token(index) {
             if matching_tokens.contains(check_token) {
                 return Some(index);
             }
