@@ -1413,6 +1413,7 @@ fn parse_function_call_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
+    // TODO: can I revert the lparen / rparen logic to something simpler again?
     let end_line = match tokens.get_line_number(search_data.end - 1) {
         Some(end_line) => end_line,
         None => panic!("Out of range"),
@@ -1607,19 +1608,23 @@ fn parse_function_def_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    match tokens.get(search_data.start) {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
+    match tokens.get_token(search_data.start) {
         Some(start_token) => match start_token {
             Token::Function => {}
             _ => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line,
                     info: "Missing expected function def token".to_owned(),
                 });
             }
         },
         None => {
             return Err(ParseError {
-                line_number: 0,
+                start_line,
+                end_line,
                 info: "Missing expected function def token".to_owned(),
             });
         }
@@ -1628,7 +1633,7 @@ fn parse_function_def_rule(
     // check for left and right parens
     let (has_lparen, lparen_index, has_rparen, rparen_index) = {
         let lparen_index = search_data.start + 2;
-        let has_lparen: bool = match tokens.get(lparen_index) {
+        let has_lparen: bool = match tokens.get_token(lparen_index) {
             Some(possible_lparen) => {
                 if *possible_lparen == Token::LParen {
                     true
@@ -1657,17 +1662,20 @@ fn parse_function_def_rule(
 
     if has_lparen && !has_rparen {
         return Err(ParseError {
-            line_number: 0,
+            start_line,
+            end_line,
             info: "Function def has no rparen".to_owned(),
         });
     } else if !has_lparen && has_rparen {
         return Err(ParseError {
-            line_number: 0,
+            start_line,
+            end_line,
             info: "Function def has no lparen".to_owned(),
         });
     } else if !has_lparen && !has_rparen {
         return Err(ParseError {
-            line_number: 0,
+            start_line,
+            end_line,
             info: "Function def has no parens".to_owned(),
         });
     }
@@ -1677,12 +1685,13 @@ fn parse_function_def_rule(
         Some(node) => node,
         None => panic!("Bad node handle"),
     };
-    let function_name = match tokens.get(search_data.start + 1) {
+    let function_name = match tokens.get_token(search_data.start + 1) {
         Some(expected_symbol) => match expected_symbol {
             Token::Symbol(name) => name,
             _ => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line,
                     info: "Function tokens must be followed by a symbol."
                         .to_owned(),
                 });
@@ -1690,7 +1699,8 @@ fn parse_function_def_rule(
         },
         None => {
             return Err(ParseError {
-                line_number: 0,
+                start_line,
+                end_line,
                 info: "Function tokens must be followed by a symbol".to_owned(),
             })
         }
@@ -1729,17 +1739,20 @@ fn parse_function_parameters_rule(
         return Ok(());
     }
 
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
     // get the final two symbols (the type and the parameter name)
     match tokens.get(search_data.end - 1) {
-        Some(final_token) => {
+        Some((final_token, final_token_line)) => {
             // check for trailing comma
             let final_symbol_index = match final_token {
                 Token::Comma => search_data.end - 2,
                 Token::Symbol(_) => search_data.end - 1,
                 _ => {
                     return Err(ParseError {
-                        line_number: 0,
-                        info: "Syntax error. Expected Symbol or Comma."
+                        start_line: final_token_line,
+                        end_line: final_token_line,
+                        info: "Missing expected Symbol or Comma at end of function parameters"
                             .to_owned(),
                     });
                 }
@@ -1768,7 +1781,8 @@ fn parse_function_parameters_rule(
         }
         None => {
             return Err(ParseError {
-                line_number: 0,
+                start_line,
+                end_line,
                 info: "Function parameters token out of range".to_owned(),
             });
         }
@@ -1782,15 +1796,18 @@ fn parse_declaration_rule(
     search_data: &SearchData,
     ast: &mut Ast,
 ) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
     // check that search data is len 2
     if (search_data.end - search_data.start) != 2 {
         return Err(ParseError {
-            line_number: 0,
-            info: "Declaration rule has more than two tokens.".to_owned(),
+            start_line,
+            end_line,
+            info: "Declaration rule has more than two tokens".to_owned(),
         });
     }
 
-    match tokens.get(search_data.start) {
+    match tokens.get_token(search_data.start) {
         Some(token) => match token {
             Token::Symbol(_) => {
                 ast.add_terminal_child(
@@ -1800,7 +1817,8 @@ fn parse_declaration_rule(
             }
             _ => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line: start_line,
                     info: "First token in declaration is not a symbol"
                         .to_owned(),
                 })
@@ -1812,7 +1830,7 @@ fn parse_declaration_rule(
     }
 
     match tokens.get(search_data.start + 1) {
-        Some(token) => match token {
+        Some((token, line_number)) => match token {
             Token::Symbol(_) => {
                 ast.add_terminal_child(
                     search_data.node_handle,
@@ -1821,7 +1839,8 @@ fn parse_declaration_rule(
             }
             _ => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line: line_number,
+                    end_line: line_number,
                     info: "Second token in declaration is not a symbol"
                         .to_owned(),
                 })
@@ -1841,6 +1860,8 @@ fn parse_primary_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
     if search_data.start == search_data.end {
         // handle empty expression case
         let node = match ast.get_node_mut(search_data.node_handle) {
@@ -1851,14 +1872,15 @@ fn parse_primary_rule(
         node.data = None;
     } else {
         match tokens.get(search_data.start) {
-            Some(token) => match token {
+            Some((token, line_number)) => match token {
                 Token::Symbol(_)
                 | Token::IntLiteral(_)
                 | Token::FloatLiteral(_)
                 | Token::StringLiteral(_) => {
                     if (search_data.end - search_data.start) != 1 {
                         return Err(ParseError {
-                            line_number: 0,
+                            start_line,
+                            end_line,
                             info: "Primary did not begin with grouping token but contained multiple tokens".to_owned(),
                         });
                     }
@@ -1881,7 +1903,7 @@ fn parse_primary_rule(
                     node.rule = Rule::Expression;
 
                     let expected_rparen_index = search_data.end - 1;
-                    match tokens.get(expected_rparen_index) {
+                    match tokens.get_token(expected_rparen_index) {
                         Some(expected_rparen) => {
                             // check whether we have mismatched parens
                             if *expected_rparen == Token::RParen {
@@ -1893,14 +1915,16 @@ fn parse_primary_rule(
                                 });
                             } else {
                                 return Err(ParseError {
-                                    line_number: 0,
+                                    start_line,
+                                    end_line,
                                     info: "Mismatched parens".to_owned(),
                                 });
                             }
                         }
                         None => {
                             return Err(ParseError {
-                                line_number: 0,
+                                start_line,
+                                end_line,
                                 info: "Mismatched parens".to_owned(),
                             });
                         }
@@ -1915,7 +1939,7 @@ fn parse_primary_rule(
                     node.rule = Rule::BraceExpression;
 
                     let expected_rbrace_index = search_data.end - 1;
-                    match tokens.get(expected_rbrace_index) {
+                    match tokens.get_token(expected_rbrace_index) {
                         Some(expected_rbrace) => {
                             // check whether we have mismatched braces
                             if *expected_rbrace == Token::RBrace {
@@ -1926,29 +1950,29 @@ fn parse_primary_rule(
                                 });
                             } else {
                                 return Err(ParseError {
-                                    line_number: 0,
+                                    start_line,
+                                    end_line,
                                     info: "Mismatched braces".to_owned(),
                                 });
                             }
                         }
                         None => {
                             return Err(ParseError {
-                                line_number: 0,
+                                start_line,
+                                end_line,
                                 info: "Mismatched braces".to_owned(),
                             })
                         }
                     }
                 }
                 _ => {
-                    return Err(ParseError {
-                        line_number: 0,
-                        info: "Unexpected token".to_owned(),
-                    })
+                    panic!("Unexpected start token")
                 }
             },
             None => {
                 return Err(ParseError {
-                    line_number: 0,
+                    start_line,
+                    end_line,
                     info: "Empty primary rule".to_owned(),
                 })
             }
