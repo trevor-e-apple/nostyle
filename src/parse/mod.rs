@@ -1413,28 +1413,24 @@ fn parse_function_call_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    // TODO: can I revert the lparen / rparen logic to something simpler again?
-    let end_line = match tokens.get_line_number(search_data.end - 1) {
-        Some(end_line) => end_line,
-        None => panic!("Out of range"),
-    };
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
 
-    match tokens.get(search_data.start) {
-        Some((start_token, start_line)) => match start_token {
+    match tokens.get_token(search_data.start) {
+        Some(start_token) => match start_token {
             Token::Symbol(_) => {
                 // check for left and right parens
-                let lparen_line: Option<usize> =
-                    match tokens.get(search_data.start + 1) {
-                        Some((possible_lparen, lparen_line)) => {
-                            if possible_lparen == Token::LParen {
-                                Some(lparen_line)
+                let has_lparen: bool =
+                    match tokens.get_token(search_data.start + 1) {
+                        Some(possible_lparen) => {
+                            if *possible_lparen == Token::LParen {
+                                true
                             } else {
-                                None
+                                false
                             }
                         }
                         None => {
                             // if there aren't other tokens, then move on to the next rule
-                            None
+                            false
                         }
                     };
                 let has_rparen = match tokens.get_token(search_data.end - 1) {
@@ -1448,54 +1444,40 @@ fn parse_function_call_rule(
                     None => false,
                 };
 
-                match lparen_line {
-                    Some(lparen_line) => {
-                        if has_rparen {
-                            // update current node to include function name
-                            let node = match ast
-                                .get_node_mut(search_data.node_handle)
-                            {
-                                Some(node) => node,
-                                None => panic!("Bad node handle"),
-                            };
-                            node.data = Some(start_token.clone());
+                if has_lparen && has_rparen {
+                    // update current node to include function name
+                    let node = match ast.get_node_mut(search_data.node_handle) {
+                        Some(node) => node,
+                        None => todo!("node handle bad???"),
+                    };
+                    node.data = Some(start_token.clone());
 
-                            add_child_to_search_stack(
-                                search_data.node_handle,
-                                Rule::FunctionArguments,
-                                search_data.start + 2,
-                                search_data.end - 1,
-                                ast,
-                                stack,
-                            );
-                        } else {
-                            // no rparen
-                            return Err(ParseError {
-                                start_line: lparen_line,
-                                end_line: end_line,
-                                info: "Missing rparen for function call"
-                                    .to_owned(),
-                            });
-                        }
+                    add_child_to_search_stack(
+                        search_data.node_handle,
+                        Rule::FunctionArguments,
+                        search_data.start + 2,
+                        search_data.end - 1,
+                        ast,
+                        stack,
+                    );
+                } else if has_lparen || has_rparen {
+                    // has_lparen xor has_rparen == true
+                    if has_lparen {
+                        return Err(ParseError {
+                            start_line,
+                            end_line,
+                            info: "Missing rparen for function call".to_owned(),
+                        });
+                    } else {
+                        return Err(ParseError {
+                            start_line,
+                            end_line,
+                            info: "Missing lparen for function call".to_owned(),
+                        });
                     }
-                    None => {
-                        if has_rparen {
-                            return Err(ParseError {
-                                start_line,
-                                end_line, // rparen must always be at end of line
-                                info: "Missing lparen for function call"
-                                    .to_owned(),
-                            });
-                        } else {
-                            // no parens, symbol can't be parsed as function call
-                            next_rule_updates(
-                                search_data,
-                                ast,
-                                stack,
-                                Rule::Primary,
-                            );
-                        }
-                    }
+                } else {
+                    // no parens, symbol can't be parsed as function call
+                    next_rule_updates(search_data, ast, stack, Rule::Primary);
                 }
             }
             _ => {
@@ -1504,7 +1486,11 @@ fn parse_function_call_rule(
             }
         },
         None => {
-            panic!("Empty function call rule");
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Empty function call rule".to_owned(),
+            });
         }
     }
 
