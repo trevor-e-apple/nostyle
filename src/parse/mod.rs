@@ -1952,7 +1952,12 @@ fn parse_primary_rule(
                     }
                 }
                 _ => {
-                    panic!("Unexpected start token")
+                    return Err(ParseError {
+                        start_line: line_number,
+                        end_line: line_number,
+                        info: "Unexpected start token for primary rule"
+                            .to_owned(),
+                    });
                 }
             },
             None => {

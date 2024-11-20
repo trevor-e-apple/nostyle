@@ -891,7 +891,10 @@ mod tests {
         let s = "a_b";
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens.get(0).unwrap(), Token::Symbol("a_b".to_owned()));
+        assert_eq!(
+            tokens.get(0).unwrap(),
+            (Token::Symbol("a_b".to_owned()), 0)
+        );
     }
 
     #[test]

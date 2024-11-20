@@ -93,7 +93,7 @@ impl Tokens {
                 // token and line number are always added and removed together
                 let line_number =
                     unsafe { *self.line_numbers.get_unchecked(index) };
-                Some((*token, line_number))
+                Some((token.clone(), line_number))
             }
             None => None,
         }
