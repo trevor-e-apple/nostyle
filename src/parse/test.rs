@@ -267,8 +267,9 @@ mod tests {
             Ok(_) => assert!(false),
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
-                // TODO: line number check
-                // TODO: check error message?
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         };
     }
@@ -2716,6 +2717,9 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         }
     }
@@ -2730,6 +2734,9 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         }
     }
@@ -2744,6 +2751,14 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 2);
+
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
+
+                let error = errors.get(1).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         }
     }
@@ -2759,6 +2774,14 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 2);
+
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
+
+                let error = errors.get(1).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         }
     }
@@ -2870,6 +2893,9 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         }
     }
@@ -3838,6 +3864,9 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         }
     }
@@ -4443,8 +4472,9 @@ mod tests {
             Ok(_) => assert!(false),
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
-                // TODO: check line number
-                // TODO: check error info?
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         };
     }
@@ -4551,6 +4581,9 @@ mod tests {
             Ok(_) => assert!(false),
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
+                let error = errors.get(0).expect("Unexpected missing error");
+                assert_eq!(error.start_line, 1);
+                assert_eq!(error.end_line, 1);
             }
         };
     }
