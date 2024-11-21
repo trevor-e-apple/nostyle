@@ -1135,6 +1135,26 @@ fn parse_if_else_rule(
             );
         }
         None => {
+            // check for rbrace
+            let rbrace_line = match tokens.get(search_data.end) {
+                Some((token, line_number)) => {
+                    if token != Token::RBrace {
+                        return Err(ParseError {
+                            start_line: line_number,
+                            end_line: line_number,
+                            info: format!(
+                                "Missing expected rbrace on line {}",
+                                line_number
+                            )
+                            .to_owned(),
+                        });
+                    } else {
+                        line_number
+                    }
+                }
+                None => panic!("Out of range error"),
+            };
+
             // find the matching lbrace for this rbrace
             let lbrace_index = match find_matching_group_indices_end(
                 tokens,
@@ -1148,8 +1168,8 @@ fn parse_if_else_rule(
                     return Err(ParseError {
                         start_line,
                         end_line,
-                        info: "Missing lbrace".to_owned(),
-                    })
+                        info: format!("Missing expected lbrace matching rbrace on line {}", rbrace_line).to_owned(),
+                    });
                 }
             };
 

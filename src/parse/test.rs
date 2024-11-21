@@ -4473,8 +4473,9 @@ mod tests {
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
                 let error = errors.get(0).expect("Unexpected missing error");
-                assert_eq!(error.start_line, 1);
-                assert_eq!(error.end_line, 1);
+
+                assert_eq!(error.start_line, 7);
+                assert_eq!(error.end_line, 7);
             }
         };
     }
