@@ -1136,7 +1136,7 @@ fn parse_if_else_rule(
         }
         None => {
             // check for rbrace
-            let rbrace_line = match tokens.get(search_data.end) {
+            let rbrace_line = match tokens.get(search_data.end - 1) {
                 Some((token, line_number)) => {
                     if token != Token::RBrace {
                         return Err(ParseError {
