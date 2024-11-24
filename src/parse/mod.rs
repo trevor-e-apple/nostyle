@@ -1209,6 +1209,8 @@ fn parse_binary_op_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
     match find_final_matching_level_token_all_groups(
         tokens,
         matching_tokens,
@@ -1284,6 +1286,15 @@ fn parse_binary_op_rule(
                         node.data = Some(binary_op_token);
                     }
                     None => panic!("Bad handle"),
+                }
+
+                // check to see if the split is possible
+                if split_index + 1 == search_data.end {
+                    return Err(ParseError {
+                        start_line,
+                        end_line,
+                        info: "".to_owned(),
+                    });
                 }
 
                 // add children and add them to the search stack
@@ -1397,9 +1408,11 @@ fn parse_unary_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    match tokens.get(search_data.start) {
-        Some((first_token, first_token_line)) => {
-            if first_token == Token::Not || first_token == Token::Minus {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
+    match tokens.get_token(search_data.start) {
+        Some(first_token) => {
+            if *first_token == Token::Not || *first_token == Token::Minus {
                 // add data to current node
                 let node = match ast.get_node_mut(search_data.node_handle) {
                     Some(node) => node,
@@ -1421,7 +1434,11 @@ fn parse_unary_rule(
             }
         }
         None => {
-            panic!("Empty unary rule");
+            return Err(ParseError {
+                start_line: start_line,
+                end_line: end_line,
+                info: "Empty unary rule".to_owned(),
+            });
         }
     }
 
