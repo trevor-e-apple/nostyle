@@ -3751,8 +3751,8 @@ fn return_statement_missing_semicolon() {
         Err(errors) => {
             assert_eq!(errors.len(), 1);
             let error = errors.get(0).expect("Unexpected missing error");
-            assert_eq!(error.start_line, 1);
-            assert_eq!(error.end_line, 1);
+            assert_eq!(error.start_line, 3);
+            assert_eq!(error.end_line, 3);
         }
     }
 }
@@ -4454,13 +4454,13 @@ fn multiple_expressions() {
     }",
     )
     .expect("Unexpected tokenize error");
-    let ast = match parse(&tokens) {
+    match parse(&tokens) {
         Ok(_) => assert!(false),
         Err(errors) => {
             assert_eq!(errors.len(), 1);
             let error = errors.get(0).expect("Unexpected missing error");
-            assert_eq!(error.start_line, 1);
-            assert_eq!(error.end_line, 1);
+            assert_eq!(error.start_line, 4);
+            assert_eq!(error.end_line, 8);
         }
     };
 }

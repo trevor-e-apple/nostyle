@@ -31,6 +31,7 @@ primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" |
 pub mod ast;
 pub mod error;
 pub mod rule;
+#[cfg(test)]
 mod test;
 mod token_search;
 
