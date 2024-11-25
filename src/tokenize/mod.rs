@@ -964,4 +964,44 @@ mod tests {
         assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("c".to_owned()), 3));
         assert_eq!(tokens.get(3).unwrap(), (Token::Symbol("d".to_owned()), 4));
     }
+
+    #[test]
+    fn bad_token_get() {
+        let s = "a b c";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        match tokens.get(3) {
+            Some(_) => assert!(false),
+            None => {}
+        };
+    }
+
+    #[test]
+    fn bad_token_get_line() {
+        let s = "a b c";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        match tokens.get_line_number(3) {
+            Some(_) => assert!(false),
+            None => {}
+        };
+    }
+
+    #[test]
+    fn get_final_line() {
+        let s = "a \n b c";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.get_final_line(), 2);
+    }
+
+    #[test]
+    fn get_final_line_one_line() {
+        let s = "a b c";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.get_final_line(), 1);
+    }
+
+    #[test]
+    fn get_final_line_empty() {
+        let tokens = Tokens::new();
+        assert_eq!(tokens.get_final_line(), 0);
+    }
 }

@@ -111,10 +111,11 @@ impl Tokens {
     }
 
     pub fn get_final_line(&self) -> usize {
-        match self.line_numbers.get(self.line_numbers.len()) {
-            Some(line_number) => *line_number,
-            None => 0,
+        if self.line_numbers.len() == 0 {
+            return 0;
         }
+
+        unsafe { *self.line_numbers.get_unchecked(self.line_numbers.len() - 1) }
     }
 
     pub fn len(&self) -> usize {
