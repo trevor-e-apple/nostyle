@@ -20,24 +20,20 @@ const HEX_CHARS: [char; 22] = [
 ];
 const BIN_CHARS: [char; 2] = ['0', '1'];
 
-/// assuming that index points to the start of the word, returns the word string
+/// Returns the string from index to the next element that is not an alphabetical char,
+/// a digit, or an underscore.
 fn get_word(chars: &Vec<char>, index: usize) -> String {
     let start = index;
-    let mut index = index;
-    while index < chars.len() {
-        let c = match chars.get(index) {
-            Some(c) => c,
-            None => panic!(),
-        };
-
-        if ALPHABET_CHARS.contains(c) || DIGIT_CHARS.contains(c) || *c == '_' {
-            index += 1;
-        } else {
+    let mut end = chars.len();
+    for (displacement, c) in chars[index..].into_iter().enumerate() {
+        if !(ALPHABET_CHARS.contains(c) || DIGIT_CHARS.contains(c) || *c == '_')
+        {
+            end = index + displacement;
             break;
         }
     }
 
-    chars[start..index].iter().map(|c| c.to_string()).collect()
+    chars[start..end].iter().map(|c| c.to_string()).collect()
 }
 
 /// TODO: document me
@@ -51,22 +47,16 @@ fn get_int_literal_token(
     valid_chars: &[char],
 ) -> Result<(Token, usize), TokenizeError> {
     let start = index;
-    let mut index = index;
-    while index < chars.len() {
-        let c = match chars.get(index) {
-            Some(c) => c,
-            None => panic!(),
-        };
-
-        if valid_chars.contains(c) {
-            index += 1;
-        } else {
+    let mut end = chars.len();
+    for (displacement, c) in chars[index..].into_iter().enumerate() {
+        if !valid_chars.contains(c) {
+            end = index + displacement;
             break;
         }
     }
 
     let num_literal_string: String =
-        chars[start..index].iter().map(|c| c.to_string()).collect();
+        chars[start..end].iter().map(|c| c.to_string()).collect();
 
     match i64::from_str_radix(&num_literal_string, base) {
         Ok(value) => Ok((Token::IntLiteral(value), num_literal_string.len())),
@@ -785,6 +775,18 @@ mod tests {
 
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens.get(0).unwrap(), (Token::IntLiteral(0xabcdef), 1));
+    }
+
+    /// test for hex literal with caps
+    #[test]
+    fn hex_literal_sum() {
+        let s = "0xabc + 0xdef";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens.get(0).unwrap(), (Token::IntLiteral(0xabc), 1));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Plus, 1));
+        assert_eq!(tokens.get(2).unwrap(), (Token::IntLiteral(0xdef), 1));
     }
 
     /// test for a binary literal
