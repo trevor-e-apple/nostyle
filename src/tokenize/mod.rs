@@ -76,25 +76,18 @@ fn get_num_token(
 ) -> Result<(Token, usize), TokenizeError> {
     let start = index;
     let mut is_float = false;
-    let mut index = index;
-    while index < chars.len() {
-        let c = match chars.get(index) {
-            Some(c) => c,
-            None => panic!(),
-        };
-
-        if DIGIT_CHARS.contains(c) || *c == FLOATING_POINT_DELIMITER {
-            if *c == FLOATING_POINT_DELIMITER {
-                is_float = true;
-            }
-            index += 1;
-        } else {
+    let mut end = chars.len();
+    for (displacement, c) in chars[index..].into_iter().enumerate() {
+        if *c == FLOATING_POINT_DELIMITER {
+            is_float = true;
+        } else if !DIGIT_CHARS.contains(c) {
+            end = index + displacement;
             break;
         }
     }
 
     let num_literal_string: String =
-        chars[start..index].iter().map(|c| c.to_string()).collect();
+        chars[start..end].iter().map(|c| c.to_string()).collect();
 
     if is_float {
         match num_literal_string.parse::<f64>() {
@@ -1005,5 +998,19 @@ mod tests {
     fn get_final_line_empty() {
         let tokens = Tokens::new();
         assert_eq!(tokens.get_final_line(), 0);
+    }
+
+    #[test]
+    fn tokenize_while() {
+        let s = "while (whild)";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(tokens.get(0).unwrap(), (Token::While, 1));
+        assert_eq!(tokens.get(1).unwrap(), (Token::LParen, 1));
+        assert_eq!(
+            tokens.get(2).unwrap(),
+            (Token::Symbol("whild".to_owned()), 1)
+        );
+        assert_eq!(tokens.get(3).unwrap(), (Token::RParen, 1));
     }
 }
