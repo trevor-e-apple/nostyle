@@ -381,21 +381,16 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
             let start = index + 1;
             let mut end = start;
             let mut has_terminal = false;
-            while end < chars.len() {
-                let next_char = match chars.get(end) {
-                    Some(next_char) => next_char,
-                    None => {
-                        break;
-                    }
-                };
-
+            for (displacement, next_char) in
+                chars[start..].into_iter().enumerate()
+            {
                 if *next_char != '"' {
                     if *next_char == '\n' {
                         line_number += 1;
                     }
-                    end += 1;
                 } else {
                     has_terminal = true;
+                    end = start + displacement;
                     break;
                 }
             }
