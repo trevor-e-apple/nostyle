@@ -1013,4 +1013,14 @@ mod tests {
         );
         assert_eq!(tokens.get(3).unwrap(), (Token::RParen, 1));
     }
+
+    /// Trailing assign symbol at EOF
+    #[test]
+    fn trailing_trailing_assign() {
+        let s = "a =";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 1));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Assign, 1));
+    }
 }
