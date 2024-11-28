@@ -1028,4 +1028,12 @@ mod tests {
         assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 1));
         assert_eq!(tokens.get(1).unwrap(), (Token::Not, 1));
     }
+
+    #[test]
+    fn tokenize_dot() {
+        let s = ".";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Dot, 1));
+    }
 }
