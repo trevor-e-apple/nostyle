@@ -1029,7 +1029,7 @@ mod tests {
         assert_eq!(tokens.get(1).unwrap(), (Token::Not, 1));
     }
 
-    /// Trailing not symbol at EOF
+    /// Trailing greater than symbol at EOF
     #[test]
     fn trailing_greater_than() {
         let s = "a >";
@@ -1037,6 +1037,17 @@ mod tests {
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 1));
         assert_eq!(tokens.get(1).unwrap(), (Token::GreaterThan, 1));
+    }
+
+    /// Greater than or equals
+    #[test]
+    fn trailing_greater_than_or_equal() {
+        let s = "a >= b";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 1));
+        assert_eq!(tokens.get(1).unwrap(), (Token::GreaterThanOrEqual, 1));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("b".to_owned()), 1));
     }
 
     #[test]
