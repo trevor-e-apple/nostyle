@@ -1049,6 +1049,17 @@ mod tests {
         assert_eq!(tokens.get(1).unwrap(), (Token::LessThan, 1));
     }
 
+    /// Less than symbol with symbol no space
+    #[test]
+    fn less_than_or_equal() {
+        let s = "a <= b";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 1));
+        assert_eq!(tokens.get(1).unwrap(), (Token::LessThanOrEqual, 1));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("b".to_owned()), 1));
+    }
+
     /// Greater than or equals
     #[test]
     fn trailing_greater_than_or_equal() {
