@@ -121,4 +121,8 @@ impl Tokens {
     pub fn len(&self) -> usize {
         self.data.len()
     }
+
+    pub fn token_slice(&self, start: usize, end: usize) -> &[Token] {
+        &self.data[start..end]
+    }
 }

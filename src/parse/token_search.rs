@@ -12,19 +12,17 @@ pub fn find_matching_group_indices(
     let mut ltokens_found = 1;
     let mut rtokens_found = 0;
 
-    for index in (starts_at + 1)..ends_at {
-        if let Some(token) = tokens.get_token(index) {
-            if *token == *ltoken {
-                ltokens_found += 1;
-            } else if *token == *rtoken {
-                rtokens_found += 1;
-            }
+    for (displacement, token) in
+        tokens.token_slice(starts_at + 1, ends_at).into_iter().enumerate()
+    {
+        if *token == *ltoken {
+            ltokens_found += 1;
+        } else if *token == *rtoken {
+            rtokens_found += 1;
+        }
 
-            if ltokens_found == rtokens_found {
-                return Some(index);
-            }
-        } else {
-            break;
+        if ltokens_found == rtokens_found {
+            return Some(starts_at + 1 + displacement);
         }
     }
 
