@@ -1,6 +1,6 @@
 use crate::tokenize::tokens::{Token, Tokens};
 
-/// finds the indices of the matching rtoken for the first ltoken found at
+/// finds the index of the matching rtoken for the first ltoken found at
 /// starts_at
 pub fn find_matching_group_indices(
     tokens: &Tokens,

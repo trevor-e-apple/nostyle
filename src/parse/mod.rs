@@ -379,7 +379,7 @@ fn parse_for_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    let (start_line, _) = get_start_end_lines(tokens, search_data);
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
 
     match tokens.get(search_data.end - 1) {
         Some((end_token, line_number)) => {
@@ -431,11 +431,11 @@ fn parse_for_rule(
     ) {
         Some(rparen_index) => rparen_index,
         None => {
-            return Err(make_final_line_error(
-                tokens,
+            return Err(ParseError {
                 start_line,
-                "Missing matching rparen for 'for' statements".to_owned(),
-            ));
+                end_line,
+                info: "Missing rparen for 'for' rule".to_owned(),
+            });
         }
     };
 
