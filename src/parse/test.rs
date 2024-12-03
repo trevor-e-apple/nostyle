@@ -4548,3 +4548,47 @@ fn missing_for_rparen() {
         }
     };
 }
+
+#[test]
+fn missing_if_lbrace() {
+    let tokens = tokenize(
+        "if (a + b) == c
+            d = c;
+        } else {
+            d = e;
+        }",
+    )
+    .expect("Unexpected tokenize error");
+
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+            let error = errors.get(0).expect("Missing error");
+            assert_eq!(error.start_line, 1);
+            assert_eq!(error.end_line, 3);
+        }
+    };
+}
+
+#[test]
+fn missing_if_braces() {
+    let tokens = tokenize(
+        "if (a + b) == c
+            d = c;
+        else {
+            d = e;
+        }",
+    )
+    .expect("Unexpected tokenize error");
+
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+            let error = errors.get(0).expect("Missing error");
+            assert_eq!(error.start_line, 1);
+            assert_eq!(error.end_line, 3);
+        }
+    };
+}

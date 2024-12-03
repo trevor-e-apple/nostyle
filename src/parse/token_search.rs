@@ -29,7 +29,7 @@ pub fn find_matching_group_indices(
     None
 }
 
-/// finds the indices of the matching ltoken for the rtoken found at
+/// finds the index of the matching ltoken for the rtoken found at
 /// ends_at
 pub fn find_matching_group_indices_end(
     tokens: &Tokens,
@@ -58,68 +58,6 @@ pub fn find_matching_group_indices_end(
     }
 
     None
-}
-
-/// finds the index of the final token between starts_at and ends_at
-/// (starts_at <= index < ends_at). Returns None if not found
-/// searches in reverse
-pub fn find_final_token(
-    tokens: &Tokens,
-    token: &Token,
-    starts_at: usize,
-    ends_at: usize,
-) -> Option<usize> {
-    for index in (starts_at..ends_at).rev() {
-        if let Some(check_token) = tokens.get_token(index) {
-            if *check_token == *token {
-                return Some(index);
-            }
-        } else {
-            return None;
-        }
-    }
-
-    None
-}
-
-/// finds the index of the final token between starts_at and ends_at
-/// (starts_at <= index < ends_at) that is at the same grouping level as
-/// starts_at
-///
-/// Returns None if not found
-pub fn find_final_matching_level_token(
-    tokens: &Tokens,
-    matching_tokens: &[Token],
-    starts_at: usize,
-    ends_at: usize,
-    group_start_token: &Token,
-    group_end_token: &Token,
-) -> Option<(usize, Token)> {
-    let mut result: Option<(usize, Token)> = None;
-
-    let mut current_level = 0;
-    for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get_token(index) {
-            if *check_token == *group_start_token {
-                current_level += 1;
-            } else if *check_token == *group_end_token {
-                current_level -= 1;
-            } else if current_level == 0
-                && matching_tokens.contains(check_token)
-            {
-                result = Some((index, check_token.clone()));
-            }
-
-            if current_level < 0 {
-                // we have moved outside of the grouping that starts_at was in
-                return None;
-            }
-        } else {
-            return None;
-        }
-    }
-
-    result
 }
 
 struct AllGroupsSearch {
