@@ -286,3 +286,24 @@ pub fn find_next_tokens(
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokenize::{tokenize, tokens::Token};
+
+    #[test]
+    fn mismatched_braces_find_from_end() {
+        let tokens = tokenize("{}}").expect("Unexpected tokenize error");
+        match find_matching_group_indices_end(
+            &tokens,
+            &Token::LBrace,
+            &Token::RBrace,
+            0,
+            tokens.len(),
+        ) {
+            Some(_) => assert!(false),
+            None => {}
+        }
+    }
+}
