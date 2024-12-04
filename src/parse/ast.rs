@@ -316,3 +316,24 @@ impl<'a> dot::GraphWalk<'a, AstNodeHandle, AstEdge> for Ast {
         e.1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_empty() {
+        let a = Ast::new();
+        let mut b = Ast::new();
+        b.add_root(Rule::Expression);
+        assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn b_empty() {
+        let mut a = Ast::new();
+        let b = Ast::new();
+        a.add_root(Rule::Expression);
+        assert!(!Ast::equivalent(&a, &b));
+    }
+}
