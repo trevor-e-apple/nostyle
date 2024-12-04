@@ -194,53 +194,15 @@ pub fn find_prev_matching_level_token_all_groups(
 ) -> Option<usize> {
     let mut group_levels = AllGroupsSearch::new();
 
-    for index in (starts_at..ends_at).rev() {
-        if let Some(check_token) = tokens.get_token(index) {
-            if group_levels.at_starting_level()
-                && matching_tokens.contains(check_token)
-            {
-                return Some(index);
-            } else {
-                group_levels.check_for_group_tokens(check_token);
-            }
+    for (displacement, check_token) in
+        tokens.token_slice(starts_at, ends_at).into_iter().enumerate().rev()
+    {
+        if group_levels.at_starting_level()
+            && matching_tokens.contains(check_token)
+        {
+            return Some(starts_at + displacement);
         } else {
-            return None;
-        }
-    }
-
-    None
-}
-
-/// finds the index of the next token of a certain type
-pub fn find_next_token(
-    tokens: &Tokens,
-    token: &Token,
-    starts_at: usize,
-    ends_at: usize,
-) -> Option<usize> {
-    for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get_token(index) {
-            if *check_token == *token {
-                return Some(index);
-            }
-        }
-    }
-
-    None
-}
-
-/// finds the index of the next token among a few types
-pub fn find_next_tokens(
-    tokens: &Tokens,
-    matching_tokens: &[Token],
-    starts_at: usize,
-    ends_at: usize,
-) -> Option<usize> {
-    for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get_token(index) {
-            if matching_tokens.contains(check_token) {
-                return Some(index);
-            }
+            group_levels.check_for_group_tokens(check_token);
         }
     }
 
