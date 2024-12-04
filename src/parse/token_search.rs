@@ -166,17 +166,15 @@ pub fn find_next_matching_level_token_all_groups(
 ) -> Option<usize> {
     let mut group_levels = AllGroupsSearch::new();
 
-    for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get_token(index) {
-            if group_levels.at_starting_level()
-                && matching_tokens.contains(check_token)
-            {
-                return Some(index);
-            } else {
-                group_levels.check_for_group_tokens(check_token);
-            }
+    for (displacement, check_token) in
+        tokens.token_slice(starts_at, ends_at).into_iter().enumerate()
+    {
+        if group_levels.at_starting_level()
+            && matching_tokens.contains(check_token)
+        {
+            return Some(starts_at + displacement);
         } else {
-            return None;
+            group_levels.check_for_group_tokens(check_token);
         }
     }
 
