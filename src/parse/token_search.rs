@@ -138,17 +138,15 @@ pub fn find_next_matching_level_token(
 ) -> Option<usize> {
     let mut current_level = 0;
 
-    for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get_token(index) {
-            if current_level == 0 && matching_tokens.contains(check_token) {
-                return Some(index);
-            } else if *check_token == *group_start_token {
-                current_level += 1;
-            } else if *check_token == *group_end_token {
-                current_level -= 1;
-            }
-        } else {
-            return None;
+    for (displacement, check_token) in
+        tokens.token_slice(starts_at, ends_at).into_iter().enumerate()
+    {
+        if current_level == 0 && matching_tokens.contains(check_token) {
+            return Some(starts_at + displacement);
+        } else if *check_token == *group_start_token {
+            current_level += 1;
+        } else if *check_token == *group_end_token {
+            current_level -= 1;
         }
     }
 
