@@ -186,38 +186,6 @@ pub fn find_next_matching_level_token_all_groups(
 /// as ends_at
 ///
 /// returns None if not found
-pub fn find_prev_matching_level_token(
-    tokens: &Tokens,
-    matching_tokens: &[Token],
-    starts_at: usize,
-    ends_at: usize,
-    group_start_token: &Token,
-    group_end_token: &Token,
-) -> Option<usize> {
-    let mut current_level = 0;
-
-    for index in (starts_at..ends_at).rev() {
-        if let Some(check_token) = tokens.get_token(index) {
-            if current_level == 0 && matching_tokens.contains(check_token) {
-                return Some(index);
-            } else if *check_token == *group_start_token {
-                current_level -= 1;
-            } else if *check_token == *group_end_token {
-                current_level += 1;
-            }
-        } else {
-            return None;
-        }
-    }
-
-    None
-}
-
-/// finds the index of the token previous token before ends_at and after
-/// starts_at (starts_at <= index < ends_at) that is at the same grouping level
-/// as ends_at
-///
-/// returns None if not found
 pub fn find_prev_matching_level_token_all_groups(
     tokens: &Tokens,
     matching_tokens: &[Token],
