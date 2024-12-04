@@ -103,21 +103,19 @@ pub fn find_final_matching_level_token_all_groups(
     let mut result: Option<(usize, Token)> = None;
 
     let mut group_levels = AllGroupsSearch::new();
-    for index in starts_at..ends_at {
-        if let Some(check_token) = tokens.get_token(index) {
-            group_levels.check_for_group_tokens(check_token);
+    for (displacement, check_token) in
+        tokens.token_slice(starts_at, ends_at).into_iter().enumerate()
+    {
+        group_levels.check_for_group_tokens(check_token);
 
-            if group_levels.at_starting_level()
-                && matching_tokens.contains(check_token)
-            {
-                result = Some((index, check_token.clone()));
-            }
+        if group_levels.at_starting_level()
+            && matching_tokens.contains(check_token)
+        {
+            result = Some((starts_at + displacement, check_token.clone()));
+        }
 
-            if group_levels.has_escaped() {
-                // we have moved outside of the grouping that starts_at was in
-                return None;
-            }
-        } else {
+        if group_levels.has_escaped() {
+            // we have moved outside of the grouping that starts_at was in
             return None;
         }
     }
