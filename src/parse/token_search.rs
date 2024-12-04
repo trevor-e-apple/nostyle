@@ -41,19 +41,17 @@ pub fn find_matching_group_indices_end(
     let mut ltokens_found = 0;
     let mut rtokens_found = 1;
 
-    for index in (starts_at..(ends_at - 1)).rev() {
-        if let Some(token) = tokens.get_token(index) {
-            if *token == *ltoken {
-                ltokens_found += 1;
-            } else if *token == *rtoken {
-                rtokens_found += 1;
-            }
+    for (displacement, token) in
+        tokens.token_slice(starts_at, ends_at - 1).into_iter().enumerate().rev()
+    {
+        if *token == *ltoken {
+            ltokens_found += 1;
+        } else if *token == *rtoken {
+            rtokens_found += 1;
+        }
 
-            if ltokens_found == rtokens_found {
-                return Some(index);
-            }
-        } else {
-            break;
+        if ltokens_found == rtokens_found {
+            return Some(starts_at + displacement);
         }
     }
 
