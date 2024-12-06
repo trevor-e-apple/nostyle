@@ -369,7 +369,25 @@ mod tests {
     }
 
     #[test]
-    fn ast_node_data_mismatch() {
+    fn ast_node_data_mismatch_a() {
+        let a = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![],
+            data: Some(Token::Assign),
+        };
+        let b = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![],
+            data: None,
+        };
+
+        assert_ne!(&a, &b);
+    }
+
+    #[test]
+    fn ast_node_data_mismatch_b() {
         let a = AstNode {
             rule: Rule::Expression,
             parent: None,
