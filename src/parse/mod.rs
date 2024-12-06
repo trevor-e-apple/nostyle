@@ -340,17 +340,16 @@ fn parse_expression_rule(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    let (start_token, start_token_line_number) =
-        match tokens.get(search_data.start) {
-            Some(token) => token,
-            None => {
-                return Err(make_final_line_error(
-                    tokens,
-                    0,
-                    "Can not parse 'expression' rule (empty tokens)".to_owned(),
-                ));
-            }
-        };
+    let start_token = match tokens.get_token(search_data.start) {
+        Some(token) => token,
+        None => {
+            return Err(make_final_line_error(
+                tokens,
+                0,
+                "Can not parse 'expression' rule (empty tokens)".to_owned(),
+            ));
+        }
+    };
 
     let rule = match start_token {
         Token::LBrace => Rule::BraceExpression,
