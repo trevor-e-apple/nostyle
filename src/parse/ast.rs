@@ -177,7 +177,7 @@ impl Ast {
             let node = if let Some(node) = self.get_node(dfs_data.node_handle) {
                 node
             } else {
-                panic!();
+                panic!("Bad handle from stack");
             };
 
             // add children to stack in reverse so they are expanded from left to right
@@ -196,11 +196,12 @@ impl Ast {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct AstNodeHandle {
     index: usize,
 }
 
+#[derive(Debug)]
 pub struct AstNode {
     pub rule: Rule,
     pub parent: Option<AstNodeHandle>,
@@ -365,5 +366,23 @@ mod tests {
         b.add_child(root_handle, Rule::BraceExpression);
 
         assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn ast_node_data_mismatch() {
+        let a = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![],
+            data: None,
+        };
+        let b = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![],
+            data: Some(Token::Assign),
+        };
+
+        assert_ne!(&a, &b);
     }
 }
