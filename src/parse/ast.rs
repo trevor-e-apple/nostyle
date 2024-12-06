@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    fn not_equivalent() {
+    fn same_size_not_equivalent() {
         let mut a = Ast::new();
         let mut b = Ast::new();
 
@@ -347,6 +347,22 @@ mod tests {
 
         let root_handle = b.add_root(Rule::Expression);
         b.add_child(root_handle, Rule::Equality);
+
+        assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn a_excess_data() {
+        let mut a = Ast::new();
+        let mut b = Ast::new();
+
+        let root_handle = a.add_root(Rule::Expression);
+        let brace_expression_handle =
+            a.add_child(root_handle, Rule::BraceExpression);
+        a.add_child(brace_expression_handle, Rule::BraceStatements);
+
+        let root_handle = b.add_root(Rule::Expression);
+        b.add_child(root_handle, Rule::BraceExpression);
 
         assert!(!Ast::equivalent(&a, &b));
     }
