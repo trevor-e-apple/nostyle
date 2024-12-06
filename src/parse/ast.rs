@@ -336,4 +336,18 @@ mod tests {
         a.add_root(Rule::Expression);
         assert!(!Ast::equivalent(&a, &b));
     }
+
+    #[test]
+    fn not_equivalent() {
+        let mut a = Ast::new();
+        let mut b = Ast::new();
+
+        let root_handle = a.add_root(Rule::Expression);
+        a.add_child(root_handle, Rule::BraceExpression);
+
+        let root_handle = b.add_root(Rule::Expression);
+        b.add_child(root_handle, Rule::Equality);
+
+        assert!(!Ast::equivalent(&a, &b));
+    }
 }
