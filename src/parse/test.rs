@@ -3366,6 +3366,21 @@ fn function_def_non_symbol() {
 }
 
 #[test]
+fn function_def_non_symbol_declaration() {
+    let tokens =
+        tokenize("fn test(10 a) {}").expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+            let error = errors.get(0).expect("Unexpected get error failure");
+            assert_eq!(error.start_line, 1);
+            assert_eq!(error.end_line, 1);
+        }
+    }
+}
+
+#[test]
 fn empty_function() {
     let tokens = tokenize("fn test() {}").expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");
