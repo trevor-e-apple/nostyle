@@ -1847,6 +1847,25 @@ fn for_loop() {
 }
 
 #[test]
+fn for_loop_missing_rbrace() {
+    let tokens = tokenize(
+        "for (a = 0; a < 10; a = a + 1;) {
+            b = 2 * b;
+    ",
+    )
+    .expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+            let error = errors.get(0).expect("Unexpected missing error");
+            assert_eq!(error.start_line, 1);
+            assert_eq!(error.end_line, 2);
+        }
+    };
+}
+
+#[test]
 fn nested_assignment_in_brace_expressions() {
     let tokens = tokenize("{{a = 0;}; a}").expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");

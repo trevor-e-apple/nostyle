@@ -541,7 +541,7 @@ fn parse_for_rule(
             None => {
                 return Err(ParseError {
                     start_line,
-                    end_line: start_line,
+                    end_line,
                     info: "Could not find expected rbrace".to_owned(),
                 })
             }
