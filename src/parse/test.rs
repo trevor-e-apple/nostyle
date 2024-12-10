@@ -1847,6 +1847,25 @@ fn for_loop() {
 }
 
 #[test]
+fn for_loop_no_statements() {
+    let tokens = tokenize(
+        "for () {
+            b = 2 * b;
+        }",
+    )
+    .expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert!(errors.len() == 1);
+            let error = errors.get(0).expect("Unexpected get error");
+            assert!(error.start_line == 1);
+            assert!(error.end_line == 1);
+        }
+    };
+}
+
+#[test]
 fn for_loop_missing_rbrace() {
     let tokens = tokenize(
         "for (a = 0; a < 10; a = a + 1;) {
