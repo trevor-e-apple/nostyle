@@ -1866,6 +1866,125 @@ fn for_loop_no_statements() {
 }
 
 #[test]
+fn for_loop_one_statement() {
+    let tokens = tokenize(
+        "for (a = 0;) {
+            b = 2 * b;
+        }",
+    )
+    .expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert!(errors.len() == 1);
+            let error = errors.get(0).expect("Unexpected get error");
+            assert!(error.start_line == 1);
+            assert!(error.end_line == 1);
+        }
+    };
+}
+
+#[test]
+fn for_loop_two_statements() {
+    let tokens = tokenize(
+        "for (a = 0; a < 10) {
+            b = 2 * b;
+        }",
+    )
+    .expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert!(errors.len() == 1);
+            let error = errors.get(0).expect("Unexpected get error");
+            assert!(error.start_line == 1);
+            assert!(error.end_line == 1);
+        }
+    };
+}
+
+#[test]
+fn for_loop_no_init() {
+    let tokens = tokenize("for (; a < 10; a = a + 1;) {}")
+        .expect("Unexpected tokenize error");
+    let ast = parse(&tokens).expect("Unexpected parse errror");
+
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+        let root_handle = expected_ast.add_root(Rule::Expression);
+
+        let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
+
+        // init statement
+        {
+            let statement_handle =
+                expected_ast.add_child(for_handle, Rule::Statement);
+            add_terminal_expression(&mut expected_ast, statement_handle, None);
+        }
+
+        // condition statement
+        {
+            let condition_statement =
+                expected_ast.add_child(for_handle, Rule::Statement);
+            let condition_expression =
+                expected_ast.add_child(condition_statement, Rule::Expression);
+            let comparison_handle = expected_ast.add_child_with_data(
+                condition_expression,
+                Rule::Comparison,
+                Some(Token::LessThan),
+            );
+
+            expected_ast.add_terminal_child(
+                comparison_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            // terminal side
+            expected_ast.add_terminal_child(
+                comparison_handle,
+                Some(Token::IntLiteral(10)),
+            );
+        }
+        // increment
+        {
+            let statement_handle =
+                expected_ast.add_child(for_handle, Rule::Statement);
+
+            // lhs
+            add_terminal_expression(
+                &mut expected_ast,
+                statement_handle,
+                Some(Token::Symbol("a".to_owned())),
+            );
+
+            // rhs
+            {
+                let expression_handle =
+                    expected_ast.add_child(statement_handle, Rule::Expression);
+                add_expected_add_child(
+                    &mut expected_ast,
+                    expression_handle,
+                    Token::Symbol("a".to_owned()),
+                    Token::IntLiteral(1),
+                )
+            }
+        }
+
+        // brace_expression
+        {
+            let brace_expression =
+                expected_ast.add_child(for_handle, Rule::BraceExpression);
+
+            // expression
+            add_terminal_expression(&mut expected_ast, brace_expression, None);
+        }
+
+        expected_ast
+    };
+    check_ast_equal(&ast, &expected_ast);
+}
+
+#[test]
 fn for_loop_missing_rbrace() {
     let tokens = tokenize(
         "for (a = 0; a < 10; a = a + 1;) {
