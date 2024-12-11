@@ -10,12 +10,15 @@ declaration -> SYMBOL SYMBOL;
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (statement | return_statement);
 return_statement -> "return" expression ";";
-statement -> plus_equals_statement | minus_equals_statement | times_equals_statement | div_equals_statement | assign_statment;
-plus_equals_statement -> ((expression | declaration) "+=" expression ";") | (expression ";");
-minus_equals_statement -> ((expression | declaration) "-=" expression ";") | (expression ";");
+statement ->
+    plus_equals_statement | minus_equals_statement | times_equals_statement | div_equals_statement | assign_statment |
+    effect_statement;
+plus_equals_statement -> ((expression | declaration) "+=" expression ";");
+minus_equals_statement -> ((expression | declaration) "-=" expression ";");
 times_equals_statement -> ((expression | declaration) "*=" expression ";") | (expression ";");
 div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expression ";");
-assign_statement -> ((expression | declaration) "=" expression ";") | (expression ";");
+assign_statement -> ((expression | declaration) "=" expression ";");
+effect_statement -> expression ";";
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -962,40 +965,14 @@ fn parse_statement_rule(
         }
         None => {
             // Handle the non-assignment statement case
-
-            // TODO: why is this - 2 instead of - 1? add a comment explaining?
-            // -- Should be caught during code coverage...
-            match tokens.get(search_data.end - 2) {
-                Some((
-                    expected_end_statement,
-                    expected_end_statement_line_number,
-                )) => {
-                    if expected_end_statement != Token::EndStatement {
-                        add_child_to_search_stack(
-                            search_data.node_handle,
-                            Rule::Expression,
-                            search_data.start,
-                            search_data.end - 1,
-                            ast,
-                            stack,
-                        );
-                    } else {
-                        return Err(ParseError {
-                            start_line: expected_end_statement_line_number,
-                            end_line: expected_end_statement_line_number,
-                            info: "Missing expected end statement".to_owned(),
-                        });
-                    }
-                }
-                None => {
-                    return Err(ParseError {
-                        start_line,
-                        end_line,
-                        info: "No end statement found (end of tokens)."
-                            .to_owned(),
-                    });
-                }
-            }
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Expression,
+                search_data.start,
+                search_data.end - 1,
+                ast,
+                stack,
+            );
         }
     }
 
