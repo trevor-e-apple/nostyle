@@ -3509,6 +3509,34 @@ fn function_def_no_parens() {
 }
 
 #[test]
+fn function_def_no_l_paren() {
+    let tokens = tokenize("fn test( {}").expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+            let error = errors.get(0).expect("Unexpected get error failure");
+            assert_eq!(error.start_line, 1);
+            assert_eq!(error.end_line, 1);
+        }
+    }
+}
+
+#[test]
+fn function_def_no_r_paren() {
+    let tokens = tokenize("fn test) {}").expect("Unexpected tokenize error");
+    match parse(&tokens) {
+        Ok(_) => assert!(false),
+        Err(errors) => {
+            assert_eq!(errors.len(), 1);
+            let error = errors.get(0).expect("Unexpected get error failure");
+            assert_eq!(error.start_line, 1);
+            assert_eq!(error.end_line, 1);
+        }
+    }
+}
+
+#[test]
 fn function_def_non_symbol() {
     let tokens = tokenize("fn 15() {}").expect("Unexpected tokenize error");
     match parse(&tokens) {
