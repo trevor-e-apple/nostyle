@@ -19,4 +19,6 @@ pub enum Rule {
     FunctionArguments,
     Primary,
     Terminal,
+    DeclarationStatements,
+    DataStructure,
 }

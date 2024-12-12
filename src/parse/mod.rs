@@ -3,22 +3,7 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> function_def | brace_expression | if_else | for_loop | equality;
-function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
-function_def_parameters -> (function_def_parameters",")? declaration ","?;
-declaration -> SYMBOL SYMBOL;
-brace_expression -> "{" brace_statements? expression "}";
-brace_statements -> brace_statements? (statement | return_statement);
-return_statement -> "return" expression ";";
-statement ->
-    plus_equals_statement | minus_equals_statement | times_equals_statement | div_equals_statement | assign_statment |
-    effect_statement;
-plus_equals_statement -> ((expression | declaration) "+=" expression ";");
-minus_equals_statement -> ((expression | declaration) "-=" expression ";");
-times_equals_statement -> ((expression | declaration) "*=" expression ";") | (expression ";");
-div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expression ";");
-assign_statement -> ((expression | declaration) "=" expression ";");
-effect_statement -> expression ";";
+expression -> function_def | brace_expression | if_else | for_loop | data_struct_def| equality;
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -29,6 +14,28 @@ unary -> (("!" | "-") unary) | function_call;
 function_call -> SYMBOL"(" function_arguments ")" | primary;
 function_arguments -> (function_arguments ",")? expression ","?;
 primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression;
+
+brace_expression -> "{" brace_statements? expression "}";
+brace_statements -> brace_statements? (statement | return_statement);
+
+declaration -> SYMBOL SYMBOL;
+
+return_statement -> "return" expression ";";
+statement ->
+    plus_equals_statement | minus_equals_statement | times_equals_statement | div_equals_statement | assign_statment |
+    effect_statement;
+plus_equals_statement -> ((expression | declaration) "+=" expression ";");
+minus_equals_statement -> ((expression | declaration) "-=" expression ";");
+times_equals_statement -> ((expression | declaration) "*=" expression ";") | (expression ";");
+div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expression ";");
+assign_statement -> ((expression | declaration) "=" expression ";");
+effect_statement -> expression ";";
+
+function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
+function_def_parameters -> (function_def_parameters",")? declaration ","?;
+
+declaration_statements -> declaration_statements? declaration ";";
+data_structure -> "struct" SYMBOL "{" declaration_statements? "}";
 */
 
 pub mod ast;
@@ -282,6 +289,28 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                 };
             }
             Rule::Terminal => {}
+            Rule::DeclarationStatements => {
+                match parse_declaration_statements(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
+            }
+            Rule::DataStructure => {
+                match parse_data_structure(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
+            }
         }
     }
 
@@ -359,6 +388,7 @@ fn parse_expression_rule(
         Token::If => Rule::IfElse,
         Token::For => Rule::ForLoop,
         Token::Function => Rule::FunctionDef,
+        Token::Struct => Rule::DataStructure,
         _ => Rule::Equality,
     };
 
@@ -1983,6 +2013,82 @@ fn parse_primary_rule(
             }
         }
     }
+
+    Ok(())
+}
+
+fn parse_declaration_statements(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    /*
+    data_structure -> "struct" SYMBOL "{" declaration_statements? "}";
+    */
+    Ok(())
+}
+
+fn parse_data_structure(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    /*
+    data_structure -> "struct" SYMBOL "{" declaration_statements? "}";
+    */
+    // verify first token is struct
+    match tokens.get_token(search_data.start) {
+        Some(start_token) => {
+            if *start_token != Token::Struct {
+                return Err(ParseError { start_line, end_line, info: "Missing struct token at start of expected structure definition".to_owned() });
+            } else {
+            }
+        }
+        None => return Err(ParseError {
+            start_line,
+            end_line,
+            info:
+                "Missing struct token at start of expected structure definition"
+                    .to_owned(),
+        }),
+    }
+
+    // find lbrace
+    let lbrace_index = search_data.start + 1;
+    match tokens.get_token(lbrace_index) {
+        Some(expected_lbrace) => {
+            if *expected_lbrace != Token::LBrace {
+                return Err(ParseError { start_line, end_line, info: "Missing struct token at start of expected structure definition".to_owned() });
+            } else {
+            }
+        }
+        None => todo!(),
+    };
+
+    // find rbrace
+    let rbrace_index = search_data.end - 1;
+    match tokens.get_token(rbrace_index) {
+        Some(expected_rbrace) => {
+            if *expected_rbrace != Token::RBrace {
+                return Err(ParseError { start_line, end_line, info: "Missing struct token at start of expected structure definition".to_owned() });
+            } else {
+            }
+        }
+        None => todo!(),
+    };
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::DeclarationStatements,
+        lbrace_index + 1,
+        rbrace_index - 1,
+        ast,
+        stack,
+    );
 
     Ok(())
 }
