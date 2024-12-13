@@ -2087,8 +2087,14 @@ fn parse_data_structure(
         }),
     }
 
+    let struct_name_index = search_data.start + 1;
+    let struct_name_token = match tokens.get_token(struct_name_index) {
+        Some(struct_name_token) => struct_name_token,
+        None => return Err(ParseError { start_line, end_line, info: todo!() }),
+    };
+
     // find lbrace
-    let lbrace_index = search_data.start + 1;
+    let lbrace_index = search_data.start + 2;
     match tokens.get_token(lbrace_index) {
         Some(expected_lbrace) => {
             if *expected_lbrace != Token::LBrace {
@@ -2159,6 +2165,13 @@ fn parse_data_structure(
             stack,
         );
     }
+
+    match ast.get_node_mut(search_data.node_handle) {
+        Some(node) => {
+            node.data = Some(struct_name_token.clone());
+        }
+        None => panic!("This should never happen. Bad node handle"),
+    };
 
     Ok(())
 }

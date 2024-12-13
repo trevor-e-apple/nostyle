@@ -4872,3 +4872,23 @@ fn missing_if_braces_unbalanced() {
         }
     };
 }
+
+#[test]
+fn parse_data_structure_declaration() {
+    let tokens = tokenize(
+        "
+        struct data_struct {
+            int32 field;
+        }
+    ",
+    )
+    .expect("Unexpected tokenize failure");
+    let ast = parse(&tokens).expect("Unexpected parse error");
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+
+        expected_ast
+    };
+
+    check_ast_equal(&ast, &expected_ast);
+}
