@@ -2025,8 +2025,46 @@ fn parse_declaration_statements(
 ) -> Result<(), ParseError> {
     let (start_line, end_line) = get_start_end_lines(tokens, search_data);
     /*
-    data_structure -> "struct" SYMBOL "{" declaration_statements? "}";
+    declaration_statements -> declaration_statements? declaration ";";
     */
+
+    // search for semicolon to split recursive and non recrusive declaration on
+    match find_prev_matching_level_token_all_groups(
+        tokens,
+        &[Token::EndStatement],
+        search_data.start,
+        search_data.end,
+    ) {
+        Some(split_index) => {
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::DeclarationStatements,
+                search_data.start,
+                split_index + 1,
+                ast,
+                stack,
+            );
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Declaration,
+                split_index + 1,
+                search_data.end,
+                ast,
+                stack,
+            );
+        }
+        None => {
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::Declaration,
+                search_data.start,
+                search_data.end - 1, // exclude trailing semicolon
+                ast,
+                stack,
+            );
+        }
+    }
+
     Ok(())
 }
 
@@ -2037,9 +2075,6 @@ fn parse_data_structure(
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
     let (start_line, end_line) = get_start_end_lines(tokens, search_data);
-    /*
-    data_structure -> "struct" SYMBOL "{" declaration_statements? "}";
-    */
     // verify first token is struct
     match tokens.get_token(search_data.start) {
         Some(start_token) => {
@@ -2062,11 +2097,23 @@ fn parse_data_structure(
     match tokens.get_token(lbrace_index) {
         Some(expected_lbrace) => {
             if *expected_lbrace != Token::LBrace {
-                return Err(ParseError { start_line, end_line, info: "Missing struct token at start of expected structure definition".to_owned() });
+                return Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "Missing lbrace at start of structure definition"
+                        .to_owned(),
+                });
             } else {
             }
         }
-        None => todo!(),
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Missing lbrace at start of structure definition"
+                    .to_owned(),
+            })
+        }
     };
 
     // find rbrace
@@ -2074,21 +2121,49 @@ fn parse_data_structure(
     match tokens.get_token(rbrace_index) {
         Some(expected_rbrace) => {
             if *expected_rbrace != Token::RBrace {
-                return Err(ParseError { start_line, end_line, info: "Missing struct token at start of expected structure definition".to_owned() });
+                return Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "Missing rbrace token at end of structure definition"
+                        .to_owned(),
+                });
             } else {
             }
         }
-        None => todo!(),
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Missing rbrace token at end of structure definition"
+                    .to_owned(),
+            });
+        }
     };
 
-    add_child_to_search_stack(
-        search_data.node_handle,
-        Rule::DeclarationStatements,
-        lbrace_index + 1,
-        rbrace_index - 1,
-        ast,
-        stack,
-    );
+    let semicolon_index = rbrace_index - 1;
+    let has_declarations = match tokens.get_token(semicolon_index) {
+        Some(token) => {
+            if *token == Token::EndStatement {
+                true
+            } else {
+                false
+            }
+        }
+        None => {
+            panic!("This should never happen, rbrace has already been found")
+        }
+    };
+
+    if has_declarations {
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::DeclarationStatements,
+            lbrace_index + 1,
+            rbrace_index,
+            ast,
+            stack,
+        );
+    }
 
     Ok(())
 }
