@@ -2023,11 +2023,6 @@ fn parse_declaration_statements(
     ast: &mut Ast,
     stack: &mut Vec<SearchData>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
-    /*
-    declaration_statements -> declaration_statements? declaration ";";
-    */
-
     // search for semicolon to split recursive and non recrusive declaration on
     match find_prev_matching_level_token_all_groups(
         tokens,
