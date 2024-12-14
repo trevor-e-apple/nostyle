@@ -210,6 +210,19 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
                     word_len,
                 );
             }
+        } else if *c == 's' {
+            let word = get_word(&chars, index);
+            if word == "struct" {
+                tokens.add_token(&mut index, Token::Struct, line_number, 6);
+            } else {
+                let word_len = word.len();
+                tokens.add_token(
+                    &mut index,
+                    Token::Symbol(word),
+                    line_number,
+                    word_len,
+                );
+            }
         } else if *c == '+' {
             binary_op_composable_token(
                 &chars,
@@ -1077,5 +1090,15 @@ mod tests {
         let tokens = tokenize(&s).expect("Unexpected tokenize error");
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens.get(0).unwrap(), (Token::Dot, 1));
+    }
+
+    #[test]
+    fn tokenize_struct() {
+        let s = "struct data_struct {
+            int32 field;
+        }";
+        let tokens = tokenize(&s).expect("Unexpected token error");
+        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Struct, 1));
     }
 }

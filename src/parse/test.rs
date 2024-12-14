@@ -4886,6 +4886,24 @@ fn parse_data_structure_declaration() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
+        let root_handle = expected_ast.add_root(Rule::Expression);
+        let data_structure_handle = expected_ast.add_child_with_data(
+            root_handle,
+            Rule::DataStructure,
+            Some(Token::Symbol("data_struct".to_owned())),
+        );
+        let declaration_statements_handle = expected_ast
+            .add_child(data_structure_handle, Rule::DeclarationStatements);
+        let declaration_statement = expected_ast
+            .add_child(declaration_statements_handle, Rule::Declaration);
+        expected_ast.add_terminal_child(
+            declaration_statement,
+            Some(Token::Symbol("int32".to_owned())),
+        );
+        expected_ast.add_terminal_child(
+            declaration_statement,
+            Some(Token::Symbol("field".to_owned())),
+        );
 
         expected_ast
     };

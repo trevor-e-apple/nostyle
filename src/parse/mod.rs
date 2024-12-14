@@ -2028,7 +2028,7 @@ fn parse_declaration_statements(
         tokens,
         &[Token::EndStatement],
         search_data.start,
-        search_data.end,
+        search_data.end - 1, // don't include the final semicolon
     ) {
         Some(split_index) => {
             add_child_to_search_stack(
@@ -2090,7 +2090,13 @@ fn parse_data_structure(
     let struct_name_index = search_data.start + 1;
     let struct_name_token = match tokens.get_token(struct_name_index) {
         Some(struct_name_token) => struct_name_token,
-        None => return Err(ParseError { start_line, end_line, info: todo!() }),
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Missing struct name".to_owned(),
+            })
+        }
     };
 
     // find lbrace
