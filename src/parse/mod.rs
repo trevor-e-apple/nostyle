@@ -2043,7 +2043,7 @@ fn parse_declaration_statements(
                 search_data.node_handle,
                 Rule::Declaration,
                 split_index + 1,
-                search_data.end,
+                search_data.end - 1, // exclude trailing semicolon
                 ast,
                 stack,
             );

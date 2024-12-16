@@ -4910,3 +4910,63 @@ fn parse_data_structure_declaration() {
 
     check_ast_equal(&ast, &expected_ast);
 }
+
+#[test]
+fn parse_data_struct_multiple_fields() {
+    let tokens = tokenize(
+        "
+        struct data_struct {
+            int32 field;
+            uint32 field2;
+        }
+    ",
+    )
+    .expect("Unexpected tokenize failure");
+    let ast = parse(&tokens).expect("Unexpected parse error");
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+        let root_handle = expected_ast.add_root(Rule::Expression);
+        let data_structure_handle = expected_ast.add_child_with_data(
+            root_handle,
+            Rule::DataStructure,
+            Some(Token::Symbol("data_struct".to_owned())),
+        );
+        let declaration_statements_handle = expected_ast
+            .add_child(data_structure_handle, Rule::DeclarationStatements);
+
+        // LHS
+        {
+            let recursive_handle = expected_ast.add_child(
+                declaration_statements_handle,
+                Rule::DeclarationStatements,
+            );
+            let declaration_statement =
+                expected_ast.add_child(recursive_handle, Rule::Declaration);
+
+            expected_ast.add_terminal_child(
+                declaration_statement,
+                Some(Token::Symbol("int32".to_owned())),
+            );
+            expected_ast.add_terminal_child(
+                declaration_statement,
+                Some(Token::Symbol("field".to_owned())),
+            );
+        }
+
+        // RHS
+        let declaration_statement = expected_ast
+            .add_child(declaration_statements_handle, Rule::Declaration);
+        expected_ast.add_terminal_child(
+            declaration_statement,
+            Some(Token::Symbol("uint32".to_owned())),
+        );
+        expected_ast.add_terminal_child(
+            declaration_statement,
+            Some(Token::Symbol("field2".to_owned())),
+        );
+
+        expected_ast
+    };
+
+    check_ast_equal(&ast, &expected_ast);
+}
