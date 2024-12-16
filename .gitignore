@@ -2,3 +2,4 @@
 *.profraw
 *.dot
 *.svg
+.DS_Store
