@@ -13,7 +13,10 @@ mult_div -> (mult_div ("*" | "/") unary) | unary;
 unary -> (("!" | "-") unary) | function_call;
 function_call -> SYMBOL"(" function_arguments ")" | primary;
 function_arguments -> (function_arguments ",")? expression ","?;
-primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression;
+primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression | struct_access;
+
+struct_access -> struct_access "." struct_access_terminal;
+struct_access_terminal -> function_call | SYMBOL;
 
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (statement | return_statement);
@@ -302,6 +305,28 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             }
             Rule::DataStructure => {
                 match parse_data_structure(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
+            }
+            Rule::StructAccess => {
+                match parse_struct_access(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
+            }
+            Rule::StructAccessTerminal => {
+                match parse_struct_access_terminal(
                     tokens,
                     &search_data,
                     &mut result,
@@ -1896,15 +1921,36 @@ fn parse_primary_rule(
         // handle empty expression case
         let node = match ast.get_node_mut(search_data.node_handle) {
             Some(node) => node,
-            None => todo!(),
+            None => panic!("Missing node handle"),
         };
         node.rule = Rule::Terminal;
         node.data = None;
     } else {
         match tokens.get(search_data.start) {
             Some((token, line_number)) => match token {
-                Token::Symbol(_)
-                | Token::IntLiteral(_)
+                Token::Symbol(_) => {
+                    if (search_data.end - search_data.start) > 1 {
+                        // update current primary to struct access
+                        let node =
+                            match ast.get_node_mut(search_data.node_handle) {
+                                Some(node) => node,
+                                None => panic!("Missing node handle"),
+                            };
+                        node.rule = Rule::StructAccess;
+                    } else {
+                        // update current primary to terminal
+                        let node =
+                            match ast.get_node_mut(search_data.node_handle) {
+                                Some(node) => node,
+                                None => {
+                                    panic!("Missing node handle")
+                                }
+                            };
+                        node.rule = Rule::Terminal;
+                        node.data = Some(token.clone());
+                    }
+                }
+                Token::IntLiteral(_)
                 | Token::FloatLiteral(_)
                 | Token::StringLiteral(_) => {
                     if (search_data.end - search_data.start) != 1 {
@@ -2178,6 +2224,95 @@ fn parse_data_structure(
         }
         None => panic!("This should never happen. Bad node handle"),
     };
+
+    Ok(())
+}
+
+fn parse_struct_access(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
+    // split on the right most dot
+    let split_index = match find_final_matching_level_token_all_groups(
+        tokens,
+        &[Token::Dot],
+        search_data.start,
+        search_data.end,
+    ) {
+        Some((split_index, _)) => split_index,
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Expected dot when parsing multi-token primary"
+                    .to_owned(),
+            })
+        }
+    };
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::StructAccess,
+        search_data.start,
+        split_index,
+        ast,
+        stack,
+    );
+
+    add_child_to_search_stack(
+        search_data.node_handle,
+        Rule::StructAccessTerminal,
+        split_index,
+        search_data.end,
+        ast,
+        stack,
+    );
+
+    Ok(())
+}
+
+fn parse_struct_access_terminal(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
+    if (search_data.end - search_data.start) == 1 {
+        match tokens.get_token(search_data.start) {
+            Some(token) => {
+                let node = match ast.get_node_mut(search_data.node_handle) {
+                    Some(node) => node,
+                    None => {
+                        panic!("Missing node handle")
+                    }
+                };
+                node.rule = Rule::Terminal;
+                node.data = Some(token.clone());
+            }
+            None => {
+                return Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "".to_owned(),
+                })
+            }
+        }
+    } else {
+        add_child_to_search_stack(
+            search_data.node_handle,
+            Rule::FunctionCall,
+            search_data.start,
+            search_data.end,
+            ast,
+            stack,
+        );
+    }
 
     Ok(())
 }

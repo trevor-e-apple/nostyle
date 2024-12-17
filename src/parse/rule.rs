@@ -21,4 +21,6 @@ pub enum Rule {
     Terminal,
     DeclarationStatements,
     DataStructure,
+    StructAccess,
+    StructAccessTerminal,
 }
