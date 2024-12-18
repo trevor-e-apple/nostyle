@@ -1930,13 +1930,14 @@ fn parse_primary_rule(
             Some((token, line_number)) => match token {
                 Token::Symbol(_) => {
                     if (search_data.end - search_data.start) > 1 {
-                        // update current primary to struct access
-                        let node =
-                            match ast.get_node_mut(search_data.node_handle) {
-                                Some(node) => node,
-                                None => panic!("Missing node handle"),
-                            };
-                        node.rule = Rule::StructAccess;
+                        add_child_to_search_stack(
+                            search_data.node_handle,
+                            Rule::StructAccess,
+                            search_data.start,
+                            search_data.end,
+                            ast,
+                            stack,
+                        );
                     } else {
                         // update current primary to terminal
                         let node =
@@ -2237,42 +2238,53 @@ fn parse_struct_access(
     let (start_line, end_line) = get_start_end_lines(tokens, search_data);
 
     // split on the right most dot
-    let split_index = match find_final_matching_level_token_all_groups(
+    match find_final_matching_level_token_all_groups(
         tokens,
         &[Token::Dot],
         search_data.start,
         search_data.end,
     ) {
-        Some((split_index, _)) => split_index,
-        None => {
-            return Err(ParseError {
-                start_line,
-                end_line,
-                info: "Expected dot when parsing multi-token primary"
-                    .to_owned(),
-            })
+        Some((split_index, _)) => {
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::StructAccess,
+                search_data.start,
+                split_index,
+                ast,
+                stack,
+            );
+
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::StructAccessTerminal,
+                split_index + 1, // exclude dot token
+                search_data.end,
+                ast,
+                stack,
+            );
+            Ok(())
         }
-    };
-
-    add_child_to_search_stack(
-        search_data.node_handle,
-        Rule::StructAccess,
-        search_data.start,
-        split_index,
-        ast,
-        stack,
-    );
-
-    add_child_to_search_stack(
-        search_data.node_handle,
-        Rule::StructAccessTerminal,
-        split_index,
-        search_data.end,
-        ast,
-        stack,
-    );
-
-    Ok(())
+        None => {
+            if (search_data.end - search_data.start) == 1 {
+                add_child_to_search_stack(
+                    search_data.node_handle,
+                    Rule::StructAccessTerminal,
+                    search_data.start,
+                    search_data.end,
+                    ast,
+                    stack,
+                );
+                Ok(())
+            } else {
+                Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "Expected dot when parsing multi-token primary"
+                        .to_owned(),
+                })
+            }
+        }
+    }
 }
 
 fn parse_struct_access_terminal(

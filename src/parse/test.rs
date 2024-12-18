@@ -4970,3 +4970,16 @@ fn parse_data_struct_multiple_fields() {
 
     check_ast_equal(&ast, &expected_ast);
 }
+
+#[test]
+fn parse_struct_field_access() {
+    let tokens = tokenize("a.b.c").expect("Unexpected tokenize error");
+    let ast = parse(&tokens).expect("Unexpected parse error");
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+        let root_handle = expected_ast.add_root(Rule::Expression);
+        expected_ast
+    };
+
+    check_ast_equal(&ast, &expected_ast);
+}

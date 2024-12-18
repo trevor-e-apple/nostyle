@@ -1093,6 +1093,16 @@ mod tests {
     }
 
     #[test]
+    fn tokenize_dot_with_symbol() {
+        let s = "a.b";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Symbol("a".to_owned()), 1));
+        assert_eq!(tokens.get(1).unwrap(), (Token::Dot, 1));
+        assert_eq!(tokens.get(2).unwrap(), (Token::Symbol("b".to_owned()), 1));
+    }
+
+    #[test]
     fn tokenize_struct() {
         let s = "struct data_struct {
             int32 field;
