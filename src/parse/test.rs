@@ -5015,3 +5015,55 @@ fn parse_struct_field_access() {
 
     check_ast_equal(&ast, &expected_ast);
 }
+
+#[test]
+fn parse_struct_field_function_call() {
+    let tokens = tokenize("a.b().c").expect("Unexpected tokenize error");
+    let ast = parse(&tokens).expect("Unexpected parse error");
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+        let root_handle = expected_ast.add_root(Rule::Expression);
+        let primary_handle = expected_ast.add_child(root_handle, Rule::Primary);
+        let struct_access_handle =
+            expected_ast.add_child(primary_handle, Rule::StructAccess);
+
+        // a.b()
+        {
+            let struct_access_handle = expected_ast
+                .add_child(struct_access_handle, Rule::StructAccess);
+
+            // a
+            {
+                let struct_access_handle = expected_ast
+                    .add_child(struct_access_handle, Rule::StructAccess);
+                expected_ast.add_terminal_child(
+                    struct_access_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+            }
+
+            // b()
+            {
+                let terminal_handle = expected_ast.add_child(
+                    struct_access_handle,
+                    Rule::StructAccessTerminal,
+                );
+                add_function_call_no_arg(
+                    &mut expected_ast,
+                    terminal_handle,
+                    "b".to_owned(),
+                );
+            }
+        }
+
+        // c
+        expected_ast.add_terminal_child(
+            struct_access_handle,
+            Some(Token::Symbol("c".to_owned())),
+        );
+
+        expected_ast
+    };
+
+    check_ast_equal(&ast, &expected_ast);
+}
