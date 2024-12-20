@@ -4978,6 +4978,38 @@ fn parse_struct_field_access() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression);
+        let primary_handle = expected_ast.add_child(root_handle, Rule::Primary);
+        let struct_access_handle =
+            expected_ast.add_child(primary_handle, Rule::StructAccess);
+
+        // a.b
+        {
+            let struct_access_handle = expected_ast
+                .add_child(struct_access_handle, Rule::StructAccess);
+
+            // a
+            {
+                let struct_access_handle = expected_ast
+                    .add_child(struct_access_handle, Rule::StructAccess);
+                expected_ast.add_terminal_child(
+                    struct_access_handle,
+                    Some(Token::Symbol("a".to_owned())),
+                );
+            }
+
+            // b
+            expected_ast.add_terminal_child(
+                struct_access_handle,
+                Some(Token::Symbol("b".to_owned())),
+            );
+        }
+
+        // c
+        expected_ast.add_terminal_child(
+            struct_access_handle,
+            Some(Token::Symbol("c".to_owned())),
+        );
+
         expected_ast
     };
 
