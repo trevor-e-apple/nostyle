@@ -36,6 +36,7 @@ pub enum Token {
     StringLiteral(String),
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum TokenizeErrorType {
     General,
