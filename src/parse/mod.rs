@@ -676,7 +676,7 @@ fn parse_brace_expression_rule(
         });
     }
 
-    let (final_token, final_line) = match tokens.get(search_data.end - 1) {
+    let final_token = match tokens.get_token(search_data.end - 1) {
         Some(token) => token,
         None => {
             return Err(ParseError {
@@ -687,7 +687,7 @@ fn parse_brace_expression_rule(
         }
     };
 
-    if final_token != Token::RBrace {
+    if *final_token != Token::RBrace {
         return Err(ParseError {
             start_line,
             end_line: start_line,
@@ -1269,7 +1269,7 @@ fn parse_binary_op_rule(
 
                         // check previous token to see if it's a binary op token
                         let prev_token_index = split_index - 1;
-                        let (prev_token, prev_token_line) = match tokens.get(prev_token_index) {
+                        let prev_token = match tokens.get_token(prev_token_index) {
                             Some(prev_token) => prev_token,
                             // This means (split_index - 1) >= tokens.len,
                             // which means find_final_matching_level_token_all_groups is messed up
