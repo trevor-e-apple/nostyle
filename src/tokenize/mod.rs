@@ -188,6 +188,8 @@ pub fn tokenize(data: &str) -> Result<Tokens, Vec<TokenizeError>> {
             let word = get_word(&chars, index);
             if word == "return" {
                 tokens.add_token(&mut index, Token::Return, line_number, 6);
+            } else if word == "returns" {
+                tokens.add_token(&mut index, Token::Returns, line_number, 7);
             } else {
                 let word_len = word.len();
                 tokens.add_token(
@@ -909,6 +911,30 @@ mod tests {
         assert_eq!(tokens.get(0).unwrap(), (Token::Return, 1));
         assert_eq!(tokens.get(1).unwrap(), (Token::Symbol("a".to_owned()), 1));
         assert_eq!(tokens.get(2).unwrap(), (Token::EndStatement, 1));
+    }
+
+    #[test]
+    fn tokenize_returns() {
+        let s = "fn foo() returns int32 {return 15;}";
+        let tokens = tokenize(&s).expect("Unexpected tokenize error");
+        assert_eq!(tokens.len(), 11);
+        assert_eq!(tokens.get(0).unwrap(), (Token::Function, 1));
+        assert_eq!(
+            tokens.get(1).unwrap(),
+            (Token::Symbol("foo".to_owned()), 1)
+        );
+        assert_eq!(tokens.get(2).unwrap(), (Token::LParen, 1));
+        assert_eq!(tokens.get(3).unwrap(), (Token::RParen, 1));
+        assert_eq!(tokens.get(4).unwrap(), (Token::Returns, 1));
+        assert_eq!(
+            tokens.get(5).unwrap(),
+            (Token::Symbol("int32".to_owned()), 1)
+        );
+        assert_eq!(tokens.get(6).unwrap(), (Token::LBrace, 1));
+        assert_eq!(tokens.get(7).unwrap(), (Token::Return, 1));
+        assert_eq!(tokens.get(8).unwrap(), (Token::IntLiteral(15), 1));
+        assert_eq!(tokens.get(9).unwrap(), (Token::EndStatement, 1));
+        assert_eq!(tokens.get(10).unwrap(), (Token::RBrace, 1));
     }
 
     #[test]
