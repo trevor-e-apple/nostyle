@@ -3,6 +3,7 @@ pub enum Rule {
     Expression,
     FunctionDef,
     FunctionDefParameters,
+    ReturnsData,
     Declaration,
     BraceExpression,
     BraceStatements,

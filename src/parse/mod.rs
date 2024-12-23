@@ -34,7 +34,8 @@ div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expr
 assign_statement -> ((expression | declaration) "=" expression ";");
 effect_statement -> expression ";";
 
-function_def -> "fn" SYMBOL "(" function_def_parameters ")" brace_expression;
+function_def -> "fn" SYMBOL "(" function_def_parameters ")" returns_data? brace_expression;
+returns_data -> "returns" SYMBOL;
 function_def_parameters -> (function_def_parameters",")? declaration ","?;
 
 declaration_statements -> declaration_statements? declaration ";";
@@ -121,6 +122,17 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             }
             Rule::FunctionDefParameters => {
                 match parse_function_parameters_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
+            }
+            Rule::ReturnsData => {
+                match parse_returns_data_rule(
                     tokens,
                     &search_data,
                     &mut result,
@@ -1762,6 +1774,33 @@ fn parse_function_def_rule(
     };
     node.data = Some(Token::Symbol(function_name.clone()));
 
+    let (returns_index, lbrace_index) = {
+        let next_token_index = rparen_index + 1;
+        let next_token = match tokens.get_token(next_token_index) {
+            Some(next_token) => next_token,
+            None => {
+                return Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "Missing token after function def rparen".to_owned(),
+                })
+            }
+        };
+
+        if *next_token == Token::Returns {
+            (Some(next_token_index), next_token_index + 2)
+        } else if *next_token == Token::LBrace {
+            (None, next_token_index)
+        } else {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Missing expected token (returns, lbrace) after rparen"
+                    .to_owned(),
+            });
+        }
+    };
+
     add_child_to_search_stack(
         search_data.node_handle,
         Rule::FunctionDefParameters,
@@ -1771,10 +1810,24 @@ fn parse_function_def_rule(
         stack,
     );
 
+    match returns_index {
+        Some(returns_index) => {
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::ReturnsData,
+                returns_index,
+                lbrace_index,
+                ast,
+                stack,
+            );
+        }
+        None => {}
+    }
+
     add_child_to_search_stack(
         search_data.node_handle,
         Rule::BraceExpression,
-        rparen_index + 1,
+        lbrace_index,
         search_data.end,
         ast,
         stack,
@@ -1842,6 +1895,44 @@ fn parse_function_parameters_rule(
             });
         }
     }
+
+    Ok(())
+}
+
+fn parse_returns_data_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
+    let token = match tokens.get_token(search_data.start + 1) {
+        Some(token) => match *token {
+            Token::Symbol(_) => token,
+            _ => {
+                return Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "Missing expected symbol token after returns"
+                        .to_owned(),
+                })
+            }
+        },
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Missing expected symbol token after returns".to_owned(),
+            })
+        }
+    };
+
+    ast.add_child_with_data(
+        search_data.node_handle,
+        Rule::Terminal,
+        Some(token.clone()),
+    );
 
     Ok(())
 }
