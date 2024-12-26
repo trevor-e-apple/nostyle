@@ -3629,6 +3629,46 @@ fn empty_function() {
 }
 
 #[test]
+fn function_with_returns() {
+    let tokens = tokenize("fn test() returns int32 {5}")
+        .expect("Unexpected tokenize error");
+    let ast = parse(&tokens).expect("Unexpected parse errror");
+
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+
+        let root_handle = expected_ast.add_root(Rule::Expression);
+        let function_def_handle = expected_ast.add_child_with_data(
+            root_handle,
+            Rule::FunctionDef,
+            Some(Token::Symbol("test".to_owned())),
+        );
+
+        // no parameters, so this has no children
+        expected_ast
+            .add_child(function_def_handle, Rule::FunctionDefParameters);
+
+        let returns_data_handle =
+            expected_ast.add_child(function_def_handle, Rule::ReturnsData);
+        expected_ast.add_terminal_child(
+            returns_data_handle,
+            Some(Token::Symbol("int32".to_owned())),
+        );
+
+        // brace expression
+        let brace_expression_handle =
+            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let expression_handle =
+            expected_ast.add_child(brace_expression_handle, Rule::Expression);
+        expected_ast
+            .add_terminal_child(expression_handle, Some(Token::IntLiteral(5)));
+
+        expected_ast
+    };
+    check_ast_equal(&ast, &expected_ast);
+}
+
+#[test]
 fn for_loop_function() {
     let tokens = tokenize(
         "fn test(int32 a, int32 b) {
