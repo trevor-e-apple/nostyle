@@ -3629,6 +3629,93 @@ fn empty_function() {
 }
 
 #[test]
+fn multiple_function_defs() {
+    let tokens = tokenize(
+        "
+        fn test1(int32 a, int32 b) {
+        }
+
+        fn test2(int32 a, int32 b) {
+        }
+
+        fn test3(int32 a, int32 b) {
+        }
+    ",
+    )
+    .expect("Unexpected tokenize error");
+    let ast = parse(&tokens).expect("Unexpected parse errror");
+
+    let expected_ast = {
+        let param_one_name = "a".to_owned();
+        let param_two_name = "b".to_owned();
+
+        let mut expected_ast = Ast::new();
+
+        let root_handle = expected_ast.add_root(Rule::Expression);
+        let function_defs_handle =
+            expected_ast.add_child(root_handle, Rule::FunctionDefs);
+
+        // recursive call
+        {
+            let function_defs_handle = expected_ast
+                .add_child(function_defs_handle, Rule::FunctionDefs);
+
+            let test1_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                function_defs_handle,
+                &"test1".to_string(),
+                &param_one_name,
+                &param_two_name,
+            );
+            // brace expression
+            let brace_expression_handle =
+                expected_ast.add_child(test1_handle, Rule::BraceExpression);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+
+            let test2_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                function_defs_handle,
+                &"test2".to_string(),
+                &param_one_name,
+                &param_two_name,
+            );
+            // brace expression
+            let brace_expression_handle =
+                expected_ast.add_child(test2_handle, Rule::BraceExpression);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+            );
+        }
+
+        let test3_handle = add_basic_function_declaration(
+            &mut expected_ast,
+            function_defs_handle,
+            &"test3".to_string(),
+            &param_one_name,
+            &param_two_name,
+        );
+
+        // brace expression
+        let brace_expression_handle =
+            expected_ast.add_child(test3_handle, Rule::BraceExpression);
+        add_terminal_expression(
+            &mut expected_ast,
+            brace_expression_handle,
+            None,
+        );
+
+        expected_ast
+    };
+    check_ast_equal(&ast, &expected_ast);
+}
+
+#[test]
 fn function_with_returns() {
     let tokens = tokenize("fn test() returns int32 {5}")
         .expect("Unexpected tokenize error");
@@ -3684,6 +3771,7 @@ fn for_loop_function() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
+        let function_name = "test".to_owned();
         let param_one = "a".to_owned();
         let param_two = "b".to_owned();
 
@@ -3692,6 +3780,7 @@ fn for_loop_function() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param_one,
             &param_two,
         );
@@ -3735,6 +3824,7 @@ fn expression_for_loop_function() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
+        let function_name = "test".to_owned();
         let param_one = "a".to_owned();
         let param_two = "b".to_owned();
 
@@ -3743,6 +3833,7 @@ fn expression_for_loop_function() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param_one,
             &param_two,
         );
@@ -4063,13 +4154,14 @@ fn return_statement_missing_semicolon() {
 fn add_basic_function_declaration(
     ast: &mut Ast,
     parent_handle: AstNodeHandle,
+    function_name: &String,
     param1_name: &String,
     param2_name: &String,
 ) -> AstNodeHandle {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
-        Some(Token::Symbol("test".to_owned())),
+        Some(Token::Symbol(function_name.clone())),
     );
 
     // parameters
@@ -4132,6 +4224,7 @@ fn function_definition_return() {
     .expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4141,6 +4234,7 @@ fn function_definition_return() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );
@@ -4192,6 +4286,7 @@ fn function_definition_multiple_returns() {
 
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4201,6 +4296,7 @@ fn function_definition_multiple_returns() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );
@@ -4318,6 +4414,7 @@ fn function_definition_if_else() {
 
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4327,6 +4424,7 @@ fn function_definition_if_else() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );
@@ -4416,6 +4514,7 @@ fn function_definition_early_return() {
 
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4425,6 +4524,7 @@ fn function_definition_early_return() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );
@@ -4539,6 +4639,7 @@ fn function_definition_final_expression() {
 
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4548,6 +4649,7 @@ fn function_definition_final_expression() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );
@@ -4675,6 +4777,7 @@ fn for_loop_return() {
     let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4685,6 +4788,7 @@ fn for_loop_return() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );
@@ -4782,6 +4886,7 @@ fn return_then_expression() {
     let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
+        let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
         let param2_name = "b".to_owned();
 
@@ -4791,6 +4896,7 @@ fn return_then_expression() {
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
             root_handle,
+            &function_name,
             &param1_name,
             &param2_name,
         );

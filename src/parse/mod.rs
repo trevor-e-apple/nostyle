@@ -3,7 +3,7 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> function_def | brace_expression | if_else | for_loop | data_struct_def| equality;
+expression -> function_defs | brace_expression | if_else | for_loop | data_struct_def| equality;
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -34,6 +34,7 @@ div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expr
 assign_statement -> ((expression | declaration) "=" expression ";");
 effect_statement -> expression ";";
 
+function_defs -> function_defs? function_def;
 function_def -> "fn" SYMBOL "(" function_def_parameters ")" returns_data? brace_expression;
 returns_data -> "returns" SYMBOL;
 function_def_parameters -> (function_def_parameters",")? declaration ","?;
@@ -108,6 +109,17 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     Ok(_) => {}
                     Err(error) => parse_errors.push(error),
                 };
+            }
+            Rule::FunctionDefs => {
+                match parse_function_defs_rule(
+                    tokens,
+                    &search_data,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                }
             }
             Rule::FunctionDef => {
                 match parse_function_def_rule(
@@ -424,7 +436,7 @@ fn parse_expression_rule(
         Token::LBrace => Rule::BraceExpression,
         Token::If => Rule::IfElse,
         Token::For => Rule::ForLoop,
-        Token::Function => Rule::FunctionDef,
+        Token::Function => Rule::FunctionDefs,
         Token::Struct => Rule::DataStructure,
         _ => Rule::Equality,
     };
@@ -1665,6 +1677,66 @@ fn parse_function_arguments_rule(
             );
         }
     }
+
+    Ok(())
+}
+
+fn parse_function_defs_rule(
+    tokens: &Tokens,
+    search_data: &SearchData,
+    ast: &mut Ast,
+    stack: &mut Vec<SearchData>,
+) -> Result<(), ParseError> {
+    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+
+    let ultimate_function_def_token_index =
+        match find_prev_matching_level_token_all_groups(
+            &tokens,
+            &[Token::Function],
+            search_data.start,
+            search_data.end,
+        ) {
+            Some(index) => index,
+            None => {
+                return Err(ParseError {
+                    start_line,
+                    end_line,
+                    info: "Expected function definition token not found"
+                        .to_owned(),
+                })
+            }
+        };
+
+    // add a recursive rule if necessary
+    match find_prev_matching_level_token_all_groups(
+        tokens,
+        &[Token::Function],
+        search_data.start,
+        ultimate_function_def_token_index,
+    ) {
+        Some(_) => {
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::FunctionDefs,
+                search_data.start,
+                ultimate_function_def_token_index,
+                ast,
+                stack,
+            );
+            add_child_to_search_stack(
+                search_data.node_handle,
+                Rule::FunctionDef,
+                ultimate_function_def_token_index,
+                search_data.end,
+                ast,
+                stack,
+            );
+        }
+        None => {
+            // can modify current node rule since this is a single function def
+            next_rule_updates(search_data, ast, stack, Rule::FunctionDef);
+        }
+    };
 
     Ok(())
 }
