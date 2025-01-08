@@ -15,13 +15,20 @@ impl Ast {
         Self { nodes: vec![] }
     }
 
-    pub fn add_root(&mut self, rule: Rule) -> AstNodeHandle {
+    pub fn add_root(
+        &mut self,
+        rule: Rule,
+        start: usize,
+        end: usize,
+    ) -> AstNodeHandle {
         assert!(self.nodes.len() == 0);
         self.nodes.push(AstNode {
             rule,
             parent: None,
             children: vec![],
             data: None,
+            start,
+            end,
         });
         AstNodeHandle { index: 0 }
     }
@@ -39,6 +46,8 @@ impl Ast {
         parent_handle: AstNodeHandle,
         rule: Rule,
         data: Option<Token>,
+        start: usize,
+        end: usize,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
@@ -46,6 +55,8 @@ impl Ast {
             parent: Some(parent_handle),
             children: vec![],
             data,
+            start,
+            end,
         });
 
         let result = AstNodeHandle { index: current_len };
@@ -62,14 +73,18 @@ impl Ast {
         &mut self,
         parent_handle: AstNodeHandle,
         rule: Rule,
+        start: usize,
+        end: usize,
     ) -> AstNodeHandle {
-        self.add_child_with_data(parent_handle, rule, None)
+        self.add_child_with_data(parent_handle, rule, None, start, end)
     }
 
     pub fn add_terminal_child(
         &mut self,
         parent_handle: AstNodeHandle,
         data: Option<Token>,
+        start: usize,
+        end: usize,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
@@ -77,6 +92,8 @@ impl Ast {
             parent: Some(parent_handle),
             children: vec![],
             data,
+            start,
+            end,
         });
 
         let result = AstNodeHandle { index: current_len };
@@ -207,6 +224,8 @@ pub struct AstNode {
     pub parent: Option<AstNodeHandle>,
     pub children: Vec<AstNodeHandle>,
     pub data: Option<Token>,
+    pub start: usize,
+    pub end: usize,
 }
 
 impl AstNode {

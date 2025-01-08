@@ -53,6 +53,7 @@ mod token_search;
 use core::panic;
 use std::todo;
 
+use ast::AstNode;
 use token_search::find_prev_matching_level_token_all_groups;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -69,12 +70,6 @@ use self::{
     },
 };
 
-struct SearchData {
-    start: usize,
-    end: usize, // end is one-past the final included element in the search data
-    node_handle: AstNodeHandle,
-}
-
 /// parses tokens and returns an abstract syntax tree
 pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
     let mut result = Ast::new();
@@ -85,13 +80,9 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
         return Ok(result);
     }
 
-    let root_handle = result.add_root(Rule::Expression);
+    let root_handle = result.add_root(Rule::Expression, 0, tokens.len());
 
-    let mut stack: Vec<SearchData> = vec![SearchData {
-        start: 0,
-        end: tokens.len(),
-        node_handle: root_handle,
-    }];
+    let mut stack: Vec<AstNodeHandle> = vec![root_handle];
     while let Some(search_data) = stack.pop() {
         let rule = match result.get_node(search_data.node_handle) {
             Some(node) => node.rule,
@@ -377,34 +368,30 @@ fn add_child_to_search_stack(
     start: usize,
     end: usize,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) {
-    let child_handle = ast.add_child(parent_handle, child_rule);
+    let child_handle = ast.add_child(parent_handle, child_rule, start, end);
 
     // add child to search stack
-    stack.push(SearchData { start, end, node_handle: child_handle });
+    stack.push(child_handle);
 }
 
 /// function for all data updates related to moving through one grammar rule and onto the next one
 fn next_rule_updates(
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
     next_rule: Rule,
 ) {
     // update current node with next rule
-    let node = match ast.get_node_mut(search_data.node_handle) {
+    let node = match ast.get_node_mut(node_handle) {
         Some(node) => node,
         None => todo!(),
     };
     node.rule = next_rule;
 
     // push back onto the stack
-    stack.push(SearchData {
-        start: search_data.start,
-        end: search_data.end,
-        node_handle: search_data.node_handle,
-    });
+    stack.push(node_handle);
 }
 
 fn make_final_line_error(
@@ -417,11 +404,16 @@ fn make_final_line_error(
 
 fn parse_expression_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let start_token = match tokens.get_token(search_data.start) {
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad ast node handle"),
+    };
+
+    let start_token = match tokens.get_token(node.start) {
         Some(token) => token,
         None => {
             return Err(make_final_line_error(
@@ -442,10 +434,10 @@ fn parse_expression_rule(
     };
 
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         rule,
-        search_data.start,
-        search_data.end,
+        node.start,
+        node.end,
         ast,
         stack,
     );
@@ -456,13 +448,19 @@ fn parse_expression_rule(
 /// parses the for rule
 fn parse_for_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node: AstNode = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
 
-    match tokens.get(search_data.end - 1) {
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
+
+    match tokens.get(node.end - 1) {
         Some((end_token, line_number)) => {
             if end_token != Token::RBrace {
                 return Err(ParseError {
@@ -481,7 +479,7 @@ fn parse_for_rule(
         }
     }
 
-    let lparen_index = search_data.start + 1;
+    let lparen_index = node.start + 1;
 
     // check for leading lparen
     match tokens.get(lparen_index) {
@@ -508,7 +506,7 @@ fn parse_for_rule(
         &Token::LParen,
         &Token::RParen,
         lparen_index,
-        search_data.end,
+        node.end,
     ) {
         Some(rparen_index) => rparen_index,
         None => {
@@ -617,7 +615,7 @@ fn parse_for_rule(
             &Token::LBrace,
             &Token::RBrace,
             lbrace_index,
-            search_data.end,
+            node.end,
         ) {
             Some(rbrace_index) => rbrace_index,
             None => {
@@ -636,7 +634,7 @@ fn parse_for_rule(
 
     // init statement
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::Statement,
         lparen_index + 1,
         init_semicolon_index + 1,
@@ -646,7 +644,7 @@ fn parse_for_rule(
 
     // condition statement
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::Statement,
         init_semicolon_index + 1,
         condition_semicolon_index + 1,
@@ -656,7 +654,7 @@ fn parse_for_rule(
 
     // increment statement
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::Statement,
         condition_semicolon_index + 1,
         increment_semicolon_index + 1,
@@ -665,7 +663,7 @@ fn parse_for_rule(
     );
 
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::BraceExpression,
         expression_lbrace_index,
         expression_rbrace_index + 1,
@@ -679,12 +677,17 @@ fn parse_for_rule(
 /// parses the brace expression rule
 fn parse_brace_expression_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+
     // check for first token
-    let (first_token, start_line) = match tokens.get(search_data.start) {
+    let (first_token, start_line) = match tokens.get(node.start) {
         Some(token) => token,
         None => {
             panic!("Empty brace expression to parse.");
@@ -700,7 +703,7 @@ fn parse_brace_expression_rule(
         });
     }
 
-    let final_token = match tokens.get_token(search_data.end - 1) {
+    let final_token = match tokens.get_token(node.end - 1) {
         Some(token) => token,
         None => {
             return Err(ParseError {
@@ -719,8 +722,8 @@ fn parse_brace_expression_rule(
         });
     }
 
-    let brace_contents_start = search_data.start + 1;
-    let brace_contents_end = search_data.end - 1;
+    let brace_contents_start = node.start + 1;
+    let brace_contents_end = node.end - 1;
 
     let end_brace_statements: Option<usize> =
         match find_final_matching_level_token_all_groups(
@@ -738,7 +741,7 @@ fn parse_brace_expression_rule(
             // some braces don't have brace statements
             if brace_contents_start < end_brace_statements {
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     Rule::BraceStatements,
                     brace_contents_start,
                     end_brace_statements,
@@ -748,7 +751,7 @@ fn parse_brace_expression_rule(
             }
 
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
                 end_brace_statements,
                 brace_contents_end,
@@ -758,7 +761,7 @@ fn parse_brace_expression_rule(
         }
         None => {
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
                 brace_contents_start,
                 brace_contents_end,
@@ -774,11 +777,17 @@ fn parse_brace_expression_rule(
 /// parse brace_statements rule
 fn parse_brace_statements_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
 
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
@@ -786,8 +795,8 @@ fn parse_brace_statements_rule(
             match find_prev_matching_level_token_all_groups(
                 tokens,
                 &[Token::EndStatement],
-                search_data.start,
-                search_data.end,
+                node.start,
+                node.end,
             ) {
                 Some(index) => index,
                 None => {
@@ -804,11 +813,11 @@ fn parse_brace_statements_rule(
             match find_prev_matching_level_token_all_groups(
                 tokens,
                 &[Token::EndStatement],
-                search_data.start,
+                node.start,
                 non_recursive_end_index,
             ) {
                 Some(prev_end_index) => prev_end_index + 1,
-                None => search_data.start,
+                None => node.start,
             };
 
         (non_recursive_start_index, non_recursive_end_index + 1)
@@ -828,11 +837,11 @@ fn parse_brace_statements_rule(
     };
 
     // push the preceding statements for a recursive expansion
-    if search_data.start < non_recursive_start_index {
+    if node.start < non_recursive_start_index {
         add_child_to_search_stack(
-            search_data.node_handle,
+            node_handle,
             Rule::BraceStatements,
-            search_data.start,
+            node.start,
             non_recursive_start_index,
             ast,
             stack,
@@ -841,7 +850,7 @@ fn parse_brace_statements_rule(
 
     // non recursive expansion
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         non_recursive_rule,
         non_recursive_start_index,
         non_recursive_end_index,
@@ -903,13 +912,14 @@ fn binary_comp_statement(
 
 fn get_start_end_lines(
     tokens: &Tokens,
-    search_data: &SearchData,
+    start: usize,
+    end: usize,
 ) -> (usize, usize) {
-    let start_line = match tokens.get_line_number(search_data.start) {
+    let start_line = match tokens.get_line_number(start) {
         Some(line_number) => line_number,
         None => panic!("Cannot parse empty tokens as statement"),
     };
-    let end_line = match tokens.get_line_number(search_data.end - 1) {
+    let end_line = match tokens.get_line_number(end - 1) {
         Some(line_number) => line_number,
         None => {
             panic!("Bad parse range.");
