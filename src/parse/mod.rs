@@ -863,18 +863,23 @@ fn parse_brace_statements_rule(
 
 // TODO: document me!
 fn binary_comp_statement(
-    search_data: &SearchData,
+    node_handle: &AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
     assign_index: usize,
     composite_rule: Rule,
     composite_token: Token,
 ) {
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!(),
+    };
+
     // LHS of statement
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::Expression,
-        search_data.start,
+        node.start,
         assign_index,
         ast,
         stack,
@@ -882,18 +887,20 @@ fn binary_comp_statement(
 
     // Statement RHS. Requires some scaffolding to set up a consistent parse with non-composed version
     let rhs_expression =
-        ast.add_child(search_data.node_handle, Rule::Expression);
+        ast.add_child(node_handle, Rule::Expression, node.start, node.end);
     let rhs_op_node = ast.add_child_with_data(
         rhs_expression,
         composite_rule,
         Some(composite_token),
+        node.start,
+        node.end,
     );
 
     // LHS (same as statement LHS)
     add_child_to_search_stack(
         rhs_op_node,
         Rule::Expression,
-        search_data.start,
+        node.start,
         assign_index,
         ast,
         stack,
@@ -904,7 +911,7 @@ fn binary_comp_statement(
         rhs_op_node,
         Rule::Expression,
         assign_index + 1,
-        search_data.end - 1,
+        node.end - 1,
         ast,
         stack,
     );
@@ -932,11 +939,17 @@ fn get_start_end_lines(
 /// parse statement rule
 fn parse_statement_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: &AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
 
     // Find assign token to split on
     match find_next_matching_level_token_all_groups(
@@ -948,12 +961,12 @@ fn parse_statement_rule(
             Token::TimesEquals,
             Token::DivideEquals,
         ],
-        search_data.start,
-        search_data.end,
+        node.start,
+        node.end,
     ) {
         Some(assign_index) => {
             // Hand the assignment statement case
-            match tokens.get(search_data.end - 1) {
+            match tokens.get(node.end - 1) {
                 Some((expected_end_statement, line_number)) => {
                     if expected_end_statement != Token::EndStatement {
                         return Err(ParseError {
@@ -978,9 +991,9 @@ fn parse_statement_rule(
                         Token::Assign => {
                             // LHS expression
                             add_child_to_search_stack(
-                                search_data.node_handle,
+                                node_handle,
                                 Rule::Expression,
-                                search_data.start,
+                                node.start,
                                 assign_index,
                                 ast,
                                 stack,
@@ -988,17 +1001,17 @@ fn parse_statement_rule(
 
                             // RHS expression
                             add_child_to_search_stack(
-                                search_data.node_handle,
+                                node_handle,
                                 Rule::Expression,
                                 assign_index + 1,
-                                search_data.end - 1,
+                                node.end - 1,
                                 ast,
                                 stack,
                             );
                         }
                         Token::PlusEquals => {
                             binary_comp_statement(
-                                search_data,
+                                node_handle,
                                 ast,
                                 stack,
                                 assign_index,
@@ -1008,7 +1021,7 @@ fn parse_statement_rule(
                         }
                         Token::MinusEquals => {
                             binary_comp_statement(
-                                search_data,
+                                node_handle,
                                 ast,
                                 stack,
                                 assign_index,
@@ -1018,7 +1031,7 @@ fn parse_statement_rule(
                         }
                         Token::TimesEquals => {
                             binary_comp_statement(
-                                search_data,
+                                node_handle,
                                 ast,
                                 stack,
                                 assign_index,
@@ -1028,7 +1041,7 @@ fn parse_statement_rule(
                         }
                         Token::DivideEquals => {
                             binary_comp_statement(
-                                search_data,
+                                node_handle,
                                 ast,
                                 stack,
                                 assign_index,
@@ -1055,10 +1068,10 @@ fn parse_statement_rule(
         None => {
             // Handle the non-assignment statement case
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
-                search_data.start,
-                search_data.end - 1,
+                node.start,
+                node.end - 1,
                 ast,
                 stack,
             );
@@ -1070,14 +1083,19 @@ fn parse_statement_rule(
 
 fn parse_return_statement(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: &AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node_handle,
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
 
-    let start_index = search_data.start + 1; // exclude Return token
-    let end_statement_index = search_data.end - 1;
+    let start_index = node.start + 1; // exclude Return token
+    let end_statement_index = node.end - 1;
     match tokens.get(end_statement_index) {
         Some((token, line_number)) => {
             if token != Token::EndStatement {
@@ -1098,7 +1116,7 @@ fn parse_return_statement(
     }
 
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::Expression,
         start_index,
         end_statement_index,
@@ -1112,13 +1130,18 @@ fn parse_return_statement(
 /// parse the if_else rule
 fn parse_if_else_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: &AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
 
-    match tokens.get(search_data.start) {
+    match tokens.get(node.start) {
         Some((expected_if, line_number)) => {
             if expected_if != Token::If {
                 return Err(ParseError {
@@ -1137,8 +1160,8 @@ fn parse_if_else_rule(
     match find_next_matching_level_token(
         tokens,
         &[Token::Else],
-        search_data.start + 1,
-        search_data.end,
+        node.start + 1,
+        node.end,
         &Token::LBrace,
         &Token::RBrace,
     ) {
@@ -1147,7 +1170,7 @@ fn parse_if_else_rule(
                 tokens,
                 &Token::LBrace,
                 &Token::RBrace,
-                search_data.start,
+                node.start,
                 else_index,
             ) {
                 Some(lbrace_index) => lbrace_index,
@@ -1171,9 +1194,9 @@ fn parse_if_else_rule(
 
             // condition expression
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
-                search_data.start + 1,
+                node.start + 1,
                 if_lbrace_index,
                 ast,
                 stack,
@@ -1181,7 +1204,7 @@ fn parse_if_else_rule(
 
             // executed expression
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::BraceExpression,
                 if_lbrace_index,
                 else_index,
@@ -1192,17 +1215,17 @@ fn parse_if_else_rule(
             // to differentiate between if condition expression and else
             // expression, we always need to add the else expression second
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
                 else_index + 1,
-                search_data.end,
+                node.end,
                 ast,
                 stack,
             );
         }
         None => {
             // check for rbrace
-            let rbrace_line = match tokens.get(search_data.end - 1) {
+            let rbrace_line = match tokens.get(node.end - 1) {
                 Some((token, line_number)) => {
                     if token != Token::RBrace {
                         return Err(ParseError {
@@ -1226,8 +1249,8 @@ fn parse_if_else_rule(
                 tokens,
                 &Token::LBrace,
                 &Token::RBrace,
-                search_data.start,
-                search_data.end,
+                node.start,
+                node.end,
             ) {
                 Some(lbrace_index) => lbrace_index,
                 None => {
@@ -1241,9 +1264,9 @@ fn parse_if_else_rule(
 
             // condition expression
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
-                search_data.start + 1,
+                node.start + 1,
                 lbrace_index,
                 ast,
                 stack,
@@ -1251,10 +1274,10 @@ fn parse_if_else_rule(
 
             // executed expression
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::BraceExpression,
                 lbrace_index,
-                search_data.end,
+                node.end,
                 ast,
                 stack,
             );
@@ -1267,20 +1290,29 @@ fn parse_if_else_rule(
 /// for parsing binary operations in an expression
 fn parse_binary_op_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: &AstNodeHandle,
     matching_tokens: &[Token],
     recursive_rule: Rule,
     next_rule: Rule,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = {
+        let node = match ast.get_node(node_handle) {
+            Some(node) => node,
+            None => panic!("Bad node handle"),
+        };
+        (node.start, node.end)
+    };
+
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
     match find_final_matching_level_token_all_groups(
         tokens,
         matching_tokens,
-        search_data.start,
-        search_data.end,
+        node_start,
+        node_end,
     ) {
         Some((split_index, binary_op_token)) => {
             /***
@@ -1329,24 +1361,20 @@ fn parse_binary_op_rule(
 
             if is_unary {
                 // modify current node with next rule
-                let node = match ast.get_node_mut(search_data.node_handle) {
+                let node = match ast.get_node_mut(node_handle) {
                     Some(node) => node,
                     None => panic!("Bad handle"),
                 };
                 node.rule = next_rule;
                 // push back onto the stack
-                stack.push(SearchData {
-                    start: search_data.start,
-                    end: search_data.end,
-                    node_handle: search_data.node_handle,
-                });
-            } else if split_index == search_data.start {
+                stack.push(node_handle);
+            } else if split_index == node_start {
                 // there are no leading tokens for the binary op, therefore this cannot
                 // -- be parsed as a binary op. therefore, pass on to the next rule
-                next_rule_updates(search_data, ast, stack, next_rule);
+                next_rule_updates(node_handle, ast, stack, next_rule);
             } else {
                 // update the token data in the expanding node
-                match ast.get_node_mut(search_data.node_handle) {
+                match ast.get_node_mut(node_handle) {
                     Some(node) => {
                         node.data = Some(binary_op_token);
                     }
@@ -1354,7 +1382,7 @@ fn parse_binary_op_rule(
                 }
 
                 // check to see if the split is possible
-                if split_index + 1 == search_data.end {
+                if split_index + 1 == node_end {
                     return Err(ParseError {
                         start_line,
                         end_line,
@@ -1364,26 +1392,26 @@ fn parse_binary_op_rule(
 
                 // add children and add them to the search stack
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     recursive_rule,
-                    search_data.start,
+                    node_start,
                     split_index,
                     ast,
                     stack,
                 );
 
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     next_rule,
                     split_index + 1,
-                    search_data.end,
+                    node_end,
                     ast,
                     stack,
                 );
             }
         }
         None => {
-            next_rule_updates(search_data, ast, stack, next_rule);
+            next_rule_updates(node_handle, ast, stack, next_rule);
         }
     }
 
