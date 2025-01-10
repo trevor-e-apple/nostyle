@@ -1290,7 +1290,7 @@ fn parse_if_else_rule(
 /// for parsing binary operations in an expression
 fn parse_binary_op_rule(
     tokens: &Tokens,
-    node_handle: &AstNodeHandle,
+    node_handle: AstNodeHandle,
     matching_tokens: &[Token],
     recursive_rule: Rule,
     next_rule: Rule,
@@ -1421,13 +1421,13 @@ fn parse_binary_op_rule(
 // parses the equality rule
 fn parse_equality_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
-        search_data,
+        node_handle,
         &[Token::BoolEquals, Token::NotEquals],
         Rule::Equality,
         Rule::Comparison,
@@ -1439,13 +1439,13 @@ fn parse_equality_rule(
 /// parse comparison rule
 fn parse_comparison_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
-        search_data,
+        node_handle,
         &[
             Token::GreaterThan,
             Token::GreaterThanOrEqual,
@@ -1462,13 +1462,13 @@ fn parse_comparison_rule(
 /// parse plus_minus rule
 fn parse_plus_minus_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
-        search_data,
+        node_handle,
         &[Token::Plus, Token::Minus],
         Rule::PlusMinus,
         Rule::MultDiv,
@@ -1480,13 +1480,13 @@ fn parse_plus_minus_rule(
 /// parse mult div
 fn parse_mult_div_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     parse_binary_op_rule(
         tokens,
-        search_data,
+        node_handle,
         &[Token::Times, Token::Divide],
         Rule::MultDiv,
         Rule::Unary,
@@ -1497,17 +1497,23 @@ fn parse_mult_div_rule(
 
 fn parse_unary_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: &AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
 
-    match tokens.get_token(search_data.start) {
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
+
+    match tokens.get_token(node_start) {
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
                 // add data to current node
-                let node = match ast.get_node_mut(search_data.node_handle) {
+                let node = match ast.get_node_mut(node_handle) {
                     Some(node) => node,
                     None => panic!("Bad handle"),
                 };
@@ -1515,15 +1521,15 @@ fn parse_unary_rule(
 
                 // recursion for unary expansion
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     Rule::Unary,
-                    search_data.start + 1,
-                    search_data.end,
+                    node_start + 1,
+                    node_end,
                     ast,
                     stack,
                 );
             } else {
-                next_rule_updates(search_data, ast, stack, Rule::FunctionCall);
+                next_rule_updates(node_handle, ast, stack, Rule::FunctionCall);
             }
         }
         None => {
@@ -1540,31 +1546,35 @@ fn parse_unary_rule(
 
 fn parse_function_call_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
-    match tokens.get_token(search_data.start) {
+    match tokens.get_token(node_start) {
         Some(start_token) => match start_token {
             Token::Symbol(_) => {
                 // check for left and right parens
-                let has_lparen: bool =
-                    match tokens.get_token(search_data.start + 1) {
-                        Some(possible_lparen) => {
-                            if *possible_lparen == Token::LParen {
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        None => {
-                            // if there aren't other tokens, then move on to the next rule
+                let has_lparen: bool = match tokens.get_token(node_start + 1) {
+                    Some(possible_lparen) => {
+                        if *possible_lparen == Token::LParen {
+                            true
+                        } else {
                             false
                         }
-                    };
-                let has_rparen = match tokens.get_token(search_data.end - 1) {
+                    }
+                    None => {
+                        // if there aren't other tokens, then move on to the next rule
+                        false
+                    }
+                };
+                let has_rparen = match tokens.get_token(node_end - 1) {
                     Some(possible_rparen) => {
                         if *possible_rparen == Token::RParen {
                             true
@@ -1577,17 +1587,17 @@ fn parse_function_call_rule(
 
                 if has_lparen && has_rparen {
                     // update current node to include function name
-                    let node = match ast.get_node_mut(search_data.node_handle) {
+                    let node = match ast.get_node_mut(node_handle) {
                         Some(node) => node,
                         None => todo!("node handle bad???"),
                     };
                     node.data = Some(start_token.clone());
 
                     add_child_to_search_stack(
-                        search_data.node_handle,
+                        node_handle,
                         Rule::FunctionArguments,
-                        search_data.start + 2,
-                        search_data.end - 1,
+                        node_start + 2,
+                        node_end - 1,
                         ast,
                         stack,
                     );
@@ -1608,12 +1618,12 @@ fn parse_function_call_rule(
                     }
                 } else {
                     // no parens, symbol can't be parsed as function call
-                    next_rule_updates(search_data, ast, stack, Rule::Primary);
+                    next_rule_updates(node_handle, ast, stack, Rule::Primary);
                 }
             }
             _ => {
                 // if not a symbol, move on to next rule
-                next_rule_updates(search_data, ast, stack, Rule::Primary);
+                next_rule_updates(node_handle, ast, stack, Rule::Primary);
             }
         },
         None => {
@@ -1630,27 +1640,31 @@ fn parse_function_call_rule(
 
 fn parse_function_arguments_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
     // find the final comma in the search range
     match find_final_matching_level_token_all_groups(
         tokens,
         &[Token::Comma],
-        search_data.start,
-        search_data.end,
+        node.start,
+        node.end,
     ) {
         Some((final_comma_index, _)) => {
             // find the RHS expression start and end. if there is no left hand side,
             // this block of code will add to the stack in place
             let (added_to_stack, rhs_start, rhs_end) =
-                if final_comma_index == (search_data.end - 1) {
+                if final_comma_index == (node.end - 1) {
                     let (added_to_stack, prev_arg_comma_index) =
                         match find_final_matching_level_token_all_groups(
                             tokens,
                             &[Token::Comma],
-                            search_data.start,
+                            node.start,
                             final_comma_index,
                         ) {
                             Some((prev_arg_comma_index, _)) => {
@@ -1658,9 +1672,9 @@ fn parse_function_arguments_rule(
                             }
                             None => {
                                 add_child_to_search_stack(
-                                    search_data.node_handle,
+                                    node_handle,
                                     Rule::Expression,
-                                    search_data.start,
+                                    node.start,
                                     final_comma_index,
                                     ast,
                                     stack,
@@ -1677,16 +1691,16 @@ fn parse_function_arguments_rule(
                     (
                         false,
                         final_comma_index + 1, // don't include the comma
-                        search_data.end,
+                        node.end,
                     )
                 };
 
             if !added_to_stack {
                 // LHS is the recursive side
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     Rule::FunctionArguments,
-                    search_data.start,
+                    node.start,
                     rhs_start,
                     ast,
                     stack,
@@ -1694,7 +1708,7 @@ fn parse_function_arguments_rule(
 
                 // RHS is an expression
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     Rule::Expression,
                     rhs_start,
                     rhs_end,
@@ -1706,10 +1720,10 @@ fn parse_function_arguments_rule(
         None => {
             // the entire search range must be the final expression
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Expression,
-                search_data.start,
-                search_data.end,
+                node.start,
+                node.end,
                 ast,
                 stack,
             );
@@ -1721,18 +1735,23 @@ fn parse_function_arguments_rule(
 
 fn parse_function_defs_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
     let ultimate_function_def_token_index =
         match find_prev_matching_level_token_all_groups(
             &tokens,
             &[Token::Function],
-            search_data.start,
-            search_data.end,
+            node_start,
+            node_end,
         ) {
             Some(index) => index,
             None => {
@@ -1749,30 +1768,30 @@ fn parse_function_defs_rule(
     match find_prev_matching_level_token_all_groups(
         tokens,
         &[Token::Function],
-        search_data.start,
+        node_start,
         ultimate_function_def_token_index,
     ) {
         Some(_) => {
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::FunctionDefs,
-                search_data.start,
+                node_start,
                 ultimate_function_def_token_index,
                 ast,
                 stack,
             );
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::FunctionDef,
                 ultimate_function_def_token_index,
-                search_data.end,
+                node_end,
                 ast,
                 stack,
             );
         }
         None => {
             // can modify current node rule since this is a single function def
-            next_rule_updates(search_data, ast, stack, Rule::FunctionDef);
+            next_rule_updates(node_handle, ast, stack, Rule::FunctionDef);
         }
     };
 
@@ -1781,13 +1800,18 @@ fn parse_function_defs_rule(
 
 fn parse_function_def_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
-    match tokens.get_token(search_data.start) {
+    match tokens.get_token(node_start) {
         Some(start_token) => match start_token {
             Token::Function => {}
             _ => {
@@ -1809,7 +1833,7 @@ fn parse_function_def_rule(
 
     // check for left and right parens
     let (has_lparen, lparen_index, has_rparen, rparen_index) = {
-        let lparen_index = search_data.start + 2;
+        let lparen_index = node_start + 2;
         let has_lparen: bool = match tokens.get_token(lparen_index) {
             Some(possible_lparen) => {
                 if *possible_lparen == Token::LParen {
@@ -1828,7 +1852,7 @@ fn parse_function_def_rule(
                 &tokens,
                 &[Token::RParen],
                 lparen_index + 1,
-                search_data.end,
+                node_end,
             ) {
                 Some(index) => (true, index),
                 None => (false, 0),
@@ -1858,11 +1882,11 @@ fn parse_function_def_rule(
     }
 
     // update current node to include function name
-    let node = match ast.get_node_mut(search_data.node_handle) {
+    let node = match ast.get_node_mut(node_handle) {
         Some(node) => node,
         None => panic!("Bad node handle"),
     };
-    let function_name = match tokens.get_token(search_data.start + 1) {
+    let function_name = match tokens.get_token(node_start + 1) {
         Some(expected_symbol) => match expected_symbol {
             Token::Symbol(name) => name,
             _ => {
@@ -1912,7 +1936,7 @@ fn parse_function_def_rule(
     };
 
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::FunctionDefParameters,
         lparen_index + 1,
         rparen_index,
@@ -1923,7 +1947,7 @@ fn parse_function_def_rule(
     match returns_index {
         Some(returns_index) => {
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::ReturnsData,
                 returns_index,
                 lbrace_index,
@@ -1935,10 +1959,10 @@ fn parse_function_def_rule(
     }
 
     add_child_to_search_stack(
-        search_data.node_handle,
+        node_handle,
         Rule::BraceExpression,
         lbrace_index,
-        search_data.end,
+        node_end,
         ast,
         stack,
     );
@@ -1948,24 +1972,30 @@ fn parse_function_def_rule(
 
 fn parse_function_parameters_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    if search_data.start == search_data.end {
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+
+    if node.start == node.end {
         // this function has no parameters. nothing to do
         return Ok(());
     }
 
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
 
     // get the final two symbols (the type and the parameter name)
-    match tokens.get(search_data.end - 1) {
+    match tokens.get(node.end - 1) {
         Some((final_token, final_token_line)) => {
             // check for trailing comma
             let final_symbol_index = match final_token {
-                Token::Comma => search_data.end - 2,
-                Token::Symbol(_) => search_data.end - 1,
+                Token::Comma => node.end - 2,
+                Token::Symbol(_) => node.end - 1,
                 _ => {
                     return Err(ParseError {
                         start_line: final_token_line,
@@ -1979,9 +2009,9 @@ fn parse_function_parameters_rule(
 
             // LHS is the recursive side
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::FunctionDefParameters,
-                search_data.start,
+                node.start,
                 declaration_start,
                 ast,
                 stack,
@@ -1989,7 +2019,7 @@ fn parse_function_parameters_rule(
 
             // RHS is a declaration
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Declaration,
                 declaration_start,
                 final_symbol_index + 1,
