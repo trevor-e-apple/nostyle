@@ -2041,13 +2041,19 @@ fn parse_function_parameters_rule(
 
 fn parse_returns_data_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
 
-    let token = match tokens.get_token(search_data.start + 1) {
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
+
+    let token = match tokens.get_token(node.start + 1) {
         Some(token) => match *token {
             Token::Symbol(_) => token,
             _ => {
@@ -2069,9 +2075,11 @@ fn parse_returns_data_rule(
     };
 
     ast.add_child_with_data(
-        search_data.node_handle,
+        node_handle,
         Rule::Terminal,
         Some(token.clone()),
+        node.start,
+        node.end,
     );
 
     Ok(())
@@ -2079,13 +2087,18 @@ fn parse_returns_data_rule(
 
 fn parse_declaration_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let node = match ast.get_node(node_handle) {
+        Some(node) => node,
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node.start, node.end);
 
     // check that search data is len 2
-    if (search_data.end - search_data.start) != 2 {
+    if (node.end - node.start) != 2 {
         return Err(ParseError {
             start_line,
             end_line,
@@ -2093,12 +2106,14 @@ fn parse_declaration_rule(
         });
     }
 
-    match tokens.get_token(search_data.start) {
+    match tokens.get_token(node.start) {
         Some(token) => match token {
             Token::Symbol(_) => {
                 ast.add_terminal_child(
-                    search_data.node_handle,
+                    node_handle,
                     Some(token.clone()),
+                    node.start,
+                    node.end,
                 );
             }
             _ => {
@@ -2115,12 +2130,14 @@ fn parse_declaration_rule(
         ),
     }
 
-    match tokens.get(search_data.start + 1) {
+    match tokens.get(node.start + 1) {
         Some((token, line_number)) => match token {
             Token::Symbol(_) => {
                 ast.add_terminal_child(
-                    search_data.node_handle,
+                    node_handle,
                     Some(token.clone()),
+                    node.start,
+                    node.end,
                 );
             }
             _ => {
@@ -2142,42 +2159,46 @@ fn parse_declaration_rule(
 
 fn parse_primary_rule(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
-    if search_data.start == search_data.end {
+    if node_start == node_end {
         // handle empty expression case
-        let node = match ast.get_node_mut(search_data.node_handle) {
+        let node = match ast.get_node_mut(node_handle) {
             Some(node) => node,
             None => panic!("Missing node handle"),
         };
         node.rule = Rule::Terminal;
         node.data = None;
     } else {
-        match tokens.get(search_data.start) {
+        match tokens.get(node_start) {
             Some((token, line_number)) => match token {
                 Token::Symbol(_) => {
-                    if (search_data.end - search_data.start) > 1 {
+                    if (node_end - node_start) > 1 {
                         add_child_to_search_stack(
-                            search_data.node_handle,
+                            node_handle,
                             Rule::StructAccess,
-                            search_data.start,
-                            search_data.end,
+                            node_start,
+                            node_end,
                             ast,
                             stack,
                         );
                     } else {
                         // update current primary to terminal
-                        let node =
-                            match ast.get_node_mut(search_data.node_handle) {
-                                Some(node) => node,
-                                None => {
-                                    panic!("Missing node handle")
-                                }
-                            };
+                        let node = match ast.get_node_mut(node_handle) {
+                            Some(node) => node,
+                            None => {
+                                panic!("Missing node handle")
+                            }
+                        };
                         node.rule = Rule::Terminal;
                         node.data = Some(token.clone());
                     }
@@ -2185,7 +2206,7 @@ fn parse_primary_rule(
                 Token::IntLiteral(_)
                 | Token::FloatLiteral(_)
                 | Token::StringLiteral(_) => {
-                    if (search_data.end - search_data.start) != 1 {
+                    if (node_end - node_start) != 1 {
                         return Err(ParseError {
                             start_line,
                             end_line,
@@ -2193,7 +2214,7 @@ fn parse_primary_rule(
                         });
                     }
                     // update current primary to terminal
-                    let node = match ast.get_node_mut(search_data.node_handle) {
+                    let node = match ast.get_node_mut(node_handle) {
                         Some(node) => node,
                         None => {
                             panic!("Missing node handle")
@@ -2204,23 +2225,21 @@ fn parse_primary_rule(
                 }
                 Token::LParen => {
                     // update current node to expression rule
-                    let node = match ast.get_node_mut(search_data.node_handle) {
+                    let node = match ast.get_node_mut(node_handle) {
                         Some(node) => node,
                         None => panic!("Missing node handle"),
                     };
                     node.rule = Rule::Expression;
 
-                    let expected_rparen_index = search_data.end - 1;
+                    let expected_rparen_index = node.end - 1;
                     match tokens.get_token(expected_rparen_index) {
                         Some(expected_rparen) => {
                             // check whether we have mismatched parens
                             if *expected_rparen == Token::RParen {
                                 // add back to stack
-                                stack.push(SearchData {
-                                    start: search_data.start + 1,
-                                    end: expected_rparen_index,
-                                    node_handle: search_data.node_handle,
-                                });
+                                node.start = node_start + 1;
+                                node.end = expected_rparen_index;
+                                stack.push(node_handle);
                             } else {
                                 return Err(ParseError {
                                     start_line,
@@ -2240,22 +2259,19 @@ fn parse_primary_rule(
                 }
                 Token::LBrace => {
                     // update current node to BraceExpression rule
-                    let node = match ast.get_node_mut(search_data.node_handle) {
+                    let node = match ast.get_node_mut(node_handle) {
                         Some(node) => node,
                         None => panic!("Missing node handle"),
                     };
                     node.rule = Rule::BraceExpression;
 
-                    let expected_rbrace_index = search_data.end - 1;
+                    let expected_rbrace_index = node_end - 1;
                     match tokens.get_token(expected_rbrace_index) {
                         Some(expected_rbrace) => {
                             // check whether we have mismatched braces
                             if *expected_rbrace == Token::RBrace {
-                                stack.push(SearchData {
-                                    start: search_data.start,
-                                    end: expected_rbrace_index + 1,
-                                    node_handle: search_data.node_handle,
-                                });
+                                node.end = expected_rbrace_index + 1;
+                                stack.push(node_handle);
                             } else {
                                 return Err(ParseError {
                                     start_line,
