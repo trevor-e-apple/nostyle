@@ -2313,41 +2313,45 @@ fn parse_primary_rule(
 
 fn parse_declaration_statements(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
     // search for semicolon to split recursive and non recrusive declaration on
     match find_prev_matching_level_token_all_groups(
         tokens,
         &[Token::EndStatement],
-        search_data.start,
-        search_data.end - 1, // don't include the final semicolon
+        node_handle.start,
+        node_handle.end - 1, // don't include the final semicolon
     ) {
         Some(split_index) => {
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::DeclarationStatements,
-                search_data.start,
+                node_start,
                 split_index + 1,
                 ast,
                 stack,
             );
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Declaration,
                 split_index + 1,
-                search_data.end - 1, // exclude trailing semicolon
+                node_end - 1, // exclude trailing semicolon
                 ast,
                 stack,
             );
         }
         None => {
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::Declaration,
-                search_data.start,
-                search_data.end - 1, // exclude trailing semicolon
+                node_start,
+                node_end - 1, // exclude trailing semicolon
                 ast,
                 stack,
             );
@@ -2359,13 +2363,19 @@ fn parse_declaration_statements(
 
 fn parse_data_structure(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => panic!("Bad node handle"),
+    };
+
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
     // verify first token is struct
-    match tokens.get_token(search_data.start) {
+    match tokens.get_token(node_start) {
         Some(start_token) => {
             if *start_token != Token::Struct {
                 return Err(ParseError { start_line, end_line, info: "Missing struct token at start of expected structure definition".to_owned() });
@@ -2381,7 +2391,7 @@ fn parse_data_structure(
         }),
     }
 
-    let struct_name_index = search_data.start + 1;
+    let struct_name_index = node_start + 1;
     let struct_name_token = match tokens.get_token(struct_name_index) {
         Some(struct_name_token) => struct_name_token,
         None => {
@@ -2394,7 +2404,7 @@ fn parse_data_structure(
     };
 
     // find lbrace
-    let lbrace_index = search_data.start + 2;
+    let lbrace_index = node_start + 2;
     match tokens.get_token(lbrace_index) {
         Some(expected_lbrace) => {
             if *expected_lbrace != Token::LBrace {
@@ -2418,7 +2428,7 @@ fn parse_data_structure(
     };
 
     // find rbrace
-    let rbrace_index = search_data.end - 1;
+    let rbrace_index = node_end - 1;
     match tokens.get_token(rbrace_index) {
         Some(expected_rbrace) => {
             if *expected_rbrace != Token::RBrace {
@@ -2457,7 +2467,7 @@ fn parse_data_structure(
 
     if has_declarations {
         add_child_to_search_stack(
-            search_data.node_handle,
+            node_handle,
             Rule::DeclarationStatements,
             lbrace_index + 1,
             rbrace_index,
@@ -2466,7 +2476,7 @@ fn parse_data_structure(
         );
     }
 
-    match ast.get_node_mut(search_data.node_handle) {
+    match ast.get_node_mut(node_handle) {
         Some(node) => {
             node.data = Some(struct_name_token.clone());
         }
@@ -2478,46 +2488,51 @@ fn parse_data_structure(
 
 fn parse_struct_access(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => todo!(),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
     // split on the right most dot
     match find_final_matching_level_token_all_groups(
         tokens,
         &[Token::Dot],
-        search_data.start,
-        search_data.end,
+        node_start,
+        node_end,
     ) {
         Some((split_index, _)) => {
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::StructAccess,
-                search_data.start,
+                node_start,
                 split_index,
                 ast,
                 stack,
             );
 
             add_child_to_search_stack(
-                search_data.node_handle,
+                node_handle,
                 Rule::StructAccessTerminal,
                 split_index + 1, // exclude dot token
-                search_data.end,
+                node_end,
                 ast,
                 stack,
             );
             Ok(())
         }
         None => {
-            if (search_data.end - search_data.start) == 1 {
+            if (node_end - node_start) == 1 {
                 add_child_to_search_stack(
-                    search_data.node_handle,
+                    node_handle,
                     Rule::StructAccessTerminal,
-                    search_data.start,
-                    search_data.end,
+                    node_start,
+                    node_end,
                     ast,
                     stack,
                 );
@@ -2536,16 +2551,21 @@ fn parse_struct_access(
 
 fn parse_struct_access_terminal(
     tokens: &Tokens,
-    search_data: &SearchData,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<SearchData>,
+    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (start_line, end_line) = get_start_end_lines(tokens, search_data);
+    let (node_start, node_end) = match ast.get_node(node_handle) {
+        Some(node) => (node.start, node.end),
+        None => todo!(),
+    };
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
 
-    if (search_data.end - search_data.start) == 1 {
-        match tokens.get_token(search_data.start) {
+    if (node_end - node_start) == 1 {
+        match tokens.get_token(node_start) {
             Some(token) => {
-                let node = match ast.get_node_mut(search_data.node_handle) {
+                let node = match ast.get_node_mut(node_handle) {
                     Some(node) => node,
                     None => {
                         panic!("Missing node handle")
@@ -2564,10 +2584,10 @@ fn parse_struct_access_terminal(
         }
     } else {
         add_child_to_search_stack(
-            search_data.node_handle,
+            node_handle,
             Rule::FunctionCall,
-            search_data.start,
-            search_data.end,
+            node_start,
+            node_end,
             ast,
             stack,
         );
