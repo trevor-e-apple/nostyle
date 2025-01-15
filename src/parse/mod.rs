@@ -83,17 +83,17 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
     let root_handle = result.add_root(Rule::Expression, 0, tokens.len());
 
     let mut stack: Vec<AstNodeHandle> = vec![root_handle];
-    while let Some(search_data) = stack.pop() {
-        let rule = match result.get_node(search_data.node_handle) {
-            Some(node) => node.rule,
-            None => panic!("Missing node handle"),
+    while let Some(node_handle) = stack.pop() {
+        let rule = {
+            let node = result.get_node(node_handle);
+            node.rule
         };
 
         match rule {
             Rule::Expression => {
                 match parse_expression_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -104,7 +104,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::FunctionDefs => {
                 match parse_function_defs_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -115,7 +115,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::FunctionDef => {
                 match parse_function_def_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -126,7 +126,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::FunctionDefParameters => {
                 match parse_function_parameters_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -137,7 +137,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::ReturnsData => {
                 match parse_returns_data_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -146,8 +146,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                 }
             }
             Rule::Declaration => {
-                match parse_declaration_rule(tokens, &search_data, &mut result)
-                {
+                match parse_declaration_rule(tokens, node_handle, &mut result) {
                     Ok(_) => {}
                     Err(error) => parse_errors.push(error),
                 }
@@ -155,7 +154,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::BraceExpression => {
                 match parse_brace_expression_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -166,7 +165,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::BraceStatements => {
                 match parse_brace_statements_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -177,7 +176,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::Statement => {
                 match parse_statement_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -188,7 +187,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::ReturnStatement => {
                 match parse_return_statement(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -199,7 +198,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::IfElse => {
                 match parse_if_else_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -210,7 +209,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::ForLoop => {
                 match parse_for_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -221,7 +220,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::Equality => {
                 match parse_equality_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -232,7 +231,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::Comparison => {
                 match parse_comparison_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -243,7 +242,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::PlusMinus => {
                 match parse_plus_minus_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -254,7 +253,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::MultDiv => {
                 match parse_mult_div_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -265,7 +264,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::Unary => {
                 match parse_unary_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -276,7 +275,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::FunctionCall => {
                 match parse_function_call_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -287,7 +286,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::FunctionArguments => {
                 match parse_function_arguments_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -298,7 +297,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::Primary => {
                 match parse_primary_rule(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -310,7 +309,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::DeclarationStatements => {
                 match parse_declaration_statements(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -321,7 +320,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::DataStructure => {
                 match parse_data_structure(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -332,7 +331,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::StructAccess => {
                 match parse_struct_access(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -343,7 +342,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
             Rule::StructAccessTerminal => {
                 match parse_struct_access_terminal(
                     tokens,
-                    &search_data,
+                    node_handle,
                     &mut result,
                     &mut stack,
                 ) {
@@ -408,10 +407,7 @@ fn parse_expression_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad ast node handle"),
-    };
+    let node = ast.get_node(node_handle);
 
     let start_token = match tokens.get_token(node.start) {
         Some(token) => token,
@@ -939,7 +935,7 @@ fn get_start_end_lines(
 /// parse statement rule
 fn parse_statement_rule(
     tokens: &Tokens,
-    node_handle: &AstNodeHandle,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
@@ -1083,14 +1079,11 @@ fn parse_statement_rule(
 
 fn parse_return_statement(
     tokens: &Tokens,
-    node_handle: &AstNodeHandle,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node_handle,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
     let (start_line, end_line) =
         get_start_end_lines(tokens, node.start, node.end);
 
@@ -1130,14 +1123,11 @@ fn parse_return_statement(
 /// parse the if_else rule
 fn parse_if_else_rule(
     tokens: &Tokens,
-    node_handle: &AstNodeHandle,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
     let (start_line, end_line) =
         get_start_end_lines(tokens, node.start, node.end);
 
@@ -1298,10 +1288,7 @@ fn parse_binary_op_rule(
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
-        let node = match ast.get_node(node_handle) {
-            Some(node) => node,
-            None => panic!("Bad node handle"),
-        };
+        let node = ast.get_node(node_handle);
         (node.start, node.end)
     };
 
@@ -1497,13 +1484,13 @@ fn parse_mult_div_rule(
 
 fn parse_unary_rule(
     tokens: &Tokens,
-    node_handle: &AstNodeHandle,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
 
     let (start_line, end_line) =
@@ -1513,10 +1500,7 @@ fn parse_unary_rule(
         Some(first_token) => {
             if *first_token == Token::Not || *first_token == Token::Minus {
                 // add data to current node
-                let node = match ast.get_node_mut(node_handle) {
-                    Some(node) => node,
-                    None => panic!("Bad handle"),
-                };
+                let node = ast.get_node_mut(node_handle);
                 node.data = Some(first_token.clone());
 
                 // recursion for unary expansion

@@ -61,10 +61,8 @@ impl Ast {
 
         let result = AstNodeHandle { index: current_len };
 
-        match self.get_node_mut(parent_handle) {
-            Some(parent_node) => parent_node.children.push(result.clone()),
-            None => todo!("panic?"),
-        }
+        let parent_node = self.get_node_mut(parent_handle);
+        parent_node.children.push(result.clone());
 
         result
     }
@@ -98,23 +96,24 @@ impl Ast {
 
         let result = AstNodeHandle { index: current_len };
 
-        match self.get_node_mut(parent_handle) {
-            Some(parent_node) => parent_node.children.push(result.clone()),
-            None => todo!("panic?"),
-        }
+        let parent_node = self.get_node_mut(parent_handle);
+        parent_node.children.push(result.clone());
 
         result
     }
 
-    pub fn get_node(&self, node_handle: AstNodeHandle) -> Option<&AstNode> {
-        self.nodes.get(node_handle.index)
+    pub fn get_node(&self, node_handle: AstNodeHandle) -> &AstNode {
+        match self.nodes.get(node_handle.index) {
+            Some(node) => node,
+            None => panic!("Bad node handle"),
+        }
     }
 
-    pub fn get_node_mut(
-        &mut self,
-        node_handle: AstNodeHandle,
-    ) -> Option<&mut AstNode> {
-        self.nodes.get_mut(node_handle.index)
+    pub fn get_node_mut(&mut self, node_handle: AstNodeHandle) -> &mut AstNode {
+        match self.nodes.get_mut(node_handle.index) {
+            Some(node) => node,
+            None => panic!("Bad node handle"),
+        }
     }
 
     /// whether or not two ast's are equivalent
@@ -141,10 +140,8 @@ impl Ast {
         loop {
             if let Some(a_node_handle) = a_stack.pop() {
                 if let Some(b_node_handle) = b_stack.pop() {
-                    let a_node =
-                        a.get_node(a_node_handle).expect("Bad AST handle");
-                    let b_node =
-                        b.get_node(b_node_handle).expect("Bad AST handle");
+                    let a_node = a.get_node(a_node_handle);
+                    let b_node = b.get_node(b_node_handle);
 
                     if a_node != b_node {
                         return false;
@@ -191,11 +188,7 @@ impl Ast {
             vec![DfsData { node_handle: root, depth: 0 }];
 
         while let Some(dfs_data) = stack.pop() {
-            let node = if let Some(node) = self.get_node(dfs_data.node_handle) {
-                node
-            } else {
-                panic!("Bad handle from stack");
-            };
+            let node = self.get_node(dfs_data.node_handle);
 
             // add children to stack in reverse so they are expanded from left to right
             for child_handle in (&node.children).into_iter().rev() {
@@ -282,9 +275,7 @@ impl<'a> dot::Labeller<'a, AstNodeHandle, AstEdge> for Ast {
         &'b self,
         node_handle: &AstNodeHandle,
     ) -> dot::LabelText<'b> {
-        let node = self
-            .get_node(*node_handle)
-            .expect("Unexpected failure to get node");
+        let node = self.get_node(*node_handle);
         dot::LabelText::LabelStr(
             format!("Rule: {:?}, Data: {:?}", node.rule, node.data).into(),
         )
@@ -315,10 +306,7 @@ impl<'a> dot::GraphWalk<'a, AstNodeHandle, AstEdge> for Ast {
                 None => break,
             };
 
-            let node = match self.get_node(node_handle) {
-                Some(node) => node,
-                None => continue,
-            };
+            let node = self.get_node(node_handle);
 
             for child in &node.children {
                 edges.push((node_handle, *child));

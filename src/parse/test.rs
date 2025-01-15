@@ -158,7 +158,7 @@ fn add_comparison_tree(
     parent_handle: AstNodeHandle,
     a: Token,
     a_start: usize,
-    a_end: usize
+    a_end: usize,
     b: Token,
     b_start: usize,
     b_end: usize,
@@ -238,8 +238,12 @@ fn empty_braces() {
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
         let brace_expression_handle =
             expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 2);
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression, 0, 2);
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            0,
+            2,
+        );
         expected_ast.add_terminal_child(expression_handle, None, 0, 2);
         expected_ast
     };
@@ -291,18 +295,34 @@ fn empty_statement_in_braces() {
 
         // statements
         {
-            let statements_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements, 1, 2);
-            let statement_handle =
-                expected_ast.add_child(statements_handle, Rule::Statement, 1, 2);
-            let expression_handle =
-                expected_ast.add_child(statement_handle, Rule::Expression, 1, 2);
+            let statements_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                1,
+                2,
+            );
+            let statement_handle = expected_ast.add_child(
+                statements_handle,
+                Rule::Statement,
+                1,
+                2,
+            );
+            let expression_handle = expected_ast.add_child(
+                statement_handle,
+                Rule::Expression,
+                1,
+                2,
+            );
             expected_ast.add_terminal_child(expression_handle, None, 1, 2);
         }
 
         // end expression
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression, 2, 2);
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            2,
+            2,
+        );
         expected_ast.add_terminal_child(expression_handle, None, 2, 2);
 
         expected_ast
@@ -348,8 +368,12 @@ fn single_token() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
-        expected_ast
-            .add_terminal_child(root_handle, Some(Token::IntLiteral(0)), 0, 1);
+        expected_ast.add_terminal_child(
+            root_handle,
+            Some(Token::IntLiteral(0)),
+            0,
+            1,
+        );
         expected_ast
     };
 
@@ -365,10 +389,18 @@ fn single_token_in_braces() {
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
         let brace_expression_handle =
             expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 3);
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression, 1, 2);
-        expected_ast
-            .add_terminal_child(expression_handle, Some(Token::IntLiteral(0)), 1, 2);
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            1,
+            2,
+        );
+        expected_ast.add_terminal_child(
+            expression_handle,
+            Some(Token::IntLiteral(0)),
+            1,
+            2,
+        );
         expected_ast
     };
 
@@ -386,15 +418,31 @@ fn single_token_nested_braces() {
 
         let outer_brace_expression_handle =
             expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 5);
-        let expression_handle = expected_ast
-            .add_child(outer_brace_expression_handle, Rule::Expression, 1, 4);
+        let expression_handle = expected_ast.add_child(
+            outer_brace_expression_handle,
+            Rule::Expression,
+            1,
+            4,
+        );
 
-        let brace_expression_handle =
-            expected_ast.add_child(expression_handle, Rule::BraceExpression, 1, 4);
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression, 2, 3);
-        expected_ast
-            .add_terminal_child(expression_handle, Some(Token::IntLiteral(0)), 2, 3);
+        let brace_expression_handle = expected_ast.add_child(
+            expression_handle,
+            Rule::BraceExpression,
+            1,
+            4,
+        );
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            2,
+            3,
+        );
+        expected_ast.add_terminal_child(
+            expression_handle,
+            Some(Token::IntLiteral(0)),
+            2,
+            3,
+        );
         expected_ast
     };
 
@@ -418,7 +466,7 @@ fn arithmetic_expression() {
             1,
             Token::IntLiteral(2),
             2,
-            3
+            3,
         );
         expected_ast
     };
@@ -439,14 +487,23 @@ fn mult_expression() {
             root_handle,
             Rule::MultDiv,
             Some(Token::Times),
-            0, 3,
+            0,
+            3,
         );
         // 1 (recursive)
-        expected_ast
-            .add_terminal_child(mult_div_handle, Some(Token::IntLiteral(1)), 0, 1);
+        expected_ast.add_terminal_child(
+            mult_div_handle,
+            Some(Token::IntLiteral(1)),
+            0,
+            1,
+        );
         // 2
-        expected_ast
-            .add_terminal_child(mult_div_handle, Some(Token::IntLiteral(2)), 2, 3);
+        expected_ast.add_terminal_child(
+            mult_div_handle,
+            Some(Token::IntLiteral(2)),
+            2,
+            3,
+        );
         expected_ast
     };
 
@@ -466,28 +523,36 @@ fn expression_with_grouping_right() {
             root_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
-            0, 
+            0,
             7,
         );
 
         // LHS: 1
-        expected_ast
-            .add_terminal_child(plus_minus_handle, Some(Token::IntLiteral(1)), 0, 1);
+        expected_ast.add_terminal_child(
+            plus_minus_handle,
+            Some(Token::IntLiteral(1)),
+            0,
+            1,
+        );
 
         // RHS: (2 + 3)
         {
             // 2 + 3
-            let expression_handle =
-                expected_ast.add_child(plus_minus_handle, Rule::Expression, 2, 7);
+            let expression_handle = expected_ast.add_child(
+                plus_minus_handle,
+                Rule::Expression,
+                2,
+                7,
+            );
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
                 Token::IntLiteral(2),
-                3, 
+                3,
                 4,
                 Token::IntLiteral(3),
                 5,
-                6
+                6,
             );
         }
 
@@ -505,28 +570,38 @@ fn expression_with_grouping_left() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 7);
         let mult_div_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::MultDiv,
             Some(Token::Times),
+            0,
+            7,
         );
 
         // LHS: (1 + 2)
         {
             let expression_handle =
-                expected_ast.add_child(mult_div_handle, Rule::Expression);
+                expected_ast.add_child(mult_div_handle, Rule::Expression, 0, 5);
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
                 Token::IntLiteral(1),
+                1,
+                2,
                 Token::IntLiteral(2),
+                3,
+                4,
             );
         }
 
         // RHS: 3
-        expected_ast
-            .add_terminal_child(mult_div_handle, Some(Token::IntLiteral(3)));
+        expected_ast.add_terminal_child(
+            mult_div_handle,
+            Some(Token::IntLiteral(3)),
+            6,
+            7,
+        );
 
         expected_ast
     };
@@ -541,29 +616,47 @@ fn expression_with_brace_grouping() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 7);
         let plus_minus_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
+            0,
+            7,
         );
 
         // LHS: 1
-        expected_ast
-            .add_terminal_child(plus_minus_handle, Some(Token::IntLiteral(1)));
+        expected_ast.add_terminal_child(
+            plus_minus_handle,
+            Some(Token::IntLiteral(1)),
+            0,
+            1,
+        );
 
         // RHS: {2 + 3}
         {
             // 2 + 3
-            let brace_expression_handle = expected_ast
-                .add_child(plus_minus_handle, Rule::BraceExpression);
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression);
+            let brace_expression_handle = expected_ast.add_child(
+                plus_minus_handle,
+                Rule::BraceExpression,
+                2,
+                7,
+            );
+            let expression_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::Expression,
+                2,
+                7,
+            );
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
                 Token::IntLiteral(2),
+                3,
+                4,
                 Token::IntLiteral(3),
+                5,
+                6,
             );
         }
 
@@ -581,12 +674,16 @@ fn expression_with_symbols() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
         add_expected_add_child(
             &mut expected_ast,
             root_handle,
             Token::Symbol("a".to_owned()),
+            0,
+            1,
             Token::Symbol("b".to_owned()),
+            2,
+            3,
         );
         expected_ast
     };
@@ -602,19 +699,27 @@ fn assignment_symbol() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 6);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 6);
 
         // statements
         {
-            let statements_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
+            let statements_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                1,
+                5,
+            );
             add_assignment_statement(
                 &mut expected_ast,
                 statements_handle,
                 Token::Symbol("a".to_owned()),
+                1,
+                2,
                 Token::Symbol("b".to_owned()),
+                3,
+                4,
             );
         }
 
@@ -623,6 +728,8 @@ fn assignment_symbol() {
             &mut expected_ast,
             brace_expression_handle,
             None,
+            5,
+            5,
         );
 
         expected_ast
@@ -638,9 +745,9 @@ fn brace_expression_with_variable_only() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 3);
 
         // no expression at end of brace expression
         add_terminal_expression(
