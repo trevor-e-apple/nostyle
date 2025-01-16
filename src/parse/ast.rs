@@ -226,6 +226,14 @@ impl AstNode {
     pub fn make_terse_string(&self) -> String {
         format!("Rule: {:?} Data: {:?}", self.rule, self.data)
     }
+
+    pub fn get_len(&self) -> usize {
+        get_node_len(self.start, self.end)
+    }
+}
+
+pub fn get_node_len(start: usize, end: usize) -> usize {
+    end - start + 1
 }
 
 impl PartialEq for AstNode {

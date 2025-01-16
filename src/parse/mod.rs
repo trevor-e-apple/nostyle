@@ -53,7 +53,7 @@ mod token_search;
 use core::panic;
 use std::todo;
 
-use ast::AstNode;
+use ast::{get_node_len, AstNode};
 use token_search::find_prev_matching_level_token_all_groups;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -383,10 +383,7 @@ fn next_rule_updates(
     next_rule: Rule,
 ) {
     // update current node with next rule
-    let node = match ast.get_node_mut(node_handle) {
-        Some(node) => node,
-        None => todo!(),
-    };
+    let node = ast.get_node_mut(node_handle);
     node.rule = next_rule;
 
     // push back onto the stack
@@ -448,10 +445,7 @@ fn parse_for_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node: AstNode = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
         get_start_end_lines(tokens, node.start, node.end);
@@ -677,10 +671,7 @@ fn parse_brace_expression_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
 
     // check for first token
     let (first_token, start_line) = match tokens.get(node.start) {
@@ -777,10 +768,7 @@ fn parse_brace_statements_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
         get_start_end_lines(tokens, node.start, node.end);
@@ -859,23 +847,23 @@ fn parse_brace_statements_rule(
 
 // TODO: document me!
 fn binary_comp_statement(
-    node_handle: &AstNodeHandle,
+    node_handle: AstNodeHandle,
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
     assign_index: usize,
     composite_rule: Rule,
     composite_token: Token,
 ) {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!(),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
 
     // LHS of statement
     add_child_to_search_stack(
         node_handle,
         Rule::Expression,
-        node.start,
+        node_start,
         assign_index,
         ast,
         stack,
@@ -883,21 +871,21 @@ fn binary_comp_statement(
 
     // Statement RHS. Requires some scaffolding to set up a consistent parse with non-composed version
     let rhs_expression =
-        ast.add_child(node_handle, Rule::Expression, node.start, node.end);
+        ast.add_child(node_handle, Rule::Expression, node_start, node_end);
     let rhs_op_node = ast.add_child_with_data(
         rhs_expression,
         composite_rule,
         Some(composite_token),
-        node.start,
-        node.end,
+        node_start,
+        node_end,
     );
 
     // LHS (same as statement LHS)
     add_child_to_search_stack(
         rhs_op_node,
         Rule::Expression,
-        node.start,
-        assign_index,
+        node_start,
+        assign_index - 1,
         ast,
         stack,
     );
@@ -907,7 +895,7 @@ fn binary_comp_statement(
         rhs_op_node,
         Rule::Expression,
         assign_index + 1,
-        node.end - 1,
+        node_end - 1,
         ast,
         stack,
     );
@@ -939,13 +927,13 @@ fn parse_statement_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
 
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node_start, node_end);
 
     // Find assign token to split on
     match find_next_matching_level_token_all_groups(
@@ -957,12 +945,12 @@ fn parse_statement_rule(
             Token::TimesEquals,
             Token::DivideEquals,
         ],
-        node.start,
-        node.end,
+        node_start,
+        node_end,
     ) {
         Some(assign_index) => {
             // Hand the assignment statement case
-            match tokens.get(node.end - 1) {
+            match tokens.get(node_end - 1) {
                 Some((expected_end_statement, line_number)) => {
                     if expected_end_statement != Token::EndStatement {
                         return Err(ParseError {
@@ -989,7 +977,7 @@ fn parse_statement_rule(
                             add_child_to_search_stack(
                                 node_handle,
                                 Rule::Expression,
-                                node.start,
+                                node_start,
                                 assign_index,
                                 ast,
                                 stack,
@@ -1000,7 +988,7 @@ fn parse_statement_rule(
                                 node_handle,
                                 Rule::Expression,
                                 assign_index + 1,
-                                node.end - 1,
+                                node_end - 1,
                                 ast,
                                 stack,
                             );
@@ -1066,8 +1054,8 @@ fn parse_statement_rule(
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
-                node.start,
-                node.end - 1,
+                node_start,
+                node_end - 1,
                 ast,
                 stack,
             );
@@ -1127,11 +1115,14 @@ fn parse_if_else_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = ast.get_node(node_handle);
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
+    };
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node_start, node_end);
 
-    match tokens.get(node.start) {
+    match tokens.get(node_start) {
         Some((expected_if, line_number)) => {
             if expected_if != Token::If {
                 return Err(ParseError {
@@ -1150,8 +1141,8 @@ fn parse_if_else_rule(
     match find_next_matching_level_token(
         tokens,
         &[Token::Else],
-        node.start + 1,
-        node.end,
+        node_start + 1,
+        node_end,
         &Token::LBrace,
         &Token::RBrace,
     ) {
@@ -1160,7 +1151,7 @@ fn parse_if_else_rule(
                 tokens,
                 &Token::LBrace,
                 &Token::RBrace,
-                node.start,
+                node_start,
                 else_index,
             ) {
                 Some(lbrace_index) => lbrace_index,
@@ -1186,7 +1177,7 @@ fn parse_if_else_rule(
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
-                node.start + 1,
+                node_start + 1,
                 if_lbrace_index,
                 ast,
                 stack,
@@ -1208,14 +1199,14 @@ fn parse_if_else_rule(
                 node_handle,
                 Rule::Expression,
                 else_index + 1,
-                node.end,
+                node_end,
                 ast,
                 stack,
             );
         }
         None => {
             // check for rbrace
-            let rbrace_line = match tokens.get(node.end - 1) {
+            let rbrace_line = match tokens.get(node_end - 1) {
                 Some((token, line_number)) => {
                     if token != Token::RBrace {
                         return Err(ParseError {
@@ -1239,8 +1230,8 @@ fn parse_if_else_rule(
                 tokens,
                 &Token::LBrace,
                 &Token::RBrace,
-                node.start,
-                node.end,
+                node_start,
+                node_end,
             ) {
                 Some(lbrace_index) => lbrace_index,
                 None => {
@@ -1256,8 +1247,8 @@ fn parse_if_else_rule(
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
-                node.start + 1,
-                lbrace_index,
+                node_start + 1,
+                lbrace_index - 1,
                 ast,
                 stack,
             );
@@ -1267,7 +1258,7 @@ fn parse_if_else_rule(
                 node_handle,
                 Rule::BraceExpression,
                 lbrace_index,
-                node.end,
+                node_end,
                 ast,
                 stack,
             );
@@ -1348,10 +1339,7 @@ fn parse_binary_op_rule(
 
             if is_unary {
                 // modify current node with next rule
-                let node = match ast.get_node_mut(node_handle) {
-                    Some(node) => node,
-                    None => panic!("Bad handle"),
-                };
+                let node = ast.get_node_mut(node_handle);
                 node.rule = next_rule;
                 // push back onto the stack
                 stack.push(node_handle);
@@ -1361,12 +1349,8 @@ fn parse_binary_op_rule(
                 next_rule_updates(node_handle, ast, stack, next_rule);
             } else {
                 // update the token data in the expanding node
-                match ast.get_node_mut(node_handle) {
-                    Some(node) => {
-                        node.data = Some(binary_op_token);
-                    }
-                    None => panic!("Bad handle"),
-                }
+                let node = ast.get_node_mut(node_handle);
+                node.data = Some(binary_op_token);
 
                 // check to see if the split is possible
                 if split_index + 1 == node_end {
@@ -1534,9 +1518,9 @@ fn parse_function_call_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1571,10 +1555,7 @@ fn parse_function_call_rule(
 
                 if has_lparen && has_rparen {
                     // update current node to include function name
-                    let node = match ast.get_node_mut(node_handle) {
-                        Some(node) => node,
-                        None => todo!("node handle bad???"),
-                    };
+                    let node = ast.get_node_mut(node_handle);
                     node.data = Some(start_token.clone());
 
                     add_child_to_search_stack(
@@ -1628,27 +1609,28 @@ fn parse_function_arguments_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
+
     // find the final comma in the search range
     match find_final_matching_level_token_all_groups(
         tokens,
         &[Token::Comma],
-        node.start,
-        node.end,
+        node_start,
+        node_end,
     ) {
         Some((final_comma_index, _)) => {
             // find the RHS expression start and end. if there is no left hand side,
             // this block of code will add to the stack in place
             let (added_to_stack, rhs_start, rhs_end) =
-                if final_comma_index == (node.end - 1) {
+                if final_comma_index == node_end {
                     let (added_to_stack, prev_arg_comma_index) =
                         match find_final_matching_level_token_all_groups(
                             tokens,
                             &[Token::Comma],
-                            node.start,
+                            node_start,
                             final_comma_index,
                         ) {
                             Some((prev_arg_comma_index, _)) => {
@@ -1658,7 +1640,7 @@ fn parse_function_arguments_rule(
                                 add_child_to_search_stack(
                                     node_handle,
                                     Rule::Expression,
-                                    node.start,
+                                    node_start,
                                     final_comma_index,
                                     ast,
                                     stack,
@@ -1675,7 +1657,7 @@ fn parse_function_arguments_rule(
                     (
                         false,
                         final_comma_index + 1, // don't include the comma
-                        node.end,
+                        node_end,
                     )
                 };
 
@@ -1684,8 +1666,8 @@ fn parse_function_arguments_rule(
                 add_child_to_search_stack(
                     node_handle,
                     Rule::FunctionArguments,
-                    node.start,
-                    rhs_start,
+                    node_start,
+                    rhs_start - 1,
                     ast,
                     stack,
                 );
@@ -1706,8 +1688,8 @@ fn parse_function_arguments_rule(
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
-                node.start,
-                node.end,
+                node_start,
+                node_end,
                 ast,
                 stack,
             );
@@ -1723,9 +1705,9 @@ fn parse_function_defs_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1788,9 +1770,9 @@ fn parse_function_def_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1866,10 +1848,7 @@ fn parse_function_def_rule(
     }
 
     // update current node to include function name
-    let node = match ast.get_node_mut(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node_mut(node_handle);
     let function_name = match tokens.get_token(node_start + 1) {
         Some(expected_symbol) => match expected_symbol {
             Token::Symbol(name) => name,
@@ -1960,10 +1939,7 @@ fn parse_function_parameters_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
 
     if node.start == node.end {
         // this function has no parameters. nothing to do
@@ -2029,10 +2005,7 @@ fn parse_returns_data_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
-    };
+    let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
         get_start_end_lines(tokens, node.start, node.end);
@@ -2074,15 +2047,16 @@ fn parse_declaration_rule(
     node_handle: AstNodeHandle,
     ast: &mut Ast,
 ) -> Result<(), ParseError> {
-    let node = match ast.get_node(node_handle) {
-        Some(node) => node,
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
+
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node_start, node_end);
 
     // check that search data is len 2
-    if (node.end - node.start) != 2 {
+    if get_node_len(node_start, node_end) != 2 {
         return Err(ParseError {
             start_line,
             end_line,
@@ -2090,14 +2064,14 @@ fn parse_declaration_rule(
         });
     }
 
-    match tokens.get_token(node.start) {
+    match tokens.get_token(node_start) {
         Some(token) => match token {
             Token::Symbol(_) => {
                 ast.add_terminal_child(
                     node_handle,
                     Some(token.clone()),
-                    node.start,
-                    node.end,
+                    node_start,
+                    node_end,
                 );
             }
             _ => {
@@ -2114,14 +2088,14 @@ fn parse_declaration_rule(
         ),
     }
 
-    match tokens.get(node.start + 1) {
+    match tokens.get(node_start + 1) {
         Some((token, line_number)) => match token {
             Token::Symbol(_) => {
                 ast.add_terminal_child(
                     node_handle,
                     Some(token.clone()),
-                    node.start,
-                    node.end,
+                    node_start,
+                    node_end,
                 );
             }
             _ => {
@@ -2147,19 +2121,16 @@ fn parse_primary_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
     if node_start == node_end {
         // handle empty expression case
-        let node = match ast.get_node_mut(node_handle) {
-            Some(node) => node,
-            None => panic!("Missing node handle"),
-        };
+        let node = ast.get_node_mut(node_handle);
         node.rule = Rule::Terminal;
         node.data = None;
     } else {
@@ -2177,12 +2148,7 @@ fn parse_primary_rule(
                         );
                     } else {
                         // update current primary to terminal
-                        let node = match ast.get_node_mut(node_handle) {
-                            Some(node) => node,
-                            None => {
-                                panic!("Missing node handle")
-                            }
-                        };
+                        let node = ast.get_node_mut(node_handle);
                         node.rule = Rule::Terminal;
                         node.data = Some(token.clone());
                     }
@@ -2198,21 +2164,13 @@ fn parse_primary_rule(
                         });
                     }
                     // update current primary to terminal
-                    let node = match ast.get_node_mut(node_handle) {
-                        Some(node) => node,
-                        None => {
-                            panic!("Missing node handle")
-                        }
-                    };
+                    let node = ast.get_node_mut(node_handle);
                     node.rule = Rule::Terminal;
                     node.data = Some(token.clone());
                 }
                 Token::LParen => {
                     // update current node to expression rule
-                    let node = match ast.get_node_mut(node_handle) {
-                        Some(node) => node,
-                        None => panic!("Missing node handle"),
-                    };
+                    let node = ast.get_node_mut(node_handle);
                     node.rule = Rule::Expression;
 
                     let expected_rparen_index = node.end - 1;
@@ -2243,10 +2201,7 @@ fn parse_primary_rule(
                 }
                 Token::LBrace => {
                     // update current node to BraceExpression rule
-                    let node = match ast.get_node_mut(node_handle) {
-                        Some(node) => node,
-                        None => panic!("Missing node handle"),
-                    };
+                    let node = ast.get_node_mut(node_handle);
                     node.rule = Rule::BraceExpression;
 
                     let expected_rbrace_index = node_end - 1;
@@ -2301,16 +2256,16 @@ fn parse_declaration_statements(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     // search for semicolon to split recursive and non recrusive declaration on
     match find_prev_matching_level_token_all_groups(
         tokens,
         &[Token::EndStatement],
-        node_handle.start,
-        node_handle.end - 1, // don't include the final semicolon
+        node_start,
+        node_end - 1, // don't include the final semicolon
     ) {
         Some(split_index) => {
             add_child_to_search_stack(
@@ -2351,9 +2306,9 @@ fn parse_data_structure(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => panic!("Bad node handle"),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
 
     let (start_line, end_line) =
@@ -2460,12 +2415,8 @@ fn parse_data_structure(
         );
     }
 
-    match ast.get_node_mut(node_handle) {
-        Some(node) => {
-            node.data = Some(struct_name_token.clone());
-        }
-        None => panic!("This should never happen. Bad node handle"),
-    };
+    let node = ast.get_node_mut(node_handle);
+    node.data = Some(struct_name_token.clone());
 
     Ok(())
 }
@@ -2476,9 +2427,9 @@ fn parse_struct_access(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => todo!(),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -2539,9 +2490,9 @@ fn parse_struct_access_terminal(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = match ast.get_node(node_handle) {
-        Some(node) => (node.start, node.end),
-        None => todo!(),
+    let (node_start, node_end) = {
+        let node = ast.get_node(node_handle);
+        (node.start, node.end)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -2549,12 +2500,7 @@ fn parse_struct_access_terminal(
     if (node_end - node_start) == 1 {
         match tokens.get_token(node_start) {
             Some(token) => {
-                let node = match ast.get_node_mut(node_handle) {
-                    Some(node) => node,
-                    None => {
-                        panic!("Missing node handle")
-                    }
-                };
+                let node = ast.get_node_mut(node_handle);
                 node.rule = Rule::Terminal;
                 node.data = Some(token.clone());
             }
