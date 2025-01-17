@@ -15,15 +15,15 @@ fn add_terminal_expression(
     parent_handle: AstNodeHandle,
     terminal_value: Option<Token>,
     child_start: usize,
-    child_end: usize,
+    child_len: usize,
 ) -> AstNodeHandle {
     let expression_handle =
-        ast.add_child(parent_handle, Rule::Expression, child_start, child_end);
+        ast.add_child(parent_handle, Rule::Expression, child_start, child_len);
     ast.add_terminal_child(
         expression_handle,
         terminal_value,
         child_start,
-        child_end,
+        child_len,
     );
 
     return expression_handle;
@@ -36,17 +36,17 @@ fn add_expected_add_child(
     parent_handle: AstNodeHandle,
     lhs_terminal: Token,
     lhs_start: usize,
-    lhs_end: usize,
+    lhs_len: usize,
     rhs_terminal: Token,
     rhs_start: usize,
-    rhs_end: usize,
+    rhs_len: usize,
 ) {
     let plus_minus_handle = ast.add_child_with_data(
         parent_handle,
         Rule::PlusMinus,
         Some(Token::Plus),
         lhs_start,
-        rhs_end,
+        lhs_len + rhs_len,
     );
 
     // lhs (recursive)
@@ -54,7 +54,7 @@ fn add_expected_add_child(
         plus_minus_handle,
         Some(lhs_terminal),
         lhs_start,
-        lhs_end,
+        lhs_len,
     );
 
     // rhs
@@ -62,7 +62,7 @@ fn add_expected_add_child(
         plus_minus_handle,
         Some(rhs_terminal),
         rhs_start,
-        rhs_end,
+        rhs_len,
     );
 }
 
@@ -235,16 +235,16 @@ fn empty_braces() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 1);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 2);
         let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
             0,
             1,
         );
-        expected_ast.add_terminal_child(expression_handle, None, 0, 1);
+        expected_ast.add_terminal_child(expression_handle, None, 0, 2);
         expected_ast
     };
 
@@ -257,10 +257,10 @@ fn empty_parens() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
         let expression_handle =
-            expected_ast.add_child(root_handle, Rule::Expression, 0, 1);
-        expected_ast.add_terminal_child(expression_handle, None, 0, 1);
+            expected_ast.add_child(root_handle, Rule::Expression, 0, 2);
+        expected_ast.add_terminal_child(expression_handle, None, 0, 2);
         expected_ast
     };
 
@@ -289,9 +289,9 @@ fn empty_statement_in_braces() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 2);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 3);
 
         // statements
         {
@@ -321,9 +321,9 @@ fn empty_statement_in_braces() {
             brace_expression_handle,
             Rule::Expression,
             2,
-            2,
+            0,
         );
-        expected_ast.add_terminal_child(expression_handle, None, 2, 2);
+        expected_ast.add_terminal_child(expression_handle, None, 2, 0);
 
         expected_ast
     };
@@ -754,6 +754,8 @@ fn brace_expression_with_variable_only() {
             &mut expected_ast,
             brace_expression_handle,
             Some(Token::Symbol("a".to_owned())),
+            2,
+            0,
         );
 
         expected_ast

@@ -72,9 +72,9 @@ impl Ast {
         parent_handle: AstNodeHandle,
         rule: Rule,
         start: usize,
-        end: usize,
+        len: usize,
     ) -> AstNodeHandle {
-        self.add_child_with_data(parent_handle, rule, None, start, end)
+        self.add_child_with_data(parent_handle, rule, None, start, len)
     }
 
     pub fn add_terminal_child(
