@@ -19,7 +19,7 @@ impl Ast {
         &mut self,
         rule: Rule,
         start: usize,
-        end: usize,
+        len: usize,
     ) -> AstNodeHandle {
         assert!(self.nodes.len() == 0);
         self.nodes.push(AstNode {
@@ -28,7 +28,7 @@ impl Ast {
             children: vec![],
             data: None,
             start,
-            end,
+            len,
         });
         AstNodeHandle { index: 0 }
     }
@@ -47,7 +47,7 @@ impl Ast {
         rule: Rule,
         data: Option<Token>,
         start: usize,
-        end: usize,
+        len: usize,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
@@ -56,7 +56,7 @@ impl Ast {
             children: vec![],
             data,
             start,
-            end,
+            len,
         });
 
         let result = AstNodeHandle { index: current_len };
@@ -82,7 +82,7 @@ impl Ast {
         parent_handle: AstNodeHandle,
         data: Option<Token>,
         start: usize,
-        end: usize,
+        len: usize,
     ) -> AstNodeHandle {
         let current_len = self.nodes.len();
         self.nodes.push(AstNode {
@@ -91,7 +91,7 @@ impl Ast {
             children: vec![],
             data,
             start,
-            end,
+            len,
         });
 
         let result = AstNodeHandle { index: current_len };
@@ -218,7 +218,7 @@ pub struct AstNode {
     pub children: Vec<AstNodeHandle>,
     pub data: Option<Token>,
     pub start: usize,
-    pub end: usize,
+    pub len: usize,
 }
 
 impl AstNode {
@@ -227,13 +227,9 @@ impl AstNode {
         format!("Rule: {:?} Data: {:?}", self.rule, self.data)
     }
 
-    pub fn get_len(&self) -> usize {
-        get_node_len(self.start, self.end)
+    pub fn get_end_index(&self) -> usize {
+        self.start + self.len - 1
     }
-}
-
-pub fn get_node_len(start: usize, end: usize) -> usize {
-    end - start + 1
 }
 
 impl PartialEq for AstNode {

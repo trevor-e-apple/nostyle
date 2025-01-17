@@ -235,16 +235,16 @@ fn empty_braces() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 2);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 1);
         let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
             0,
-            2,
+            1,
         );
-        expected_ast.add_terminal_child(expression_handle, None, 0, 2);
+        expected_ast.add_terminal_child(expression_handle, None, 0, 1);
         expected_ast
     };
 
@@ -257,10 +257,10 @@ fn empty_parens() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
         let expression_handle =
-            expected_ast.add_child(root_handle, Rule::Expression, 0, 2);
-        expected_ast.add_terminal_child(expression_handle, None, 0, 2);
+            expected_ast.add_child(root_handle, Rule::Expression, 0, 1);
+        expected_ast.add_terminal_child(expression_handle, None, 0, 1);
         expected_ast
     };
 
@@ -289,9 +289,9 @@ fn empty_statement_in_braces() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 3);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 2);
 
         // statements
         {
@@ -299,21 +299,21 @@ fn empty_statement_in_braces() {
                 brace_expression_handle,
                 Rule::BraceStatements,
                 1,
-                2,
+                1,
             );
             let statement_handle = expected_ast.add_child(
                 statements_handle,
                 Rule::Statement,
                 1,
-                2,
+                1,
             );
             let expression_handle = expected_ast.add_child(
                 statement_handle,
                 Rule::Expression,
                 1,
-                2,
+                1,
             );
-            expected_ast.add_terminal_child(expression_handle, None, 1, 2);
+            expected_ast.add_terminal_child(expression_handle, None, 1, 1);
         }
 
         // end expression
@@ -367,7 +367,7 @@ fn single_token() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 0);
         expected_ast.add_terminal_child(
             root_handle,
             Some(Token::IntLiteral(0)),

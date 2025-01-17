@@ -51,9 +51,7 @@ mod test;
 mod token_search;
 
 use core::panic;
-use std::todo;
 
-use ast::{get_node_len, AstNode};
 use token_search::find_prev_matching_level_token_all_groups;
 
 use crate::tokenize::tokens::{Token, Tokens};
@@ -365,11 +363,11 @@ fn add_child_to_search_stack(
     parent_handle: AstNodeHandle,
     child_rule: Rule,
     start: usize,
-    end: usize,
+    len: usize,
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) {
-    let child_handle = ast.add_child(parent_handle, child_rule, start, end);
+    let child_handle = ast.add_child(parent_handle, child_rule, start, len);
 
     // add child to search stack
     stack.push(child_handle);
@@ -430,7 +428,7 @@ fn parse_expression_rule(
         node_handle,
         rule,
         node.start,
-        node.end,
+        node.len,
         ast,
         stack,
     );
@@ -448,9 +446,9 @@ fn parse_for_rule(
     let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node.start, node.len);
 
-    match tokens.get(node.end - 1) {
+    match tokens.get(node.get_end_index()) {
         Some((end_token, line_number)) => {
             if end_token != Token::RBrace {
                 return Err(ParseError {
@@ -496,7 +494,7 @@ fn parse_for_rule(
         &Token::LParen,
         &Token::RParen,
         lparen_index,
-        node.end,
+        node.start + node.len,
     ) {
         Some(rparen_index) => rparen_index,
         None => {
@@ -605,7 +603,7 @@ fn parse_for_rule(
             &Token::LBrace,
             &Token::RBrace,
             lbrace_index,
-            node.end,
+            node.start + node.len,
         ) {
             Some(rbrace_index) => rbrace_index,
             None => {
@@ -690,7 +688,7 @@ fn parse_brace_expression_rule(
         });
     }
 
-    let final_token = match tokens.get_token(node.end - 1) {
+    let final_token = match tokens.get_token(node.get_end_index()) {
         Some(token) => token,
         None => {
             return Err(ParseError {
@@ -710,7 +708,7 @@ fn parse_brace_expression_rule(
     }
 
     let brace_contents_start = node.start + 1;
-    let brace_contents_end = node.end - 1;
+    let brace_contents_end = node.get_end_index() - 1;
 
     let end_brace_statements: Option<usize> =
         match find_final_matching_level_token_all_groups(
@@ -771,7 +769,7 @@ fn parse_brace_statements_rule(
     let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node.start, node.get_end_index());
 
     // find brace_statement terminal
     let (non_recursive_start_index, non_recursive_end_index): (usize, usize) = {
@@ -780,7 +778,7 @@ fn parse_brace_statements_rule(
                 tokens,
                 &[Token::EndStatement],
                 node.start,
-                node.end,
+                node.get_end_index() + 1,
             ) {
                 Some(index) => index,
                 None => {
@@ -856,7 +854,7 @@ fn binary_comp_statement(
 ) {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     // LHS of statement
@@ -929,7 +927,7 @@ fn parse_statement_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     let (start_line, end_line) =
@@ -1073,10 +1071,10 @@ fn parse_return_statement(
 ) -> Result<(), ParseError> {
     let node = ast.get_node(node_handle);
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node.start, node.get_end_index());
 
     let start_index = node.start + 1; // exclude Return token
-    let end_statement_index = node.end - 1;
+    let end_statement_index = node.get_end_index();
     match tokens.get(end_statement_index) {
         Some((token, line_number)) => {
             if token != Token::EndStatement {
@@ -1117,7 +1115,7 @@ fn parse_if_else_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1280,7 +1278,7 @@ fn parse_binary_op_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     let (start_line, end_line) =
@@ -1474,7 +1472,7 @@ fn parse_unary_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     let (start_line, end_line) =
@@ -1502,8 +1500,8 @@ fn parse_unary_rule(
         }
         None => {
             return Err(ParseError {
-                start_line: start_line,
-                end_line: end_line,
+                start_line,
+                end_line,
                 info: "Empty unary rule".to_owned(),
             });
         }
@@ -1520,7 +1518,7 @@ fn parse_function_call_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1611,7 +1609,7 @@ fn parse_function_arguments_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     // find the final comma in the search range
@@ -1707,7 +1705,7 @@ fn parse_function_defs_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1772,7 +1770,7 @@ fn parse_function_def_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -1941,21 +1939,21 @@ fn parse_function_parameters_rule(
 ) -> Result<(), ParseError> {
     let node = ast.get_node(node_handle);
 
-    if node.start == node.end {
+    if node.start == node.get_end_index() {
         // this function has no parameters. nothing to do
         return Ok(());
     }
 
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node.start, node.get_end_index());
 
     // get the final two symbols (the type and the parameter name)
-    match tokens.get(node.end - 1) {
+    match tokens.get(node.get_end_index()) {
         Some((final_token, final_token_line)) => {
             // check for trailing comma
             let final_symbol_index = match final_token {
-                Token::Comma => node.end - 2,
-                Token::Symbol(_) => node.end - 1,
+                Token::Comma => node.get_end_index() - 1,
+                Token::Symbol(_) => node.get_end_index(),
                 _ => {
                     return Err(ParseError {
                         start_line: final_token_line,
@@ -2008,7 +2006,7 @@ fn parse_returns_data_rule(
     let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.end);
+        get_start_end_lines(tokens, node.start, node.get_end_index());
 
     let token = match tokens.get_token(node.start + 1) {
         Some(token) => match *token {
@@ -2036,7 +2034,7 @@ fn parse_returns_data_rule(
         Rule::Terminal,
         Some(token.clone()),
         node.start,
-        node.end,
+        node.len,
     );
 
     Ok(())
@@ -2049,14 +2047,14 @@ fn parse_declaration_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
     // check that search data is len 2
-    if get_node_len(node_start, node_end) != 2 {
+    if (node_end - node_start + 1) != 2 {
         return Err(ParseError {
             start_line,
             end_line,
@@ -2123,7 +2121,7 @@ fn parse_primary_rule(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -2173,14 +2171,15 @@ fn parse_primary_rule(
                     let node = ast.get_node_mut(node_handle);
                     node.rule = Rule::Expression;
 
-                    let expected_rparen_index = node.end - 1;
+                    let expected_rparen_index = node.get_end_index() - 1;
                     match tokens.get_token(expected_rparen_index) {
                         Some(expected_rparen) => {
                             // check whether we have mismatched parens
                             if *expected_rparen == Token::RParen {
                                 // add back to stack
                                 node.start = node_start + 1;
-                                node.end = expected_rparen_index;
+                                node.len =
+                                    expected_rparen_index - node_start + 1;
                                 stack.push(node_handle);
                             } else {
                                 return Err(ParseError {
@@ -2209,7 +2208,8 @@ fn parse_primary_rule(
                         Some(expected_rbrace) => {
                             // check whether we have mismatched braces
                             if *expected_rbrace == Token::RBrace {
-                                node.end = expected_rbrace_index + 1;
+                                node.len =
+                                    expected_rbrace_index - node.start + 1;
                                 stack.push(node_handle);
                             } else {
                                 return Err(ParseError {
@@ -2258,7 +2258,7 @@ fn parse_declaration_statements(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     // search for semicolon to split recursive and non recrusive declaration on
     match find_prev_matching_level_token_all_groups(
@@ -2308,7 +2308,7 @@ fn parse_data_structure(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
 
     let (start_line, end_line) =
@@ -2429,7 +2429,7 @@ fn parse_struct_access(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -2492,7 +2492,7 @@ fn parse_struct_access_terminal(
 ) -> Result<(), ParseError> {
     let (node_start, node_end) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.end)
+        (node.start, node.get_end_index())
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
