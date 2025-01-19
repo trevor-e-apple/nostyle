@@ -2102,20 +2102,26 @@ fn assign_if_else_if() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 24);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
-        let statements_handle = expected_ast
-            .add_child(brace_expression_handle, Rule::BraceStatements);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 24);
+        let statements_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::BraceStatements,
+            1,
+            22,
+        );
 
         let statement_handle =
-            expected_ast.add_child(statements_handle, Rule::Statement);
+            expected_ast.add_child(statements_handle, Rule::Statement, 1, 22);
 
         // Statement LHS
         add_terminal_expression(
             &mut expected_ast,
             statement_handle,
             Some(Token::Symbol("d".to_owned())),
+            1,
+            1,
         );
 
         // Statement RHS
