@@ -129,24 +129,21 @@ fn add_comparison_tree(
     parent_handle: AstNodeHandle,
     a: Token,
     a_start: usize,
-    a_end: usize,
     b: Token,
-    b_start: usize,
-    b_end: usize,
 ) {
     let equality_handle = ast.add_child_with_data(
         parent_handle,
         Rule::Equality,
         Some(Token::BoolEquals),
         a_start,
-        b_end,
+        3,
     );
 
     // a
-    ast.add_terminal_child(equality_handle, Some(a), a_start, a_end);
+    ast.add_terminal_child(equality_handle, Some(a), a_start, 1);
 
     // b
-    ast.add_terminal_child(equality_handle, Some(b), b_start, b_end);
+    ast.add_terminal_child(equality_handle, Some(b), a_start + 2, 1);
 }
 
 fn write_ast_dot(ast: &Ast, ast_name: &str, seconds_since: u64) {
@@ -1924,73 +1921,108 @@ fn if_else_if() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
-        let if_else_handle = expected_ast.add_child(root_handle, Rule::IfElse);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 28);
+        let if_else_handle =
+            expected_ast.add_child(root_handle, Rule::IfElse, 0, 28);
 
         // a == b
         {
             let condition_expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::Expression);
+                expected_ast.add_child(if_else_handle, Rule::Expression, 1, 3);
 
             add_comparison_tree(
                 &mut expected_ast,
                 condition_expression_handle,
                 Token::Symbol("a".to_owned()),
+                1,
                 Token::Symbol("b".to_owned()),
             );
         }
         // { d = b; }
         {
-            let brace_expression =
-                expected_ast.add_child(if_else_handle, Rule::BraceExpression);
+            let brace_expression = expected_ast.add_child(
+                if_else_handle,
+                Rule::BraceExpression,
+                4,
+                6,
+            );
             // d = b;
             {
-                let brace_statements_handle = expected_ast
-                    .add_child(brace_expression, Rule::BraceStatements);
+                let brace_statements_handle = expected_ast.add_child(
+                    brace_expression,
+                    Rule::BraceStatements,
+                    5,
+                    4,
+                );
                 add_assignment_statement(
                     &mut expected_ast,
                     brace_statements_handle,
                     Token::Symbol("d".to_owned()),
+                    5,
                     Token::Symbol("b".to_owned()),
                 );
             }
 
             // no ending expression
-            add_terminal_expression(&mut expected_ast, brace_expression, None);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression,
+                None,
+                9,
+                0,
+            );
         }
 
         // else
         {
-            let expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::Expression);
+            let expression_handle = expected_ast.add_child(
+                if_else_handle,
+                Rule::Expression,
+                11,
+                17,
+            );
 
             let if_else_handle =
-                expected_ast.add_child(expression_handle, Rule::IfElse);
+                expected_ast.add_child(expression_handle, Rule::IfElse, 11, 17);
 
             // a == c
             {
-                let condition_expression_handle =
-                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let condition_expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::Expression,
+                    12,
+                    3,
+                );
                 add_comparison_tree(
                     &mut expected_ast,
                     condition_expression_handle,
                     Token::Symbol("a".to_owned()),
+                    12,
                     Token::Symbol("c".to_owned()),
                 );
             }
 
             // { d = c; }
             {
-                let brace_expression = expected_ast
-                    .add_child(if_else_handle, Rule::BraceExpression);
+                let brace_expression = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::BraceExpression,
+                    15,
+                    6,
+                );
                 // d = c;
                 {
-                    let brace_statements_handle = expected_ast
-                        .add_child(brace_expression, Rule::BraceStatements);
+                    let brace_statements_handle = expected_ast.add_child(
+                        brace_expression,
+                        Rule::BraceStatements,
+                        16,
+                        4,
+                    );
                     add_assignment_statement(
                         &mut expected_ast,
                         brace_statements_handle,
                         Token::Symbol("d".to_owned()),
+                        16,
                         Token::Symbol("c".to_owned()),
                     );
                 }
@@ -2000,23 +2032,38 @@ fn if_else_if() {
                     &mut expected_ast,
                     brace_expression,
                     None,
+                    20,
+                    0,
                 );
             }
 
             // else
             {
-                let expression_handle =
-                    expected_ast.add_child(if_else_handle, Rule::Expression);
-                let brace_expression_handle = expected_ast
-                    .add_child(expression_handle, Rule::BraceExpression);
+                let expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::Expression,
+                    22,
+                    6,
+                );
+                let brace_expression_handle = expected_ast.add_child(
+                    expression_handle,
+                    Rule::BraceExpression,
+                    22,
+                    6,
+                );
 
                 // statements
-                let brace_statements_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::BraceStatements);
+                let brace_statements_handle = expected_ast.add_child(
+                    brace_expression_handle,
+                    Rule::BraceStatements,
+                    23,
+                    4,
+                );
                 add_assignment_statement(
                     &mut expected_ast,
                     brace_statements_handle,
                     Token::Symbol("d".to_owned()),
+                    23,
                     Token::Symbol("e".to_owned()),
                 );
                 // expression
@@ -2024,6 +2071,8 @@ fn if_else_if() {
                     &mut expected_ast,
                     brace_expression_handle,
                     None,
+                    26,
+                    0,
                 );
             }
         }
