@@ -2126,80 +2126,124 @@ fn assign_if_else_if() {
 
         // Statement RHS
         {
-            let expression_handle =
-                expected_ast.add_child(statement_handle, Rule::Expression);
+            let expression_handle = expected_ast.add_child(
+                statement_handle,
+                Rule::Expression,
+                3,
+                20,
+            );
             let if_else_handle =
-                expected_ast.add_child(expression_handle, Rule::IfElse);
+                expected_ast.add_child(expression_handle, Rule::IfElse, 3, 19);
 
             // a == b
             {
-                let condition_expression_handle =
-                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let condition_expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::Expression,
+                    4,
+                    3,
+                );
                 add_comparison_tree(
                     &mut expected_ast,
                     condition_expression_handle,
                     Token::Symbol("a".to_owned()),
+                    4,
                     Token::Symbol("b".to_owned()),
                 );
             }
             // { b }
             {
-                let brace_expression = expected_ast
-                    .add_child(if_else_handle, Rule::BraceExpression);
+                let brace_expression = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::BraceExpression,
+                    7,
+                    3,
+                );
 
                 // b
                 add_terminal_expression(
                     &mut expected_ast,
                     brace_expression,
                     Some(Token::Symbol("b".to_owned())),
+                    8,
+                    1,
                 );
             }
 
             // else
             {
-                let expression_handle =
-                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::Expression,
+                    11,
+                    11,
+                );
 
-                let if_else_handle =
-                    expected_ast.add_child(expression_handle, Rule::IfElse);
+                let if_else_handle = expected_ast.add_child(
+                    expression_handle,
+                    Rule::IfElse,
+                    11,
+                    11,
+                );
 
                 // a == c
                 {
-                    let condition_expression_handle = expected_ast
-                        .add_child(if_else_handle, Rule::Expression);
+                    let condition_expression_handle = expected_ast.add_child(
+                        if_else_handle,
+                        Rule::Expression,
+                        12,
+                        3,
+                    );
                     add_comparison_tree(
                         &mut expected_ast,
                         condition_expression_handle,
                         Token::Symbol("a".to_owned()),
+                        12,
                         Token::Symbol("c".to_owned()),
                     );
                 }
 
                 // { c }
                 {
-                    let brace_expression = expected_ast
-                        .add_child(if_else_handle, Rule::BraceExpression);
+                    let brace_expression = expected_ast.add_child(
+                        if_else_handle,
+                        Rule::BraceExpression,
+                        15,
+                        3,
+                    );
 
                     // c
                     add_terminal_expression(
                         &mut expected_ast,
                         brace_expression,
                         Some(Token::Symbol("c".to_owned())),
+                        16,
+                        1,
                     );
                 }
 
                 // else
                 {
-                    let expression_handle = expected_ast
-                        .add_child(if_else_handle, Rule::Expression);
-                    let brace_expression = expected_ast
-                        .add_child(expression_handle, Rule::BraceExpression);
+                    let expression_handle = expected_ast.add_child(
+                        if_else_handle,
+                        Rule::Expression,
+                        18,
+                        3,
+                    );
+                    let brace_expression = expected_ast.add_child(
+                        expression_handle,
+                        Rule::BraceExpression,
+                        18,
+                        3,
+                    );
 
                     // e
                     add_terminal_expression(
                         &mut expected_ast,
                         brace_expression,
                         Some(Token::Symbol("e".to_owned())),
+                        19,
+                        1,
                     );
                 }
             }
@@ -2210,6 +2254,8 @@ fn assign_if_else_if() {
             &mut expected_ast,
             brace_expression_handle,
             None,
+            20,
+            0,
         );
 
         expected_ast
@@ -2218,104 +2264,181 @@ fn assign_if_else_if() {
     check_ast_equal(&ast, &expected_ast);
 }
 
+/// Adds a for loop to the ast that matches the following syntax
+/// for (a = 0; a < 10; a = a + 1;)
 fn add_for_loop_declaration(
     ast: &mut Ast,
     parent_handle: AstNodeHandle,
-) -> AstNodeHandle {
-    let for_handle = ast.add_child(parent_handle, Rule::ForLoop);
+    for_loop_start: usize,
+) -> (AstNodeHandle, usize) {
+    let declaration_len = 17;
+    let for_handle = ast.add_child(
+        parent_handle,
+        Rule::ForLoop,
+        for_loop_start,
+        declaration_len,
+    );
 
     // init statement
     add_assignment_statement(
         ast,
         for_handle,
         Token::Symbol("a".to_owned()),
+        for_loop_start + 2,
         Token::IntLiteral(0),
     );
 
     // condition statement
     {
-        let condition_statement = ast.add_child(for_handle, Rule::Statement);
-        let condition_expression =
-            ast.add_child(condition_statement, Rule::Expression);
+        let condition_statement_start = for_loop_start + 6;
+        let condition_statement = ast.add_child(
+            for_handle,
+            Rule::Statement,
+            condition_statement_start,
+            4,
+        );
+        let condition_expression = ast.add_child(
+            condition_statement,
+            Rule::Expression,
+            condition_statement_start,
+            3,
+        );
         let comparison_handle = ast.add_child_with_data(
             condition_expression,
             Rule::Comparison,
             Some(Token::LessThan),
+            condition_statement_start,
+            3,
         );
 
         ast.add_terminal_child(
             comparison_handle,
             Some(Token::Symbol("a".to_owned())),
+            condition_statement_start,
+            1,
         );
 
         // terminal side
-        ast.add_terminal_child(comparison_handle, Some(Token::IntLiteral(10)));
+        ast.add_terminal_child(
+            comparison_handle,
+            Some(Token::IntLiteral(10)),
+            condition_statement_start + 2,
+            1,
+        );
     }
     // increment
     {
-        let statement_handle = ast.add_child(for_handle, Rule::Statement);
+        let increment_statement_start = for_loop_start + 10;
+        let statement_handle = ast.add_child(
+            for_handle,
+            Rule::Statement,
+            increment_statement_start,
+            6,
+        );
 
         // lhs
         add_terminal_expression(
             ast,
             statement_handle,
             Some(Token::Symbol("a".to_owned())),
+            increment_statement_start,
+            1,
         );
 
         // rhs
         {
-            let expression_handle =
-                ast.add_child(statement_handle, Rule::Expression);
+            let expression_handle = ast.add_child(
+                statement_handle,
+                Rule::Expression,
+                increment_statement_start + 2,
+                3,
+            );
             add_expected_add_child(
                 ast,
                 expression_handle,
                 Token::Symbol("a".to_owned()),
+                increment_statement_start + 2,
                 Token::IntLiteral(1),
             )
         }
     }
 
-    for_handle
+    (for_handle, declaration_len)
 }
 
+/// Uses add_for_loop_declaration to make a basic for loop and has the following brace expression
+/// {
+///     b = 2 * b;
+/// }
 fn add_basic_for_loop(
     ast: &mut Ast,
     parent_handle: AstNodeHandle,
+    for_loop_start: usize,
 ) -> AstNodeHandle {
-    let for_handle = add_for_loop_declaration(ast, parent_handle);
+    let (for_handle, declaration_len) =
+        add_for_loop_declaration(ast, parent_handle, for_loop_start);
 
     // brace_expression
     {
-        let brace_expression = ast.add_child(for_handle, Rule::BraceExpression);
+        let brace_expression_start = for_loop_start + declaration_len;
+        let brace_expression = ast.add_child(
+            for_handle,
+            Rule::BraceExpression,
+            brace_expression_start,
+            8,
+        );
         // brace statements
         {
-            let brace_statements =
-                ast.add_child(brace_expression, Rule::BraceStatements);
-            let statement_handle =
-                ast.add_child(brace_statements, Rule::Statement);
+            let statements_start = brace_expression_start + 1;
+            let brace_statements = ast.add_child(
+                brace_expression,
+                Rule::BraceStatements,
+                statements_start,
+                6,
+            );
+            let statement_handle = ast.add_child(
+                brace_statements,
+                Rule::Statement,
+                statements_start,
+                6,
+            );
 
             // statement lhs: assignment
             add_terminal_expression(
                 ast,
                 statement_handle,
                 Some(Token::Symbol("b".to_owned())),
+                statements_start,
+                1,
             );
 
             // statement rhs: expression
             {
-                let rhs_expression =
-                    ast.add_child(statement_handle, Rule::Expression);
+                let expression_start = statements_start + 2;
+                let rhs_expression = ast.add_child(
+                    statement_handle,
+                    Rule::Expression,
+                    expression_start,
+                    3,
+                );
                 add_expected_mult_child(
                     ast,
                     rhs_expression,
                     Token::IntLiteral(2),
+                    expression_start,
                     Token::Symbol("b".to_owned()),
                 );
             }
         }
 
         // expression
-        add_terminal_expression(ast, brace_expression, None);
+        add_terminal_expression(
+            ast,
+            brace_expression,
+            None,
+            for_loop_start + 7,
+            0,
+        );
     }
 
     for_handle
@@ -2335,8 +2458,8 @@ fn for_loop() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
-        add_basic_for_loop(&mut expected_ast, root_handle);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 25);
+        add_basic_for_loop(&mut expected_ast, root_handle, 0);
 
         expected_ast
     };
@@ -2408,60 +2531,84 @@ fn for_loop_no_init() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 16);
 
-        let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
+        let for_handle =
+            expected_ast.add_child(root_handle, Rule::ForLoop, 0, 16);
 
         // init statement
         {
             let statement_handle =
-                expected_ast.add_child(for_handle, Rule::Statement);
-            add_terminal_expression(&mut expected_ast, statement_handle, None);
+                expected_ast.add_child(for_handle, Rule::Statement, 1, 1);
+            add_terminal_expression(
+                &mut expected_ast,
+                statement_handle,
+                None,
+                1,
+                0,
+            );
         }
 
         // condition statement
         {
             let condition_statement =
-                expected_ast.add_child(for_handle, Rule::Statement);
-            let condition_expression =
-                expected_ast.add_child(condition_statement, Rule::Expression);
+                expected_ast.add_child(for_handle, Rule::Statement, 3, 4);
+            let condition_expression = expected_ast.add_child(
+                condition_statement,
+                Rule::Expression,
+                3,
+                3,
+            );
             let comparison_handle = expected_ast.add_child_with_data(
                 condition_expression,
                 Rule::Comparison,
                 Some(Token::LessThan),
+                3,
+                3,
             );
 
             expected_ast.add_terminal_child(
                 comparison_handle,
                 Some(Token::Symbol("a".to_owned())),
+                3,
+                1,
             );
 
             // terminal side
             expected_ast.add_terminal_child(
                 comparison_handle,
                 Some(Token::IntLiteral(10)),
+                5,
+                1,
             );
         }
         // increment
         {
             let statement_handle =
-                expected_ast.add_child(for_handle, Rule::Statement);
+                expected_ast.add_child(for_handle, Rule::Statement, 7, 7);
 
             // lhs
             add_terminal_expression(
                 &mut expected_ast,
                 statement_handle,
                 Some(Token::Symbol("a".to_owned())),
+                7,
+                1,
             );
 
             // rhs
             {
-                let expression_handle =
-                    expected_ast.add_child(statement_handle, Rule::Expression);
+                let expression_handle = expected_ast.add_child(
+                    statement_handle,
+                    Rule::Expression,
+                    9,
+                    3,
+                );
                 add_expected_add_child(
                     &mut expected_ast,
                     expression_handle,
                     Token::Symbol("a".to_owned()),
+                    9,
                     Token::IntLiteral(1),
                 )
             }
@@ -2469,11 +2616,21 @@ fn for_loop_no_init() {
 
         // brace_expression
         {
-            let brace_expression =
-                expected_ast.add_child(for_handle, Rule::BraceExpression);
+            let brace_expression = expected_ast.add_child(
+                for_handle,
+                Rule::BraceExpression,
+                14,
+                2,
+            );
 
             // expression
-            add_terminal_expression(&mut expected_ast, brace_expression, None);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression,
+                None,
+                15,
+                0,
+            );
         }
 
         expected_ast
