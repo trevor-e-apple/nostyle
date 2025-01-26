@@ -2664,36 +2664,51 @@ fn nested_assignment_in_brace_expressions() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 10);
 
         let brace_expression =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 10);
 
         // {a = 0;};
         {
-            let brace_statements =
-                expected_ast.add_child(brace_expression, Rule::BraceStatements);
+            let brace_statements = expected_ast.add_child(
+                brace_expression,
+                Rule::BraceStatements,
+                1,
+                7,
+            );
             let statement =
-                expected_ast.add_child(brace_statements, Rule::Statement);
+                expected_ast.add_child(brace_statements, Rule::Statement, 1, 7);
             let expression =
-                expected_ast.add_child(statement, Rule::Expression);
+                expected_ast.add_child(statement, Rule::Expression, 1, 6);
             let brace_expression =
-                expected_ast.add_child(expression, Rule::BraceExpression);
+                expected_ast.add_child(expression, Rule::BraceExpression, 1, 6);
 
             // a = 0;
             {
-                let brace_statements = expected_ast
-                    .add_child(brace_expression, Rule::BraceStatements);
+                let brace_statements = expected_ast.add_child(
+                    brace_expression,
+                    Rule::BraceStatements,
+                    2,
+                    4,
+                );
 
                 add_assignment_statement(
                     &mut expected_ast,
                     brace_statements,
                     Token::Symbol("a".to_owned()),
+                    2,
                     Token::IntLiteral(0),
                 );
             }
             // ending expression
-            add_terminal_expression(&mut expected_ast, brace_expression, None);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression,
+                None,
+                6,
+                0,
+            );
         }
 
         // ending expression
@@ -2701,6 +2716,8 @@ fn nested_assignment_in_brace_expressions() {
             &mut expected_ast,
             brace_expression,
             Some(Token::Symbol("a".to_owned())),
+            8,
+            0,
         );
 
         expected_ast
@@ -2722,67 +2739,98 @@ fn for_loop_brace() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
-        let for_handle = expected_ast.add_child(root_handle, Rule::ForLoop);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 28);
+        let for_handle =
+            expected_ast.add_child(root_handle, Rule::ForLoop, 0, 28);
 
         // init statement
         add_assignment_statement(
             &mut expected_ast,
             for_handle,
             Token::Symbol("a".to_owned()),
+            2,
             Token::IntLiteral(0),
         );
 
         // condition statement
         {
             let condition_statement =
-                expected_ast.add_child(for_handle, Rule::Statement);
-            let condition_expression =
-                expected_ast.add_child(condition_statement, Rule::Expression);
+                expected_ast.add_child(for_handle, Rule::Statement, 6, 4);
+            let condition_expression = expected_ast.add_child(
+                condition_statement,
+                Rule::Expression,
+                6,
+                3,
+            );
             let comparison_handle = expected_ast.add_child_with_data(
                 condition_expression,
                 Rule::Comparison,
                 Some(Token::LessThan),
+                6,
+                3,
             );
 
             expected_ast.add_terminal_child(
                 comparison_handle,
                 Some(Token::Symbol("a".to_owned())),
+                6,
+                1,
             );
 
             // terminal side
             expected_ast.add_terminal_child(
                 comparison_handle,
                 Some(Token::IntLiteral(10)),
+                8,
+                1,
             );
         }
 
         // increment
         {
             let statement_handle =
-                expected_ast.add_child(for_handle, Rule::Statement);
+                expected_ast.add_child(for_handle, Rule::Statement, 10, 10);
 
             // lhs
             add_terminal_expression(
                 &mut expected_ast,
                 statement_handle,
                 Some(Token::Symbol("a".to_owned())),
+                10,
+                1,
             );
 
             // rhs
             {
-                let expression_handle =
-                    expected_ast.add_child(statement_handle, Rule::Expression);
-                let brace_expression_handle = expected_ast
-                    .add_child(expression_handle, Rule::BraceExpression);
-                let end_expression_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::Expression);
-                let paren_group_handle = expected_ast
-                    .add_child(end_expression_handle, Rule::Expression);
+                let expression_handle = expected_ast.add_child(
+                    statement_handle,
+                    Rule::Expression,
+                    12,
+                    7,
+                );
+                let brace_expression_handle = expected_ast.add_child(
+                    expression_handle,
+                    Rule::BraceExpression,
+                    12,
+                    7,
+                );
+                let end_expression_handle = expected_ast.add_child(
+                    brace_expression_handle,
+                    Rule::Expression,
+                    13,
+                    5,
+                );
+                let paren_group_handle = expected_ast.add_child(
+                    end_expression_handle,
+                    Rule::Expression,
+                    14,
+                    3,
+                );
                 add_expected_add_child(
                     &mut expected_ast,
                     paren_group_handle,
                     Token::Symbol("a".to_owned()),
+                    14,
                     Token::IntLiteral(1),
                 )
             }
@@ -2790,37 +2838,62 @@ fn for_loop_brace() {
 
         // brace_expression
         {
-            let brace_expression =
-                expected_ast.add_child(for_handle, Rule::BraceExpression);
+            let brace_expression = expected_ast.add_child(
+                for_handle,
+                Rule::BraceExpression,
+                21,
+                8,
+            );
             // brace statements
             {
-                let brace_statements = expected_ast
-                    .add_child(brace_expression, Rule::BraceStatements);
-                let statement_handle =
-                    expected_ast.add_child(brace_statements, Rule::Statement);
+                let brace_statements = expected_ast.add_child(
+                    brace_expression,
+                    Rule::BraceStatements,
+                    22,
+                    6,
+                );
+                let statement_handle = expected_ast.add_child(
+                    brace_statements,
+                    Rule::Statement,
+                    22,
+                    6,
+                );
 
                 // statement lhs: assignment
                 add_terminal_expression(
                     &mut expected_ast,
                     statement_handle,
                     Some(Token::Symbol("b".to_owned())),
+                    22,
+                    1,
                 );
 
                 // statement rhs: expression
                 {
-                    let rhs_expression = expected_ast
-                        .add_child(statement_handle, Rule::Expression);
+                    let rhs_expression = expected_ast.add_child(
+                        statement_handle,
+                        Rule::Expression,
+                        24,
+                        3,
+                    );
                     add_expected_mult_child(
                         &mut expected_ast,
                         rhs_expression,
                         Token::IntLiteral(2),
+                        24,
                         Token::Symbol("b".to_owned()),
                     );
                 }
             }
 
             // expression
-            add_terminal_expression(&mut expected_ast, brace_expression, None);
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression,
+                None,
+                27,
+                0,
+            );
         }
 
         expected_ast
