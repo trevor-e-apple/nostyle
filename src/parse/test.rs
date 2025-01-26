@@ -2917,30 +2917,43 @@ fn brace_statements() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 14);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 14);
 
         // statements
         {
-            let statements_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
+            let statements_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                1,
+                12,
+            );
 
             // recursive statements
             {
-                let statements_handle = expected_ast
-                    .add_child(statements_handle, Rule::BraceStatements);
+                let statements_handle = expected_ast.add_child(
+                    statements_handle,
+                    Rule::BraceStatements,
+                    1,
+                    8,
+                );
 
                 // recursive statements
                 {
-                    let statements_handle = expected_ast
-                        .add_child(statements_handle, Rule::BraceStatements);
+                    let statements_handle = expected_ast.add_child(
+                        statements_handle,
+                        Rule::BraceStatements,
+                        1,
+                        4,
+                    );
 
                     // a = b;
                     add_assignment_statement(
                         &mut expected_ast,
                         statements_handle,
                         Token::Symbol("a".to_owned()),
+                        1,
                         Token::Symbol("b".to_owned()),
                     );
                 }
@@ -2950,6 +2963,7 @@ fn brace_statements() {
                     &mut expected_ast,
                     statements_handle,
                     Token::Symbol("c".to_owned()),
+                    5,
                     Token::Symbol("d".to_owned()),
                 );
             }
@@ -2959,6 +2973,7 @@ fn brace_statements() {
                 &mut expected_ast,
                 statements_handle,
                 Token::Symbol("e".to_owned()),
+                9,
                 Token::Symbol("f".to_owned()),
             );
         }
@@ -2968,6 +2983,8 @@ fn brace_statements() {
             &mut expected_ast,
             brace_expression_handle,
             None,
+            13,
+            0,
         );
 
         expected_ast
