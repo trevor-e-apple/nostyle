@@ -3015,18 +3015,30 @@ fn braced_statements_and_expression() {
 
         // statements
         {
-            let statements_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements, 1, 12);
+            let statements_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                1,
+                12,
+            );
 
             // recursive statements
             {
-                let statements_handle = expected_ast
-                    .add_child(statements_handle, Rule::BraceStatements, 1, 8);
+                let statements_handle = expected_ast.add_child(
+                    statements_handle,
+                    Rule::BraceStatements,
+                    1,
+                    8,
+                );
 
                 // recursive statements
                 {
-                    let statements_handle = expected_ast
-                        .add_child(statements_handle, Rule::BraceStatements, 1, 4);
+                    let statements_handle = expected_ast.add_child(
+                        statements_handle,
+                        Rule::BraceStatements,
+                        1,
+                        4,
+                    );
 
                     // a = b;
                     add_assignment_statement(
@@ -3097,18 +3109,30 @@ fn braced_statements_and_braced_expression() {
 
         // statements
         {
-            let statements_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements, 1, 12);
+            let statements_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                1,
+                12,
+            );
 
             // recursive statements
             {
-                let statements_handle = expected_ast
-                    .add_child(statements_handle, Rule::BraceStatements, 1, 8);
+                let statements_handle = expected_ast.add_child(
+                    statements_handle,
+                    Rule::BraceStatements,
+                    1,
+                    8,
+                );
 
                 // recursive statements
                 {
-                    let statements_handle = expected_ast
-                        .add_child(statements_handle, Rule::BraceStatements, 1, 4);
+                    let statements_handle = expected_ast.add_child(
+                        statements_handle,
+                        Rule::BraceStatements,
+                        1,
+                        4,
+                    );
 
                     // a = b;
                     add_assignment_statement(
@@ -3142,15 +3166,27 @@ fn braced_statements_and_braced_expression() {
 
         // expression at the end
         {
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression, 13, 7);
-            let brace_expression_handle = expected_ast
-                .add_child(expression_handle, Rule::BraceExpression, 13, 7);
+            let expression_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::Expression,
+                13,
+                7,
+            );
+            let brace_expression_handle = expected_ast.add_child(
+                expression_handle,
+                Rule::BraceExpression,
+                13,
+                7,
+            );
 
             // statements
             {
-                let statements_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::BraceStatements, 14, 4);
+                let statements_handle = expected_ast.add_child(
+                    brace_expression_handle,
+                    Rule::BraceStatements,
+                    14,
+                    4,
+                );
 
                 // g = f;
                 add_assignment_statement(
@@ -3167,8 +3203,8 @@ fn braced_statements_and_braced_expression() {
                 &mut expected_ast,
                 brace_expression_handle,
                 Some(Token::Symbol("g".to_owned())),
-                18, 
-                1
+                18,
+                1,
             );
         }
 
@@ -3184,25 +3220,35 @@ fn unary_expansion() {
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 4);
 
         let unary_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::Unary,
             Some(Token::Minus),
+            0,
+            4,
         );
         let unary_handle = expected_ast.add_child_with_data(
             unary_handle,
             Rule::Unary,
             Some(Token::Minus),
+            1,
+            3,
         );
         let unary_handle = expected_ast.add_child_with_data(
             unary_handle,
             Rule::Unary,
             Some(Token::Minus),
+            2,
+            2,
         );
-        expected_ast
-            .add_terminal_child(unary_handle, Some(Token::IntLiteral(1)));
+        expected_ast.add_terminal_child(
+            unary_handle,
+            Some(Token::IntLiteral(1)),
+            3,
+            1,
+        );
 
         expected_ast
     };
@@ -3218,12 +3264,14 @@ fn add_negative_number_lhs() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 4);
 
         let plus_minus_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
+            0,
+            4,
         );
 
         // LHS
@@ -3232,14 +3280,24 @@ fn add_negative_number_lhs() {
                 plus_minus_handle,
                 Rule::Unary,
                 Some(Token::Minus),
+                0,
+                2,
             );
-            expected_ast
-                .add_terminal_child(unary_handle, Some(Token::IntLiteral(1)));
+            expected_ast.add_terminal_child(
+                unary_handle,
+                Some(Token::IntLiteral(1)),
+                1,
+                1,
+            );
         }
 
         // RHS
-        expected_ast
-            .add_terminal_child(plus_minus_handle, Some(Token::IntLiteral(1)));
+        expected_ast.add_terminal_child(
+            plus_minus_handle,
+            Some(Token::IntLiteral(1)),
+            3,
+            1,
+        );
 
         expected_ast
     };
@@ -3256,17 +3314,23 @@ fn add_negative_number_rhs() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 4);
 
         let plus_minus_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
+            0,
+            4,
         );
 
         // LHS
-        expected_ast
-            .add_terminal_child(plus_minus_handle, Some(Token::IntLiteral(1)));
+        expected_ast.add_terminal_child(
+            plus_minus_handle,
+            Some(Token::IntLiteral(1)),
+            0,
+            1,
+        );
 
         // RHS
         {
@@ -3274,9 +3338,15 @@ fn add_negative_number_rhs() {
                 plus_minus_handle,
                 Rule::Unary,
                 Some(Token::Minus),
+                2,
+                2,
             );
-            expected_ast
-                .add_terminal_child(unary_handle, Some(Token::IntLiteral(1)));
+            expected_ast.add_terminal_child(
+                unary_handle,
+                Some(Token::IntLiteral(1)),
+                3,
+                1,
+            );
         }
 
         expected_ast
