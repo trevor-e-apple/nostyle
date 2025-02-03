@@ -3364,12 +3364,14 @@ fn add_negative_number_lhs_unary_expansion() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 5);
 
         let plus_minus_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
+            0,
+            5,
         );
 
         // LHS
@@ -3378,19 +3380,31 @@ fn add_negative_number_lhs_unary_expansion() {
                 plus_minus_handle,
                 Rule::Unary,
                 Some(Token::Minus),
+                0,
+                3,
             );
             let unary_handle = expected_ast.add_child_with_data(
                 unary_handle,
                 Rule::Unary,
                 Some(Token::Minus),
+                1,
+                2,
             );
-            expected_ast
-                .add_terminal_child(unary_handle, Some(Token::IntLiteral(1)));
+            expected_ast.add_terminal_child(
+                unary_handle,
+                Some(Token::IntLiteral(1)),
+                2,
+                1,
+            );
         }
 
         // RHS
-        expected_ast
-            .add_terminal_child(plus_minus_handle, Some(Token::IntLiteral(1)));
+        expected_ast.add_terminal_child(
+            plus_minus_handle,
+            Some(Token::IntLiteral(1)),
+            4,
+            1,
+        );
 
         expected_ast
     };
@@ -3407,17 +3421,23 @@ fn add_negative_number_rhs_unary_expansion() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 5);
 
         let plus_minus_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::PlusMinus,
             Some(Token::Plus),
+            0,
+            5,
         );
 
         // LHS
-        expected_ast
-            .add_terminal_child(plus_minus_handle, Some(Token::IntLiteral(1)));
+        expected_ast.add_terminal_child(
+            plus_minus_handle,
+            Some(Token::IntLiteral(1)),
+            0,
+            1,
+        );
 
         // RHS
         {
@@ -3425,14 +3445,22 @@ fn add_negative_number_rhs_unary_expansion() {
                 plus_minus_handle,
                 Rule::Unary,
                 Some(Token::Minus),
+                2,
+                3,
             );
             let unary_handle = expected_ast.add_child_with_data(
                 unary_handle,
                 Rule::Unary,
                 Some(Token::Minus),
+                3,
+                2,
             );
-            expected_ast
-                .add_terminal_child(unary_handle, Some(Token::IntLiteral(1)));
+            expected_ast.add_terminal_child(
+                unary_handle,
+                Some(Token::IntLiteral(1)),
+                4,
+                1,
+            );
         }
 
         expected_ast
@@ -3442,42 +3470,84 @@ fn add_negative_number_rhs_unary_expansion() {
 }
 
 /// Constructs expected ast for binary op and assignment composition
-fn binary_op_and_assign_expected_ast(rule: Rule, data: Token) -> Ast {
+fn binary_op_and_assign_expected_ast(
+    rule: Rule,
+    data: Token,
+    expression_start: usize,
+) -> Ast {
+    let expression_len = 6;
     let mut expected_ast = Ast::new();
 
-    let root = expected_ast.add_root(Rule::Expression);
-    let brace_expression = expected_ast.add_child(root, Rule::BraceExpression);
+    let root = expected_ast.add_root(
+        Rule::Expression,
+        expression_start,
+        expression_len,
+    );
+    let brace_expression = expected_ast.add_child(
+        root,
+        Rule::BraceExpression,
+        expression_start,
+        expression_len,
+    );
 
-    let brace_statements =
-        expected_ast.add_child(brace_expression, Rule::BraceStatements);
+    let statements_start = expression_start + 1;
+    let brace_statements = expected_ast.add_child(
+        brace_expression,
+        Rule::BraceStatements,
+        statements_start,
+        4,
+    );
     {
-        let statement =
-            expected_ast.add_child(brace_statements, Rule::Statement);
+        let statement = expected_ast.add_child(
+            brace_statements,
+            Rule::Statement,
+            statements_start,
+            4,
+        );
 
         // LHS
         add_terminal_expression(
             &mut expected_ast,
             statement,
             Some(Token::Symbol("a".to_owned())),
+            statements_start,
+            1,
         );
 
         // RHS
-        let rhs = expected_ast.add_child(statement, Rule::Expression);
-        let binary_op_node_handle =
-            expected_ast.add_child_with_data(rhs, rule, Some(data));
+        let rhs_start = statements_start + 2;
+        let rhs =
+            expected_ast.add_child(statement, Rule::Expression, rhs_start, 1);
+        let binary_op_node_handle = expected_ast.add_child_with_data(
+            rhs,
+            rule,
+            Some(data),
+            rhs_start,
+            1,
+        );
         add_terminal_expression(
             &mut expected_ast,
             binary_op_node_handle,
             Some(Token::Symbol("a".to_owned())),
+            statements_start,
+            1,
         );
         add_terminal_expression(
             &mut expected_ast,
             binary_op_node_handle,
             Some(Token::Symbol("b".to_owned())),
+            rhs_start,
+            1,
         );
     }
 
-    add_terminal_expression(&mut expected_ast, brace_expression, None);
+    add_terminal_expression(
+        &mut expected_ast,
+        brace_expression,
+        None,
+        statements_start + 4,
+        0,
+    );
 
     expected_ast
 }
@@ -3487,7 +3557,7 @@ fn binary_op_and_assign() {
     let tokens = tokenize("{a += b;}").expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast =
-        binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Plus);
+        binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Plus, 0);
 
     check_ast_equal(&ast, &expected_ast);
 }
@@ -3497,7 +3567,7 @@ fn binary_op_and_assign_minus() {
     let tokens = tokenize("{a -= b;}").expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast =
-        binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Minus);
+        binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Minus, 0);
 
     check_ast_equal(&ast, &expected_ast);
 }
@@ -3507,7 +3577,7 @@ fn binary_op_and_assign_times() {
     let tokens = tokenize("{a *= b;}").expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast =
-        binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Times);
+        binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Times, 0);
 
     check_ast_equal(&ast, &expected_ast);
 }
@@ -3517,7 +3587,7 @@ fn binary_op_and_assign_div() {
     let tokens = tokenize("{a /= b;}").expect("Unexpected tokenize error");
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast =
-        binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Divide);
+        binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Divide, 0);
 
     check_ast_equal(&ast, &expected_ast);
 }
