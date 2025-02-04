@@ -3599,61 +3599,83 @@ fn binary_op_and_assign_rhs_expression() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root = expected_ast.add_root(Rule::Expression);
+        let root = expected_ast.add_root(Rule::Expression, 0, 8);
         let brace_expression =
-            expected_ast.add_child(root, Rule::BraceExpression);
+            expected_ast.add_child(root, Rule::BraceExpression, 0, 8);
 
-        let brace_statements =
-            expected_ast.add_child(brace_expression, Rule::BraceStatements);
+        let brace_statements = expected_ast.add_child(
+            brace_expression,
+            Rule::BraceStatements,
+            1,
+            6,
+        );
         {
             let statement =
-                expected_ast.add_child(brace_statements, Rule::Statement);
+                expected_ast.add_child(brace_statements, Rule::Statement, 1, 6);
 
             // LHS
             add_terminal_expression(
                 &mut expected_ast,
                 statement,
                 Some(Token::Symbol("a".to_owned())),
+                1,
+                1,
             );
 
             // RHS
-            let rhs = expected_ast.add_child(statement, Rule::Expression);
+            let rhs = expected_ast.add_child(statement, Rule::Expression, 3, 3);
             let plus_minus = expected_ast.add_child_with_data(
                 rhs,
                 Rule::PlusMinus,
                 Some(Token::Plus),
+                3,
+                3,
             );
             add_terminal_expression(
                 &mut expected_ast,
                 plus_minus,
                 Some(Token::Symbol("a".to_owned())),
+                1,
+                1,
             );
 
             // b - c
             {
                 let expression =
-                    expected_ast.add_child(plus_minus, Rule::Expression);
+                    expected_ast.add_child(plus_minus, Rule::Expression, 3, 3);
                 let plus_minus = expected_ast.add_child_with_data(
                     expression,
                     Rule::PlusMinus,
                     Some(Token::Minus),
+                    3,
+                    3,
                 );
 
                 // b
                 expected_ast.add_terminal_child(
                     plus_minus,
                     Some(Token::Symbol("b".to_owned())),
+                    3,
+                    1,
                 );
 
                 // c
                 expected_ast.add_terminal_child(
                     plus_minus,
                     Some(Token::Symbol("c".to_owned())),
+                    5,
+                    1,
                 );
             }
         }
 
-        add_terminal_expression(&mut expected_ast, brace_expression, None);
+        add_terminal_expression(
+            &mut expected_ast,
+            brace_expression,
+            None,
+            7,
+            0,
+        );
 
         expected_ast
     };
@@ -3745,28 +3767,46 @@ fn statement_lhs_is_expression() {
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 8);
         let brace_expression =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 8);
 
         // statements
         {
-            let brace_statements =
-                expected_ast.add_child(brace_expression, Rule::BraceStatements);
+            let brace_statements = expected_ast.add_child(
+                brace_expression,
+                Rule::BraceStatements,
+                1,
+                6,
+            );
             let statement_handle =
-                expected_ast.add_child(brace_statements, Rule::Statement);
+                expected_ast.add_child(brace_statements, Rule::Statement, 1, 6);
 
             // LHS
             {
-                let expression_handle =
-                    expected_ast.add_child(statement_handle, Rule::Expression);
-                let brace_expression = expected_ast
-                    .add_child(expression_handle, Rule::BraceExpression);
-                let expression_handle =
-                    expected_ast.add_child(brace_expression, Rule::Expression);
+                let expression_handle = expected_ast.add_child(
+                    statement_handle,
+                    Rule::Expression,
+                    1,
+                    3,
+                );
+                let brace_expression = expected_ast.add_child(
+                    expression_handle,
+                    Rule::BraceExpression,
+                    1,
+                    3,
+                );
+                let expression_handle = expected_ast.add_child(
+                    brace_expression,
+                    Rule::Expression,
+                    2,
+                    1,
+                );
                 expected_ast.add_terminal_child(
                     expression_handle,
                     Some(Token::Symbol("a".to_owned())),
+                    2,
+                    1,
                 );
             }
 
@@ -3775,10 +3815,18 @@ fn statement_lhs_is_expression() {
                 &mut expected_ast,
                 statement_handle,
                 Some(Token::IntLiteral(1)),
+                5,
+                1,
             );
         }
         // expression
-        add_terminal_expression(&mut expected_ast, brace_expression, None);
+        add_terminal_expression(
+            &mut expected_ast,
+            brace_expression,
+            None,
+            7,
+            0,
+        );
         expected_ast
     };
 
@@ -3791,33 +3839,53 @@ fn statement_lhs_is_function() {
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 9);
         let brace_expression =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 9);
 
         // statements
         {
-            let brace_statements =
-                expected_ast.add_child(brace_expression, Rule::BraceStatements);
+            let brace_statements = expected_ast.add_child(
+                brace_expression,
+                Rule::BraceStatements,
+                1,
+                7,
+            );
             let statement_handle =
-                expected_ast.add_child(brace_statements, Rule::Statement);
+                expected_ast.add_child(brace_statements, Rule::Statement, 1, 7);
 
             // LHS
             {
-                let expression_handle =
-                    expected_ast.add_child(statement_handle, Rule::Expression);
+                let expression_handle = expected_ast.add_child(
+                    statement_handle,
+                    Rule::Expression,
+                    1,
+                    4,
+                );
                 let fun_call_handle = expected_ast.add_child_with_data(
                     expression_handle,
                     Rule::FunctionCall,
                     Some(Token::Symbol("fun".to_owned())),
+                    1,
+                    1,
                 );
-                let fun_arg_handle = expected_ast
-                    .add_child(fun_call_handle, Rule::FunctionArguments);
-                let expression_handle =
-                    expected_ast.add_child(fun_arg_handle, Rule::Expression);
+                let fun_arg_handle = expected_ast.add_child(
+                    fun_call_handle,
+                    Rule::FunctionArguments,
+                    3,
+                    1,
+                );
+                let expression_handle = expected_ast.add_child(
+                    fun_arg_handle,
+                    Rule::Expression,
+                    3,
+                    1,
+                );
                 expected_ast.add_terminal_child(
                     expression_handle,
                     Some(Token::Symbol("a".to_owned())),
+                    3,
+                    1,
                 );
             }
 
@@ -3826,10 +3894,18 @@ fn statement_lhs_is_function() {
                 &mut expected_ast,
                 statement_handle,
                 Some(Token::IntLiteral(1)),
+                6,
+                1,
             );
         }
         // expression
-        add_terminal_expression(&mut expected_ast, brace_expression, None);
+        add_terminal_expression(
+            &mut expected_ast,
+            brace_expression,
+            None,
+            8,
+            0,
+        );
         expected_ast
     };
 
