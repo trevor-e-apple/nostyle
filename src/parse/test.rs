@@ -3947,15 +3947,22 @@ fn add_function_call_no_arg(
     ast: &mut Ast,
     parent_handle: AstNodeHandle,
     function_name: String,
+    start: usize,
 ) {
     let function_call_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionCall,
         Some(Token::Symbol(function_name)),
+        start,
+        3,
     );
-    let args_handle =
-        ast.add_child(function_call_handle, Rule::FunctionArguments);
-    add_terminal_expression(ast, args_handle, None);
+    let args_handle = ast.add_child(
+        function_call_handle,
+        Rule::FunctionArguments,
+        start + 1,
+        2,
+    );
+    add_terminal_expression(ast, args_handle, None, start + 2, 0);
 }
 
 #[test]
@@ -3964,12 +3971,13 @@ fn function_call_no_arguments() {
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
 
         add_function_call_no_arg(
             &mut expected_ast,
             root_handle,
             "test".to_owned(),
+            0,
         );
         expected_ast
     };
@@ -3982,15 +3990,28 @@ fn add_function_call_one_arg(
     parent_handle: AstNodeHandle,
     function_name: String,
     arg_name: String,
+    start: usize,
 ) {
     let function_call_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionCall,
         Some(Token::Symbol(function_name)),
+        start,
+        4,
     );
-    let args_handle =
-        ast.add_child(function_call_handle, Rule::FunctionArguments);
-    add_terminal_expression(ast, args_handle, Some(Token::Symbol(arg_name)));
+    let args_handle = ast.add_child(
+        function_call_handle,
+        Rule::FunctionArguments,
+        start + 1,
+        3,
+    );
+    add_terminal_expression(
+        ast,
+        args_handle,
+        Some(Token::Symbol(arg_name)),
+        start + 2,
+        1,
+    );
 }
 
 #[test]
@@ -4000,12 +4021,13 @@ fn function_call_one_argument() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 4);
         add_function_call_one_arg(
             &mut expected_ast,
             root_handle,
             "test".to_owned(),
             "me".to_owned(),
+            0,
         );
 
         expected_ast
@@ -4020,24 +4042,28 @@ fn function_call_two_arguments() {
     let ast = parse(&tokens).expect("Unexpected parse errror");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 6);
         let function_call_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionCall,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            6,
         );
         let args_handle = expected_ast
-            .add_child(function_call_handle, Rule::FunctionArguments);
+            .add_child(function_call_handle, Rule::FunctionArguments, 1, 5);
 
         // "me" argument
         {
             // recursive arg
             let args_handle =
-                expected_ast.add_child(args_handle, Rule::FunctionArguments);
+                expected_ast.add_child(args_handle, Rule::FunctionArguments, 2, 1);
             add_terminal_expression(
                 &mut expected_ast,
                 args_handle,
                 Some(Token::Symbol("me".to_owned())),
+                2,
+                1,
             );
         }
 
@@ -4046,6 +4072,8 @@ fn function_call_two_arguments() {
             &mut expected_ast,
             args_handle,
             Some(Token::Symbol("please".to_owned())),
+            4,
+            1,
         );
 
         expected_ast
