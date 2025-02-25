@@ -1206,7 +1206,7 @@ fn left_right_precedence() {
 #[test]
 fn add_mult_precedence() {
     let tokens = tokenize("a + b * c").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -1263,7 +1263,7 @@ fn add_mult_precedence() {
 fn nested_groups() {
     let tokens =
         tokenize("a * (b - (c + d))").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
@@ -1359,7 +1359,7 @@ fn nested_brace_expressions() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -1532,7 +1532,7 @@ fn nested_brace_expressions_brace_first() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 21);
@@ -1693,7 +1693,7 @@ fn nested_brace_expressions_brace_first() {
 fn if_only() {
     let tokens = tokenize("if (a + b) == c {d = c;}")
         .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 14);
@@ -1786,7 +1786,7 @@ fn if_else() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 20);
@@ -1917,7 +1917,7 @@ fn if_else_if() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -2098,7 +2098,7 @@ fn assign_if_else_if() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -2454,7 +2454,7 @@ fn for_loop() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -2527,7 +2527,7 @@ fn for_loop_two_statements() {
 fn for_loop_no_init() {
     let tokens = tokenize("for (; a < 10; a = a + 1;) {}")
         .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -2660,7 +2660,7 @@ fn for_loop_missing_rbrace() {
 #[test]
 fn nested_assignment_in_brace_expressions() {
     let tokens = tokenize("{{a = 0;}; a}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -2735,7 +2735,7 @@ fn for_loop_brace() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -2913,7 +2913,7 @@ fn brace_statements() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -3005,7 +3005,7 @@ fn braced_statements_and_expression() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -3100,7 +3100,7 @@ fn braced_statements_and_braced_expression() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 21);
@@ -3217,7 +3217,7 @@ fn braced_statements_and_braced_expression() {
 #[test]
 fn unary_expansion() {
     let tokens = tokenize("---1").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 4);
@@ -3260,7 +3260,7 @@ fn unary_expansion() {
 #[test]
 fn add_negative_number_lhs() {
     let tokens = tokenize("-1 + 1").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
@@ -3310,7 +3310,7 @@ fn add_negative_number_lhs() {
 #[test]
 fn add_negative_number_rhs() {
     let tokens = tokenize("1 + -1").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
@@ -3360,7 +3360,7 @@ fn add_negative_number_rhs() {
 #[test]
 fn add_negative_number_lhs_unary_expansion() {
     let tokens = tokenize("--1 + 1").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
@@ -3417,7 +3417,7 @@ fn add_negative_number_lhs_unary_expansion() {
 #[test]
 fn add_negative_number_rhs_unary_expansion() {
     let tokens = tokenize("1 + --1").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
@@ -3555,7 +3555,7 @@ fn binary_op_and_assign_expected_ast(
 #[test]
 fn binary_op_and_assign() {
     let tokens = tokenize("{a += b;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast =
         binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Plus, 0);
 
@@ -3565,7 +3565,7 @@ fn binary_op_and_assign() {
 #[test]
 fn binary_op_and_assign_minus() {
     let tokens = tokenize("{a -= b;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast =
         binary_op_and_assign_expected_ast(Rule::PlusMinus, Token::Minus, 0);
 
@@ -3575,7 +3575,7 @@ fn binary_op_and_assign_minus() {
 #[test]
 fn binary_op_and_assign_times() {
     let tokens = tokenize("{a *= b;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast =
         binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Times, 0);
 
@@ -3585,7 +3585,7 @@ fn binary_op_and_assign_times() {
 #[test]
 fn binary_op_and_assign_div() {
     let tokens = tokenize("{a /= b;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast =
         binary_op_and_assign_expected_ast(Rule::MultDiv, Token::Divide, 0);
 
@@ -3595,7 +3595,7 @@ fn binary_op_and_assign_div() {
 #[test]
 fn binary_op_and_assign_rhs_expression() {
     let tokens = tokenize("{a += b - c;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
@@ -3764,7 +3764,7 @@ fn multiple_errors_valid() {
 #[test]
 fn statement_lhs_is_expression() {
     let tokens = tokenize("{{a} = 1;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 8);
@@ -3836,7 +3836,7 @@ fn statement_lhs_is_expression() {
 #[test]
 fn statement_lhs_is_function() {
     let tokens = tokenize("{fun(a) = 1;}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 9);
@@ -3968,7 +3968,7 @@ fn add_function_call_no_arg(
 #[test]
 fn function_call_no_arguments() {
     let tokens = tokenize("test()").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
@@ -4017,7 +4017,7 @@ fn add_function_call_one_arg(
 #[test]
 fn function_call_one_argument() {
     let tokens = tokenize("test(me)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -4039,7 +4039,7 @@ fn function_call_one_argument() {
 fn function_call_two_arguments() {
     let tokens =
         tokenize("test(me, please)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 6);
@@ -4160,7 +4160,7 @@ fn add_function_call_multiple_arguments(
 fn function_call_multiple_arguments() {
     let tokens = tokenize("test(me, please, thanks)")
         .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let expected_len = 8;
@@ -4186,7 +4186,7 @@ fn function_call_multiple_arguments() {
 #[test]
 fn function_call_trailing_comma_single_arg() {
     let tokens = tokenize("test(me,)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 5);
@@ -4206,7 +4206,7 @@ fn function_call_trailing_comma_single_arg() {
 fn function_call_trailing_comma() {
     let tokens = tokenize("test(me, please, thanks,)")
         .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let expected_len = 9;
@@ -4233,7 +4233,7 @@ fn function_calls_nested() {
     let tokens = tokenize("test(first_inner(a, b, c,), second_inner(d(e),))")
         .expect("Unexpected tokenize error");
 
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 21);
@@ -4309,31 +4309,42 @@ fn function_calls_nested() {
 fn function_call_argument_expression() {
     let tokens =
         tokenize("test(1 + 2, please,)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 9);
         let function_call_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionCall,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            9,
         );
-        let args_handle = expected_ast
-            .add_child(function_call_handle, Rule::FunctionArguments);
+        let args_handle = expected_ast.add_child(
+            function_call_handle,
+            Rule::FunctionArguments,
+            1,
+            8,
+        );
 
         // 1 + 2 argument
         {
             // recursive arg
-            let args_handle =
-                expected_ast.add_child(args_handle, Rule::FunctionArguments);
+            let args_handle = expected_ast.add_child(
+                args_handle,
+                Rule::FunctionArguments,
+                2,
+                3,
+            );
 
             // 1 + 2
             let expression_handle =
-                expected_ast.add_child(args_handle, Rule::Expression);
+                expected_ast.add_child(args_handle, Rule::Expression, 2, 3);
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
                 Token::IntLiteral(1),
+                2,
                 Token::IntLiteral(2),
             );
         }
@@ -4343,6 +4354,8 @@ fn function_call_argument_expression() {
             &mut expected_ast,
             args_handle,
             Some(Token::Symbol("please".to_owned())),
+            6,
+            1,
         );
 
         expected_ast
@@ -4354,34 +4367,49 @@ fn function_call_argument_expression() {
 fn function_call_parens_in_expression() {
     let tokens =
         tokenize("test((1 + 2), please,)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 11);
         let function_call_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionCall,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            11,
         );
-        let args_handle = expected_ast
-            .add_child(function_call_handle, Rule::FunctionArguments);
+        let args_handle = expected_ast.add_child(
+            function_call_handle,
+            Rule::FunctionArguments,
+            1,
+            10,
+        );
 
         // (1 + 2) argument
         {
             // recursive arg
-            let args_handle =
-                expected_ast.add_child(args_handle, Rule::FunctionArguments);
+            let args_handle = expected_ast.add_child(
+                args_handle,
+                Rule::FunctionArguments,
+                2,
+                5,
+            );
 
             // (1 + 2)
             let expression_handle =
-                expected_ast.add_child(args_handle, Rule::Expression);
-            let expression_handle =
-                expected_ast.add_child(expression_handle, Rule::Expression);
+                expected_ast.add_child(args_handle, Rule::Expression, 2, 5);
+            let expression_handle = expected_ast.add_child(
+                expression_handle,
+                Rule::Expression,
+                3,
+                3,
+            );
             // 1 + 2
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
                 Token::IntLiteral(1),
+                3,
                 Token::IntLiteral(2),
             );
         }
@@ -4391,6 +4419,8 @@ fn function_call_parens_in_expression() {
             &mut expected_ast,
             args_handle,
             Some(Token::Symbol("please".to_owned())),
+            8,
+            1,
         );
 
         expected_ast
@@ -4402,7 +4432,7 @@ fn function_call_parens_in_expression() {
 fn function_call_braced_expression() {
     let tokens =
         tokenize("test({1 + 2}, please,)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression);
@@ -4459,7 +4489,7 @@ fn multiple_function_calls() {
     }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression);
@@ -4533,7 +4563,7 @@ fn multiple_function_calls() {
 fn function_call_no_arg_comma() {
     // TODO: a warning here may be a good idea
     let tokens = tokenize("test(,)").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression);
@@ -4658,7 +4688,7 @@ fn function_def_non_symbol_params_trailing_comma() {
 #[test]
 fn empty_function() {
     let tokens = tokenize("fn test() {}").expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -4703,7 +4733,7 @@ fn multiple_function_defs() {
     ",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let param_one_name = "a".to_owned();
@@ -4779,7 +4809,7 @@ fn multiple_function_defs() {
 fn function_with_returns() {
     let tokens = tokenize("fn test() returns int32 {5}")
         .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -4826,7 +4856,7 @@ fn for_loop_function() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -4879,7 +4909,7 @@ fn expression_for_loop_function() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -4921,7 +4951,7 @@ fn function_definition_no_params() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -5012,7 +5042,7 @@ fn function_definition_one_param() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -5112,7 +5142,7 @@ fn function_definition_multiple_params() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -5141,7 +5171,7 @@ fn function_definition_trailing_comma_one_arg() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -5168,7 +5198,7 @@ fn function_definition_trailing_comma_multiple_args() {
         }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
@@ -5282,7 +5312,7 @@ fn function_definition_return() {
     }",
     )
     .expect("Unexpected tokenize error");
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
@@ -5344,7 +5374,7 @@ fn function_definition_multiple_returns() {
     )
     .expect("Unexpected tokenize error");
 
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
@@ -5472,7 +5502,7 @@ fn function_definition_if_else() {
     )
     .expect("Unexpected tokenize error");
 
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
@@ -5572,7 +5602,7 @@ fn function_definition_early_return() {
     )
     .expect("Unexpected tokenize error");
 
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
@@ -5697,7 +5727,7 @@ fn function_definition_final_expression() {
     )
     .expect("Unexpected tokenize error");
 
-    let ast = parse(&tokens).expect("Unexpected parse errror");
+    let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let function_name = "test".to_owned();
         let param1_name = "a".to_owned();
