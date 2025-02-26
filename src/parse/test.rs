@@ -4435,33 +4435,52 @@ fn function_call_braced_expression() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 11);
         let function_call_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionCall,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            11,
         );
-        let args_handle = expected_ast
-            .add_child(function_call_handle, Rule::FunctionArguments);
+        let args_handle = expected_ast.add_child(
+            function_call_handle,
+            Rule::FunctionArguments,
+            1,
+            10,
+        );
 
         // {1 + 2} argument
         {
             // recursive arg
-            let args_handle =
-                expected_ast.add_child(args_handle, Rule::FunctionArguments);
+            let args_handle = expected_ast.add_child(
+                args_handle,
+                Rule::FunctionArguments,
+                2,
+                5,
+            );
 
             // {1 + 2}
             let expression_handle =
-                expected_ast.add_child(args_handle, Rule::Expression);
-            let brace_expression_handle = expected_ast
-                .add_child(expression_handle, Rule::BraceExpression);
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression);
+                expected_ast.add_child(args_handle, Rule::Expression, 2, 5);
+            let brace_expression_handle = expected_ast.add_child(
+                expression_handle,
+                Rule::BraceExpression,
+                2,
+                5,
+            );
+            let expression_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::Expression,
+                3,
+                3,
+            );
             // 1 + 2
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
                 Token::IntLiteral(1),
+                3,
                 Token::IntLiteral(2),
             );
         }
@@ -4471,6 +4490,8 @@ fn function_call_braced_expression() {
             &mut expected_ast,
             args_handle,
             Some(Token::Symbol("please".to_owned())),
+            8,
+            1,
         );
 
         expected_ast
@@ -4492,57 +4513,90 @@ fn multiple_function_calls() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 23);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression);
-        let brace_statements_handle = expected_ast
-            .add_child(brace_expression_handle, Rule::BraceStatements);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 23);
+        let brace_statements_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::BraceStatements,
+            1,
+            11,
+        );
 
         // fun_a()
         {
             // recursive call
             let brace_statements_handle: AstNodeHandle = expected_ast
-                .add_child(brace_statements_handle, Rule::BraceStatements);
-            let statement_handle = expected_ast
-                .add_child(brace_statements_handle, Rule::Statement);
+                .add_child(
+                    brace_statements_handle,
+                    Rule::BraceStatements,
+                    1,
+                    6,
+                );
+            let statement_handle = expected_ast.add_child(
+                brace_statements_handle,
+                Rule::Statement,
+                1,
+                6,
+            );
 
             // LHS
             add_terminal_expression(
                 &mut expected_ast,
                 statement_handle,
                 Some(Token::Symbol("a".to_owned())),
+                1,
+                1,
             );
 
             // RHS
             {
-                let expression_handle =
-                    expected_ast.add_child(statement_handle, Rule::Expression);
+                let expression_handle = expected_ast.add_child(
+                    statement_handle,
+                    Rule::Expression,
+                    3,
+                    2,
+                );
                 add_function_call_no_arg(
                     &mut expected_ast,
                     expression_handle,
                     "fun_a".to_owned(),
+                    3,
                 );
             }
         }
 
         // fun_b(b)
         {
-            let statement_handle = expected_ast
-                .add_child(brace_statements_handle, Rule::Statement);
-            let expression_handle =
-                expected_ast.add_child(statement_handle, Rule::Expression);
+            let statement_handle = expected_ast.add_child(
+                brace_statements_handle,
+                Rule::Statement,
+                7,
+                4,
+            );
+            let expression_handle = expected_ast.add_child(
+                statement_handle,
+                Rule::Expression,
+                7,
+                4,
+            );
             add_function_call_one_arg(
                 &mut expected_ast,
                 expression_handle,
                 "fun_b".to_owned(),
                 "b".to_owned(),
+                7,
             );
         }
 
         // return expression
         {
-            let expression_handle = expected_ast
-                .add_child(brace_expression_handle, Rule::Expression);
+            let expression_handle = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::Expression,
+                12,
+                9,
+            );
             add_function_call_multiple_arguments(
                 &mut expected_ast,
                 expression_handle,
@@ -4550,6 +4604,8 @@ fn multiple_function_calls() {
                 "a".to_owned(),
                 "b".to_owned(),
                 "c".to_owned(),
+                12,
+                9,
             );
         }
 
