@@ -4622,18 +4622,28 @@ fn function_call_no_arg_comma() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 4);
         let function_call_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionCall,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            4,
         );
 
-        let function_arguments_handle = expected_ast
-            .add_child(function_call_handle, Rule::FunctionArguments);
-        let expression_handle =
-            expected_ast.add_child(function_arguments_handle, Rule::Expression);
-        expected_ast.add_terminal_child(expression_handle, None);
+        let function_arguments_handle = expected_ast.add_child(
+            function_call_handle,
+            Rule::FunctionArguments,
+            1,
+            1,
+        );
+        let expression_handle = expected_ast.add_child(
+            function_arguments_handle,
+            Rule::Expression,
+            1,
+            1,
+        );
+        expected_ast.add_terminal_child(expression_handle, None, 1, 0);
 
         expected_ast
     };
@@ -4749,24 +4759,36 @@ fn empty_function() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 6);
         let function_def_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionDef,
             Some(Token::Symbol("test".to_owned())),
+            1,
+            3,
         );
 
         // no parameters, so this has no children
-        expected_ast
-            .add_child(function_def_handle, Rule::FunctionDefParameters);
+        expected_ast.add_child(
+            function_def_handle,
+            Rule::FunctionDefParameters,
+            2,
+            2,
+        );
 
         // brace expression
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            4,
+            2,
+        );
         add_terminal_expression(
             &mut expected_ast,
             brace_expression_handle,
             None,
+            5,
+            0,
         );
 
         expected_ast
