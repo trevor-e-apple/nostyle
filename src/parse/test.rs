@@ -4910,31 +4910,55 @@ fn function_with_returns() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 9);
         let function_def_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionDef,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            9,
         );
 
         // no parameters, so this has no children
-        expected_ast
-            .add_child(function_def_handle, Rule::FunctionDefParameters);
+        expected_ast.add_child(
+            function_def_handle,
+            Rule::FunctionDefParameters,
+            2,
+            2,
+        );
 
-        let returns_data_handle =
-            expected_ast.add_child(function_def_handle, Rule::ReturnsData);
+        let returns_data_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::ReturnsData,
+            4,
+            2,
+        );
         expected_ast.add_terminal_child(
             returns_data_handle,
             Some(Token::Symbol("int32".to_owned())),
+            4,
+            2,
         );
 
         // brace expression
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression);
-        expected_ast
-            .add_terminal_child(expression_handle, Some(Token::IntLiteral(5)));
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            6,
+            3,
+        );
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            7,
+            1,
+        );
+        expected_ast.add_terminal_child(
+            expression_handle,
+            Some(Token::IntLiteral(5)),
+            7,
+            1,
+        );
 
         expected_ast
     };
@@ -4961,7 +4985,7 @@ fn for_loop_function() {
         let param_one = "a".to_owned();
         let param_two = "b".to_owned();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 38);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -4972,22 +4996,32 @@ fn for_loop_function() {
         );
 
         // brace expression
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            10,
+            27,
+        );
 
         // brace statements
-        let brace_statements = expected_ast
-            .add_child(brace_expression_handle, Rule::BraceStatements);
+        let brace_statements = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::BraceStatements,
+            0,
+            1,
+        );
         let statement_handle =
-            expected_ast.add_child(brace_statements, Rule::Statement);
+            expected_ast.add_child(brace_statements, Rule::Statement, 0, 1);
         let expression_handle =
-            expected_ast.add_child(statement_handle, Rule::Expression);
-        add_basic_for_loop(&mut expected_ast, expression_handle);
+            expected_ast.add_child(statement_handle, Rule::Expression, 0, 1);
+        add_basic_for_loop(&mut expected_ast, expression_handle, 0);
 
         add_terminal_expression(
             &mut expected_ast,
             brace_expression_handle,
             Some(Token::Symbol("b".to_owned())),
+            0,
+            1,
         );
 
         expected_ast
@@ -5014,7 +5048,7 @@ fn expression_for_loop_function() {
         let param_one = "a".to_owned();
         let param_two = "b".to_owned();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -5025,13 +5059,21 @@ fn expression_for_loop_function() {
         );
 
         // brace expression
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            0,
+            1,
+        );
 
         // trailing expression
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression);
-        add_basic_for_loop(&mut expected_ast, expression_handle);
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            0,
+            1,
+        );
+        add_basic_for_loop(&mut expected_ast, expression_handle, 0);
 
         expected_ast
     };
@@ -5052,26 +5094,41 @@ fn function_definition_no_params() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 9);
         let function_def_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::FunctionDef,
             Some(Token::Symbol("test".to_owned())),
+            0,
+            9,
         );
 
         // no parameters, so this has no children
-        expected_ast
-            .add_child(function_def_handle, Rule::FunctionDefParameters);
+        expected_ast.add_child(
+            function_def_handle,
+            Rule::FunctionDefParameters,
+            1,
+            2,
+        );
 
         // brace expression
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            4,
+            5,
+        );
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            5,
+            3,
+        );
         add_expected_add_child(
             &mut expected_ast,
             expression_handle,
             Token::Symbol("a".to_owned()),
+            5,
             Token::Symbol("b".to_owned()),
         );
 
@@ -5087,44 +5144,75 @@ fn add_one_param_function(
     function_name: String,
     param_type: String,
     param_name: String,
+    start: usize,
+    function_param_len: usize,
 ) {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
         Some(Token::Symbol(function_name)),
+        start,
+        function_param_len + 5,
     );
 
     // parameters
     {
-        let function_parameters_handle =
-            ast.add_child(function_def_handle, Rule::FunctionDefParameters);
+        let function_parameters_handle = ast.add_child(
+            function_def_handle,
+            Rule::FunctionDefParameters,
+            start + 2,
+            function_param_len,
+        );
 
         // recursive side
-        ast.add_child(function_parameters_handle, Rule::FunctionDefParameters);
+        ast.add_child(
+            function_parameters_handle,
+            Rule::FunctionDefParameters,
+            start + 3,
+            function_param_len,
+        );
 
         // non-recursive side
         {
-            let declaration_handle =
-                ast.add_child(function_parameters_handle, Rule::Declaration);
+            let declaration_handle = ast.add_child(
+                function_parameters_handle,
+                Rule::Declaration,
+                start + 4,
+                1,
+            );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param_type)),
+                start + 4,
+                1,
             );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param_name.clone())),
+                start + 4,
+                1,
             );
         }
     }
 
-    let brace_expression_handle =
-        ast.add_child(function_def_handle, Rule::BraceExpression);
-    let expression_handle =
-        ast.add_child(brace_expression_handle, Rule::Expression);
+    let brace_start = start + function_param_len;
+    let brace_expression_handle = ast.add_child(
+        function_def_handle,
+        Rule::BraceExpression,
+        brace_start,
+        5,
+    );
+    let expression_handle = ast.add_child(
+        brace_expression_handle,
+        Rule::Expression,
+        brace_start,
+        5,
+    );
     add_expected_add_child(
         ast,
         expression_handle,
         Token::Symbol(param_name.clone()),
+        brace_start + 1,
         Token::IntLiteral(1),
     );
 }
@@ -5143,13 +5231,15 @@ fn function_definition_one_param() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 11);
         add_one_param_function(
             &mut expected_ast,
             root_handle,
             "test".to_owned(),
             "int32".to_owned(),
             "a".to_owned(),
+            0,
+            4,
         );
         expected_ast
     };
@@ -5165,67 +5255,105 @@ fn add_two_param_function(
     param1_name: String,
     param2_type: String,
     param2_name: String,
+    start: usize,
+    param_len: usize,
 ) {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
         Some(Token::Symbol(function_name)),
+        start,
+        2 + param_len + 5,
     );
 
     // parameters
     {
-        let function_parameters_handle =
-            ast.add_child(function_def_handle, Rule::FunctionDefParameters);
+        let function_parameters_handle = ast.add_child(
+            function_def_handle,
+            Rule::FunctionDefParameters,
+            2,
+            param_len,
+        );
 
         // recursive side
         {
             let function_parameters_handle = ast.add_child(
                 function_parameters_handle,
                 Rule::FunctionDefParameters,
+                3,
+                2,
             );
 
             // recursive side
             ast.add_child(
                 function_parameters_handle,
                 Rule::FunctionDefParameters,
+                3,
+                2,
             );
 
             // non-recursive side
-            let declaration_handle =
-                ast.add_child(function_parameters_handle, Rule::Declaration);
+            let declaration_handle = ast.add_child(
+                function_parameters_handle,
+                Rule::Declaration,
+                3,
+                2,
+            );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param1_type)),
+                3,
+                1,
             );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param1_name.clone())),
+                4,
+                1,
             );
         }
 
         // non-recursive side
         {
-            let declaration_handle =
-                ast.add_child(function_parameters_handle, Rule::Declaration);
+            let declaration_handle = ast.add_child(
+                function_parameters_handle,
+                Rule::Declaration,
+                6,
+                2,
+            );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param2_type.clone())),
+                6,
+                1,
             );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param2_name.clone())),
+                7,
+                1,
             );
         }
     }
 
-    let brace_expression_handle =
-        ast.add_child(function_def_handle, Rule::BraceExpression);
-    let expression_handle =
-        ast.add_child(brace_expression_handle, Rule::Expression);
+    let brace_start = start + param_len;
+    let brace_expression_handle = ast.add_child(
+        function_def_handle,
+        Rule::BraceExpression,
+        brace_start,
+        5,
+    );
+    let expression_handle = ast.add_child(
+        brace_expression_handle,
+        Rule::Expression,
+        brace_start + 1,
+        3,
+    );
     add_expected_add_child(
         ast,
         expression_handle,
         Token::Symbol(param1_name.clone()),
+        brace_start + 1,
         Token::Symbol(param2_name.clone()),
     );
 }
@@ -5243,7 +5371,7 @@ fn function_definition_multiple_params() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 14);
         add_two_param_function(
             &mut expected_ast,
             root_handle,
@@ -5252,6 +5380,8 @@ fn function_definition_multiple_params() {
             "a".to_owned(),
             "int32".to_owned(),
             "b".to_owned(),
+            0,
+            7,
         );
         expected_ast
     };
@@ -5272,13 +5402,15 @@ fn function_definition_trailing_comma_one_arg() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 12);
         add_one_param_function(
             &mut expected_ast,
             root_handle,
             "test".to_owned(),
             "int32".to_owned(),
             "a".to_owned(),
+            0,
+            5,
         );
         expected_ast
     };
@@ -5299,7 +5431,7 @@ fn function_definition_trailing_comma_multiple_args() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 15);
         add_two_param_function(
             &mut expected_ast,
             root_handle,
@@ -5308,6 +5440,8 @@ fn function_definition_trailing_comma_multiple_args() {
             "a".to_owned(),
             "float32".to_owned(),
             "b".to_owned(),
+            0,
+            8,
         );
         expected_ast
     };
