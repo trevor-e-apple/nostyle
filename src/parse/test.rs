@@ -4825,8 +4825,12 @@ fn multiple_function_defs() {
 
         // recursive call
         {
-            let function_defs_handle = expected_ast
-                .add_child(function_defs_handle, Rule::FunctionDefs, 0, 11);
+            let function_defs_handle = expected_ast.add_child(
+                function_defs_handle,
+                Rule::FunctionDefs,
+                0,
+                11,
+            );
 
             let test1_handle = add_basic_function_declaration(
                 &mut expected_ast,
@@ -4836,14 +4840,18 @@ fn multiple_function_defs() {
                 &param_two_name,
             );
             // brace expression
-            let brace_expression_handle =
-                expected_ast.add_child(test1_handle, Rule::BraceExpression, 9, 2);
+            let brace_expression_handle = expected_ast.add_child(
+                test1_handle,
+                Rule::BraceExpression,
+                9,
+                2,
+            );
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
                 None,
                 10,
-                0
+                0,
             );
 
             let test2_handle = add_basic_function_declaration(
@@ -4854,8 +4862,12 @@ fn multiple_function_defs() {
                 &param_two_name,
             );
             // brace expression
-            let brace_expression_handle =
-                expected_ast.add_child(test2_handle, Rule::BraceExpression, 20, 2);
+            let brace_expression_handle = expected_ast.add_child(
+                test2_handle,
+                Rule::BraceExpression,
+                20,
+                2,
+            );
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
@@ -4881,7 +4893,7 @@ fn multiple_function_defs() {
             brace_expression_handle,
             None,
             32,
-            0
+            0,
         );
 
         expected_ast
