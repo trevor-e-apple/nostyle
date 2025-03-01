@@ -4819,14 +4819,14 @@ fn multiple_function_defs() {
 
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 33);
         let function_defs_handle =
-            expected_ast.add_child(root_handle, Rule::FunctionDefs);
+            expected_ast.add_child(root_handle, Rule::FunctionDefs, 0, 33);
 
         // recursive call
         {
             let function_defs_handle = expected_ast
-                .add_child(function_defs_handle, Rule::FunctionDefs);
+                .add_child(function_defs_handle, Rule::FunctionDefs, 0, 11);
 
             let test1_handle = add_basic_function_declaration(
                 &mut expected_ast,
@@ -4837,11 +4837,13 @@ fn multiple_function_defs() {
             );
             // brace expression
             let brace_expression_handle =
-                expected_ast.add_child(test1_handle, Rule::BraceExpression);
+                expected_ast.add_child(test1_handle, Rule::BraceExpression, 9, 2);
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
                 None,
+                10,
+                0
             );
 
             let test2_handle = add_basic_function_declaration(
@@ -4853,11 +4855,13 @@ fn multiple_function_defs() {
             );
             // brace expression
             let brace_expression_handle =
-                expected_ast.add_child(test2_handle, Rule::BraceExpression);
+                expected_ast.add_child(test2_handle, Rule::BraceExpression, 20, 2);
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
                 None,
+                21,
+                0,
             );
         }
 
@@ -4871,11 +4875,13 @@ fn multiple_function_defs() {
 
         // brace expression
         let brace_expression_handle =
-            expected_ast.add_child(test3_handle, Rule::BraceExpression);
+            expected_ast.add_child(test3_handle, Rule::BraceExpression, 31, 2);
         add_terminal_expression(
             &mut expected_ast,
             brace_expression_handle,
             None,
+            32,
+            0
         );
 
         expected_ast
