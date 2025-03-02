@@ -5549,7 +5549,7 @@ fn function_definition_return() {
         let param2_name = "b".to_owned();
 
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 16);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -6391,44 +6391,68 @@ fn parse_data_struct_multiple_fields() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 10);
         let data_structure_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::DataStructure,
             Some(Token::Symbol("data_struct".to_owned())),
+            0,
+            10,
         );
-        let declaration_statements_handle = expected_ast
-            .add_child(data_structure_handle, Rule::DeclarationStatements);
+        let declaration_statements_handle = expected_ast.add_child(
+            data_structure_handle,
+            Rule::DeclarationStatements,
+            2,
+            8,
+        );
 
         // LHS
         {
             let recursive_handle = expected_ast.add_child(
                 declaration_statements_handle,
                 Rule::DeclarationStatements,
+                3,
+                3,
             );
-            let declaration_statement =
-                expected_ast.add_child(recursive_handle, Rule::Declaration);
+            let declaration_statement = expected_ast.add_child(
+                recursive_handle,
+                Rule::Declaration,
+                3,
+                2,
+            );
 
             expected_ast.add_terminal_child(
                 declaration_statement,
                 Some(Token::Symbol("int32".to_owned())),
+                3,
+                1,
             );
             expected_ast.add_terminal_child(
                 declaration_statement,
                 Some(Token::Symbol("field".to_owned())),
+                4,
+                1,
             );
         }
 
         // RHS
-        let declaration_statement = expected_ast
-            .add_child(declaration_statements_handle, Rule::Declaration);
+        let declaration_statement = expected_ast.add_child(
+            declaration_statements_handle,
+            Rule::Declaration,
+            6,
+            3,
+        );
         expected_ast.add_terminal_child(
             declaration_statement,
             Some(Token::Symbol("uint32".to_owned())),
+            6,
+            1,
         );
         expected_ast.add_terminal_child(
             declaration_statement,
             Some(Token::Symbol("field2".to_owned())),
+            7,
+            1,
         );
 
         expected_ast
@@ -6443,23 +6467,34 @@ fn parse_struct_field_access() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
-        let primary_handle = expected_ast.add_child(root_handle, Rule::Primary);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 5);
+        let primary_handle =
+            expected_ast.add_child(root_handle, Rule::Primary, 0, 5);
         let struct_access_handle =
-            expected_ast.add_child(primary_handle, Rule::StructAccess);
+            expected_ast.add_child(primary_handle, Rule::StructAccess, 0, 5);
 
         // a.b
         {
-            let struct_access_handle = expected_ast
-                .add_child(struct_access_handle, Rule::StructAccess);
+            let struct_access_handle = expected_ast.add_child(
+                struct_access_handle,
+                Rule::StructAccess,
+                0,
+                3,
+            );
 
             // a
             {
-                let struct_access_handle = expected_ast
-                    .add_child(struct_access_handle, Rule::StructAccess);
+                let struct_access_handle = expected_ast.add_child(
+                    struct_access_handle,
+                    Rule::StructAccess,
+                    0,
+                    1,
+                );
                 expected_ast.add_terminal_child(
                     struct_access_handle,
                     Some(Token::Symbol("a".to_owned())),
+                    0,
+                    1,
                 );
             }
 
@@ -6467,6 +6502,8 @@ fn parse_struct_field_access() {
             expected_ast.add_terminal_child(
                 struct_access_handle,
                 Some(Token::Symbol("b".to_owned())),
+                2,
+                1,
             );
         }
 
@@ -6474,6 +6511,8 @@ fn parse_struct_field_access() {
         expected_ast.add_terminal_child(
             struct_access_handle,
             Some(Token::Symbol("c".to_owned())),
+            4,
+            1,
         );
 
         expected_ast
@@ -6488,23 +6527,34 @@ fn parse_struct_field_function_call() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
-        let primary_handle = expected_ast.add_child(root_handle, Rule::Primary);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 7);
+        let primary_handle =
+            expected_ast.add_child(root_handle, Rule::Primary, 0, 7);
         let struct_access_handle =
-            expected_ast.add_child(primary_handle, Rule::StructAccess);
+            expected_ast.add_child(primary_handle, Rule::StructAccess, 0, 7);
 
         // a.b()
         {
-            let struct_access_handle = expected_ast
-                .add_child(struct_access_handle, Rule::StructAccess);
+            let struct_access_handle = expected_ast.add_child(
+                struct_access_handle,
+                Rule::StructAccess,
+                0,
+                5,
+            );
 
             // a
             {
-                let struct_access_handle = expected_ast
-                    .add_child(struct_access_handle, Rule::StructAccess);
+                let struct_access_handle = expected_ast.add_child(
+                    struct_access_handle,
+                    Rule::StructAccess,
+                    0,
+                    1,
+                );
                 expected_ast.add_terminal_child(
                     struct_access_handle,
                     Some(Token::Symbol("a".to_owned())),
+                    0,
+                    1,
                 );
             }
 
@@ -6513,11 +6563,14 @@ fn parse_struct_field_function_call() {
                 let terminal_handle = expected_ast.add_child(
                     struct_access_handle,
                     Rule::StructAccessTerminal,
+                    2,
+                    3,
                 );
                 add_function_call_no_arg(
                     &mut expected_ast,
                     terminal_handle,
                     "b".to_owned(),
+                    2,
                 );
             }
         }
@@ -6526,6 +6579,8 @@ fn parse_struct_field_function_call() {
         expected_ast.add_terminal_child(
             struct_access_handle,
             Some(Token::Symbol("c".to_owned())),
+            6,
+            1,
         );
 
         expected_ast
