@@ -5477,55 +5477,86 @@ fn add_basic_function_declaration(
     function_name: &String,
     param1_name: &String,
     param2_name: &String,
+    start: usize,
+    param_len: usize,
 ) -> AstNodeHandle {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
         Some(Token::Symbol(function_name.clone())),
+        start,
+        2 + param_len,
     );
 
     // parameters
     {
-        let function_parameters_handle =
-            ast.add_child(function_def_handle, Rule::FunctionDefParameters);
+        let function_parameters_handle = ast.add_child(
+            function_def_handle,
+            Rule::FunctionDefParameters,
+            start + 2,
+            param_len,
+        );
 
         // recursive side
+        let first_param_start = start + 2;
         {
             let function_parameters_handle = ast.add_child(
                 function_parameters_handle,
                 Rule::FunctionDefParameters,
+                first_param_start,
+                2,
             );
 
             // recursive side
             ast.add_child(
                 function_parameters_handle,
                 Rule::FunctionDefParameters,
+                first_param_start,
+                2,
             );
 
             // non-recursive side
-            let declaration_handle =
-                ast.add_child(function_parameters_handle, Rule::Declaration);
+            let declaration_handle = ast.add_child(
+                function_parameters_handle,
+                Rule::Declaration,
+                first_param_start,
+                2,
+            );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol("int32".to_owned())),
+                first_param_start,
+                1,
             );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param1_name.clone())),
+                first_param_start + 1,
+                1,
             );
         }
 
         // non-recursive side
         {
-            let declaration_handle =
-                ast.add_child(function_parameters_handle, Rule::Declaration);
+            let second_param_start = first_param_start + 3;
+            let second_param_len = param_len - 3 - 2; // remove the first param and the parens to get this length
+            let declaration_handle = ast.add_child(
+                function_parameters_handle,
+                Rule::Declaration,
+                second_param_start,
+                second_param_len,
+            );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol("int32".to_owned())),
+                second_param_start,
+                1,
             );
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param2_name.clone())),
+                second_param_start,
+                1,
             );
         }
     }
@@ -5557,23 +5588,42 @@ fn function_definition_return() {
             &function_name,
             &param1_name,
             &param2_name,
+            0,
+            8,
         );
 
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            10,
+            7,
+        );
 
         // brace statements
         {
-            let brace_statements = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
-            let return_statement =
-                expected_ast.add_child(brace_statements, Rule::ReturnStatement);
-            let return_expression =
-                expected_ast.add_child(return_statement, Rule::Expression);
+            let brace_statements = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                11,
+                5,
+            );
+            let return_statement = expected_ast.add_child(
+                brace_statements,
+                Rule::ReturnStatement,
+                11,
+                5,
+            );
+            let return_expression = expected_ast.add_child(
+                return_statement,
+                Rule::Expression,
+                11,
+                4,
+            );
             add_expected_add_child(
                 &mut expected_ast,
                 return_expression,
                 Token::Symbol(param1_name.clone()),
+                12,
                 Token::Symbol(param2_name.clone()),
             );
         }
@@ -5582,6 +5632,8 @@ fn function_definition_return() {
             &mut expected_ast,
             brace_expression_handle,
             None,
+            16,
+            0,
         );
 
         expected_ast
@@ -5611,7 +5663,7 @@ fn function_definition_multiple_returns() {
         let param2_name = "b".to_owned();
 
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 28);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -5619,31 +5671,55 @@ fn function_definition_multiple_returns() {
             &function_name,
             &param1_name,
             &param2_name,
+            0,
+            8,
         );
 
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            10,
+            18,
+        );
 
         // brace statements
         {
-            let brace_statements = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
+            let brace_statements = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                11,
+                16,
+            );
 
-            let statement_handle =
-                expected_ast.add_child(brace_statements, Rule::Statement);
-            let expression_handle =
-                expected_ast.add_child(statement_handle, Rule::Expression);
+            let statement_handle = expected_ast.add_child(
+                brace_statements,
+                Rule::Statement,
+                11,
+                16,
+            );
+            let expression_handle = expected_ast.add_child(
+                statement_handle,
+                Rule::Expression,
+                11,
+                15,
+            );
             let if_else_handle =
-                expected_ast.add_child(expression_handle, Rule::IfElse);
+                expected_ast.add_child(expression_handle, Rule::IfElse, 11, 15);
 
             // condition
             {
-                let condition_expression_handle =
-                    expected_ast.add_child(if_else_handle, Rule::Expression);
+                let condition_expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::Expression,
+                    12,
+                    3,
+                );
                 let equality_handle = expected_ast.add_child_with_data(
                     condition_expression_handle,
                     Rule::Comparison,
                     Some(Token::GreaterThan),
+                    12,
+                    3,
                 );
 
                 // LHS
@@ -5651,6 +5727,8 @@ fn function_definition_multiple_returns() {
                     equality_handle,
                     Rule::Terminal,
                     Some(Token::Symbol("a".to_owned())),
+                    12,
+                    1,
                 );
 
                 // RHS
@@ -5658,50 +5736,88 @@ fn function_definition_multiple_returns() {
                     equality_handle,
                     Rule::Terminal,
                     Some(Token::IntLiteral(0)),
+                    14,
+                    1,
                 );
             }
 
             // if side
             {
-                let brace_expression_handle = expected_ast
-                    .add_child(if_else_handle, Rule::BraceExpression);
-                let brace_statements_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::BraceStatements);
-                let return_statement_handle = expected_ast
-                    .add_child(brace_statements_handle, Rule::ReturnStatement);
+                let brace_expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::BraceExpression,
+                    15,
+                    5,
+                );
+                let brace_statements_handle = expected_ast.add_child(
+                    brace_expression_handle,
+                    Rule::BraceStatements,
+                    16,
+                    3,
+                );
+                let return_statement_handle = expected_ast.add_child(
+                    brace_statements_handle,
+                    Rule::ReturnStatement,
+                    16,
+                    3,
+                );
                 add_terminal_expression(
                     &mut expected_ast,
                     return_statement_handle,
                     Some(Token::Symbol("a".to_owned())),
+                    17,
+                    1,
                 );
 
                 add_terminal_expression(
                     &mut expected_ast,
                     brace_expression_handle,
                     None,
+                    19,
+                    0,
                 );
             }
 
             // else side
             {
-                let expression_handle =
-                    expected_ast.add_child(if_else_handle, Rule::Expression);
-                let brace_expression_handle = expected_ast
-                    .add_child(expression_handle, Rule::BraceExpression);
-                let brace_statements_handle = expected_ast
-                    .add_child(brace_expression_handle, Rule::BraceStatements);
-                let return_statement_handle = expected_ast
-                    .add_child(brace_statements_handle, Rule::ReturnStatement);
+                let expression_handle = expected_ast.add_child(
+                    if_else_handle,
+                    Rule::Expression,
+                    21,
+                    5,
+                );
+                let brace_expression_handle = expected_ast.add_child(
+                    expression_handle,
+                    Rule::BraceExpression,
+                    21,
+                    5,
+                );
+                let brace_statements_handle = expected_ast.add_child(
+                    brace_expression_handle,
+                    Rule::BraceStatements,
+                    22,
+                    3,
+                );
+                let return_statement_handle = expected_ast.add_child(
+                    brace_statements_handle,
+                    Rule::ReturnStatement,
+                    22,
+                    3,
+                );
                 add_terminal_expression(
                     &mut expected_ast,
                     return_statement_handle,
                     Some(Token::Symbol("b".to_owned())),
+                    23,
+                    1,
                 );
 
                 add_terminal_expression(
                     &mut expected_ast,
                     brace_expression_handle,
                     None,
+                    25,
+                    0,
                 );
             }
         }
@@ -5710,6 +5826,8 @@ fn function_definition_multiple_returns() {
             &mut expected_ast,
             brace_expression_handle,
             None,
+            27,
+            0,
         );
 
         expected_ast
@@ -6211,7 +6329,7 @@ fn return_then_expression() {
         let param2_name = "b".to_owned();
 
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 16);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -6352,23 +6470,37 @@ fn parse_data_structure_declaration() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 7);
         let data_structure_handle = expected_ast.add_child_with_data(
             root_handle,
             Rule::DataStructure,
             Some(Token::Symbol("data_struct".to_owned())),
+            0,
+            7,
         );
-        let declaration_statements_handle = expected_ast
-            .add_child(data_structure_handle, Rule::DeclarationStatements);
-        let declaration_statement = expected_ast
-            .add_child(declaration_statements_handle, Rule::Declaration);
+        let declaration_statements_handle = expected_ast.add_child(
+            data_structure_handle,
+            Rule::DeclarationStatements,
+            2,
+            5,
+        );
+        let declaration_statement = expected_ast.add_child(
+            declaration_statements_handle,
+            Rule::Declaration,
+            3,
+            3,
+        );
         expected_ast.add_terminal_child(
             declaration_statement,
             Some(Token::Symbol("int32".to_owned())),
+            3,
+            1,
         );
         expected_ast.add_terminal_child(
             declaration_statement,
             Some(Token::Symbol("field".to_owned())),
+            4,
+            1,
         );
 
         expected_ast
