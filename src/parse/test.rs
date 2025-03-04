@@ -6221,7 +6221,7 @@ fn for_loop_return() {
 
         let mut expected_ast = Ast::new();
 
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 35);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -6229,37 +6229,74 @@ fn for_loop_return() {
             &function_name,
             &param1_name,
             &param2_name,
+            0,
+            8,
         );
 
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            10,
+            25,
+        );
 
         // statements
         {
-            let brace_statements = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
-            let statement_handle =
-                expected_ast.add_child(brace_statements, Rule::Statement);
-            let expression_handle =
-                expected_ast.add_child(statement_handle, Rule::Expression);
+            let brace_statements = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                11,
+                23,
+            );
+            let statement_handle = expected_ast.add_child(
+                brace_statements,
+                Rule::Statement,
+                11,
+                23,
+            );
+            let expression_handle = expected_ast.add_child(
+                statement_handle,
+                Rule::Expression,
+                11,
+                22,
+            );
 
-            let for_handle =
-                add_for_loop_declaration(&mut expected_ast, expression_handle);
+            let for_loop_start = 11;
+            let (for_handle, declaration_len) = add_for_loop_declaration(
+                &mut expected_ast,
+                expression_handle,
+                for_loop_start,
+            );
             // for loop brace_expression
             {
-                let brace_expression =
-                    expected_ast.add_child(for_handle, Rule::BraceExpression);
+                let brace_start = for_loop_start + declaration_len;
+                let brace_expression = expected_ast.add_child(
+                    for_handle,
+                    Rule::BraceExpression,
+                    brace_start,
+                    5,
+                );
                 // brace statements
                 {
-                    let brace_statements = expected_ast
-                        .add_child(brace_expression, Rule::BraceStatements);
-                    let return_statement_handle = expected_ast
-                        .add_child(brace_statements, Rule::ReturnStatement);
+                    let brace_statements = expected_ast.add_child(
+                        brace_expression,
+                        Rule::BraceStatements,
+                        brace_start + 1,
+                        3,
+                    );
+                    let return_statement_handle = expected_ast.add_child(
+                        brace_statements,
+                        Rule::ReturnStatement,
+                        brace_start + 1,
+                        3,
+                    );
 
                     add_terminal_expression(
                         &mut expected_ast,
                         return_statement_handle,
                         Some(Token::Symbol("b".to_owned())),
+                        brace_start + 2,
+                        1,
                     );
                 }
 
@@ -6268,6 +6305,8 @@ fn for_loop_return() {
                     &mut expected_ast,
                     brace_expression,
                     None,
+                    brace_start + 4,
+                    0,
                 );
             }
         }
@@ -6276,6 +6315,8 @@ fn for_loop_return() {
             &mut expected_ast,
             brace_expression_handle,
             None,
+            34,
+            0,
         );
         expected_ast
     };
@@ -6337,24 +6378,40 @@ fn return_then_expression() {
             &function_name,
             &param1_name,
             &param2_name,
+            0,
+            8,
         );
 
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            10,
+            6,
+        );
 
         // brace statements
         {
-            let brace_statements = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
+            let brace_statements = expected_ast.add_child(
+                brace_expression_handle,
+                Rule::BraceStatements,
+                11,
+                3,
+            );
 
             // first statement
             {
-                let return_statement_handle = expected_ast
-                    .add_child(brace_statements, Rule::ReturnStatement);
+                let return_statement_handle = expected_ast.add_child(
+                    brace_statements,
+                    Rule::ReturnStatement,
+                    11,
+                    3,
+                );
                 add_terminal_expression(
                     &mut expected_ast,
                     return_statement_handle,
                     Some(Token::Symbol("a".to_owned())),
+                    11,
+                    1,
                 );
             }
         }
@@ -6363,6 +6420,8 @@ fn return_then_expression() {
             &mut expected_ast,
             brace_expression_handle,
             Some(Token::Symbol("b".to_owned())),
+            14,
+            1,
         );
 
         expected_ast
