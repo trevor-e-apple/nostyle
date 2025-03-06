@@ -4838,6 +4838,8 @@ fn multiple_function_defs() {
                 &"test1".to_string(),
                 &param_one_name,
                 &param_two_name,
+                0,
+                7,
             );
             // brace expression
             let brace_expression_handle = expected_ast.add_child(
@@ -4860,6 +4862,8 @@ fn multiple_function_defs() {
                 &"test2".to_string(),
                 &param_one_name,
                 &param_two_name,
+                12,
+                7,
             );
             // brace expression
             let brace_expression_handle = expected_ast.add_child(
@@ -4883,6 +4887,8 @@ fn multiple_function_defs() {
             &"test3".to_string(),
             &param_one_name,
             &param_two_name,
+            23,
+            7,
         );
 
         // brace expression
@@ -4993,6 +4999,8 @@ fn for_loop_function() {
             &function_name,
             &param_one,
             &param_two,
+            0,
+            7,
         );
 
         // brace expression
@@ -5056,6 +5064,8 @@ fn expression_for_loop_function() {
             &function_name,
             &param_one,
             &param_two,
+            0,
+            7,
         );
 
         // brace expression
@@ -5857,7 +5867,7 @@ fn function_definition_if_else() {
         let param2_name = "b".to_owned();
 
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 25);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -5865,29 +5875,45 @@ fn function_definition_if_else() {
             &function_name,
             &param1_name,
             &param2_name,
+            0,
+            8,
         );
 
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
+        let brace_expression_handle = expected_ast.add_child(
+            function_def_handle,
+            Rule::BraceExpression,
+            10,
+            15,
+        );
 
-        let expression_handle =
-            expected_ast.add_child(brace_expression_handle, Rule::Expression);
+        let expression_handle = expected_ast.add_child(
+            brace_expression_handle,
+            Rule::Expression,
+            11,
+            13,
+        );
         let if_else_handle =
-            expected_ast.add_child(expression_handle, Rule::IfElse);
+            expected_ast.add_child(expression_handle, Rule::IfElse, 11, 13);
 
         // condition
         {
             let condition_expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::Expression);
+                expected_ast.add_child(if_else_handle, Rule::Expression, 12, 5);
 
             // b/c of the parens, we actually have two expressions in a row
-            let condition_expression_handle = expected_ast
-                .add_child(condition_expression_handle, Rule::Expression);
+            let condition_expression_handle = expected_ast.add_child(
+                condition_expression_handle,
+                Rule::Expression,
+                13,
+                3,
+            );
 
             let equality_handle = expected_ast.add_child_with_data(
                 condition_expression_handle,
                 Rule::Comparison,
                 Some(Token::GreaterThan),
+                13,
+                3,
             );
 
             // LHS
@@ -5895,6 +5921,8 @@ fn function_definition_if_else() {
                 equality_handle,
                 Rule::Terminal,
                 Some(Token::Symbol("a".to_owned())),
+                13,
+                1,
             );
 
             // RHS
@@ -5902,31 +5930,45 @@ fn function_definition_if_else() {
                 equality_handle,
                 Rule::Terminal,
                 Some(Token::IntLiteral(0)),
+                15,
+                1,
             );
         }
 
         // if side
         {
-            let brace_expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::BraceExpression);
+            let brace_expression_handle = expected_ast.add_child(
+                if_else_handle,
+                Rule::BraceExpression,
+                17,
+                3,
+            );
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
                 Some(Token::Symbol("a".to_owned())),
+                18,
+                1,
             );
         }
 
         // else side
         {
             let expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::Expression);
-            let brace_expression_handle = expected_ast
-                .add_child(expression_handle, Rule::BraceExpression);
+                expected_ast.add_child(if_else_handle, Rule::Expression, 21, 3);
+            let brace_expression_handle = expected_ast.add_child(
+                expression_handle,
+                Rule::BraceExpression,
+                21,
+                3,
+            );
 
             add_terminal_expression(
                 &mut expected_ast,
                 brace_expression_handle,
                 Some(Token::Symbol("b".to_owned())),
+                22,
+                1,
             );
         }
 
@@ -5951,112 +5993,165 @@ fn function_definition_early_return() {
     .expect("Unexpected tokenize error");
 
     let ast = parse(&tokens).expect("Unexpected parse error");
-    let expected_ast = {
-        let function_name = "test".to_owned();
-        let param1_name = "a".to_owned();
-        let param2_name = "b".to_owned();
-
-        let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression);
-
-        let function_def_handle = add_basic_function_declaration(
-            &mut expected_ast,
-            root_handle,
-            &function_name,
-            &param1_name,
-            &param2_name,
-        );
-
-        let brace_expression_handle =
-            expected_ast.add_child(function_def_handle, Rule::BraceExpression);
-
-        // brace statements
+    let expected_ast =
         {
-            let brace_statements = expected_ast
-                .add_child(brace_expression_handle, Rule::BraceStatements);
+            let function_name = "test".to_owned();
+            let param1_name = "a".to_owned();
+            let param2_name = "b".to_owned();
 
-            // first statement
+            let mut expected_ast = Ast::new();
+            let root_handle = expected_ast.add_root(Rule::Expression, 0, 25);
+
+            let function_def_handle = add_basic_function_declaration(
+                &mut expected_ast,
+                root_handle,
+                &function_name,
+                &param1_name,
+                &param2_name,
+                0,
+                8,
+            );
+
+            let brace_expression_handle = expected_ast.add_child(
+                function_def_handle,
+                Rule::BraceExpression,
+                10,
+                15,
+            );
+
+            // brace statements
             {
-                let brace_statements = expected_ast
-                    .add_child(brace_statements, Rule::BraceStatements);
-                let statement_handle =
-                    expected_ast.add_child(brace_statements, Rule::Statement);
-                let expression_handle =
-                    expected_ast.add_child(statement_handle, Rule::Expression);
-                let if_else_handle =
-                    expected_ast.add_child(expression_handle, Rule::IfElse);
+                let brace_statements = expected_ast.add_child(
+                    brace_expression_handle,
+                    Rule::BraceStatements,
+                    11,
+                    13,
+                );
 
-                // condition
+                // first statement
                 {
-                    let condition_expression_handle = expected_ast
-                        .add_child(if_else_handle, Rule::Expression);
-                    let equality_handle = expected_ast.add_child_with_data(
-                        condition_expression_handle,
-                        Rule::Comparison,
-                        Some(Token::GreaterThan),
+                    let brace_statements = expected_ast.add_child(
+                        brace_statements,
+                        Rule::BraceStatements,
+                        11,
+                        10,
+                    );
+                    let statement_handle = expected_ast.add_child(
+                        brace_statements,
+                        Rule::Statement,
+                        11,
+                        10,
+                    );
+                    let expression_handle = expected_ast.add_child(
+                        statement_handle,
+                        Rule::Expression,
+                        11,
+                        9,
+                    );
+                    let if_else_handle = expected_ast.add_child(
+                        expression_handle,
+                        Rule::IfElse,
+                        11,
+                        9,
                     );
 
-                    // LHS
-                    expected_ast.add_child_with_data(
-                        equality_handle,
-                        Rule::Terminal,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
+                    // condition
+                    {
+                        let condition_expression_handle = expected_ast
+                            .add_child(if_else_handle, Rule::Expression, 12, 3);
+                        let equality_handle = expected_ast.add_child_with_data(
+                            condition_expression_handle,
+                            Rule::Comparison,
+                            Some(Token::GreaterThan),
+                            12,
+                            3,
+                        );
 
-                    // RHS
-                    expected_ast.add_child_with_data(
-                        equality_handle,
-                        Rule::Terminal,
-                        Some(Token::IntLiteral(0)),
-                    );
+                        // LHS
+                        expected_ast.add_child_with_data(
+                            equality_handle,
+                            Rule::Terminal,
+                            Some(Token::Symbol("a".to_owned())),
+                            12,
+                            1,
+                        );
+
+                        // RHS
+                        expected_ast.add_child_with_data(
+                            equality_handle,
+                            Rule::Terminal,
+                            Some(Token::IntLiteral(0)),
+                            14,
+                            1,
+                        );
+                    }
+
+                    // if side
+                    {
+                        let brace_expression_handle = expected_ast.add_child(
+                            if_else_handle,
+                            Rule::BraceExpression,
+                            15,
+                            5,
+                        );
+                        let brace_statements_handle = expected_ast.add_child(
+                            brace_expression_handle,
+                            Rule::BraceStatements,
+                            16,
+                            3,
+                        );
+                        let return_statement_handle = expected_ast.add_child(
+                            brace_statements_handle,
+                            Rule::ReturnStatement,
+                            16,
+                            3,
+                        );
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            return_statement_handle,
+                            Some(Token::Symbol("a".to_owned())),
+                            17,
+                            1,
+                        );
+
+                        add_terminal_expression(
+                            &mut expected_ast,
+                            brace_expression_handle,
+                            None,
+                            19,
+                            0,
+                        );
+                    }
                 }
 
-                // if side
+                // second statement
                 {
-                    let brace_expression_handle = expected_ast
-                        .add_child(if_else_handle, Rule::BraceExpression);
-                    let brace_statements_handle = expected_ast.add_child(
-                        brace_expression_handle,
-                        Rule::BraceStatements,
-                    );
                     let return_statement_handle = expected_ast.add_child(
-                        brace_statements_handle,
+                        brace_statements,
                         Rule::ReturnStatement,
+                        21,
+                        3,
                     );
                     add_terminal_expression(
                         &mut expected_ast,
                         return_statement_handle,
-                        Some(Token::Symbol("a".to_owned())),
-                    );
-
-                    add_terminal_expression(
-                        &mut expected_ast,
-                        brace_expression_handle,
-                        None,
+                        Some(Token::Symbol("b".to_owned())),
+                        22,
+                        1,
                     );
                 }
             }
 
-            // second statement
-            {
-                let return_statement_handle = expected_ast
-                    .add_child(brace_statements, Rule::ReturnStatement);
-                add_terminal_expression(
-                    &mut expected_ast,
-                    return_statement_handle,
-                    Some(Token::Symbol("b".to_owned())),
-                );
-            }
-        }
+            add_terminal_expression(
+                &mut expected_ast,
+                brace_expression_handle,
+                None,
+                24,
+                0,
+            );
 
-        add_terminal_expression(
-            &mut expected_ast,
-            brace_expression_handle,
-            None,
-        );
-
-        expected_ast
-    };
+            expected_ast
+        };
 
     check_ast_equal(&ast, &expected_ast);
 }
