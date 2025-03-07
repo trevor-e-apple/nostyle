@@ -337,7 +337,7 @@ mod tests {
     fn a_empty() {
         let a = Ast::new();
         let mut b = Ast::new();
-        b.add_root(Rule::Expression);
+        b.add_root(Rule::Expression, 0, 1);
         assert!(!Ast::equivalent(&a, &b));
     }
 
@@ -345,7 +345,7 @@ mod tests {
     fn b_empty() {
         let mut a = Ast::new();
         let b = Ast::new();
-        a.add_root(Rule::Expression);
+        a.add_root(Rule::Expression, 0, 1);
         assert!(!Ast::equivalent(&a, &b));
     }
 
@@ -354,11 +354,39 @@ mod tests {
         let mut a = Ast::new();
         let mut b = Ast::new();
 
-        let root_handle = a.add_root(Rule::Expression);
-        a.add_child(root_handle, Rule::BraceExpression);
+        let root_handle = a.add_root(Rule::Expression, 0, 1);
+        a.add_child(root_handle, Rule::BraceExpression, 0, 1);
 
-        let root_handle = b.add_root(Rule::Expression);
-        b.add_child(root_handle, Rule::Equality);
+        let root_handle = b.add_root(Rule::Expression, 0, 1);
+        b.add_child(root_handle, Rule::Equality, 0, 1);
+
+        assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn same_structure_not_equivalent_len() {
+        let mut a = Ast::new();
+        let mut b = Ast::new();
+
+        let root_handle = a.add_root(Rule::Expression, 0, 2);
+        a.add_child(root_handle, Rule::BraceExpression, 0, 2);
+
+        let root_handle = b.add_root(Rule::Expression, 0, 1);
+        b.add_child(root_handle, Rule::BraceExpression, 0, 1);
+
+        assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn same_structure_not_equivalent_start() {
+        let mut a = Ast::new();
+        let mut b = Ast::new();
+
+        let root_handle = a.add_root(Rule::Expression, 0, 2);
+        a.add_child(root_handle, Rule::BraceExpression, 1, 2);
+
+        let root_handle = b.add_root(Rule::Expression, 0, 2);
+        b.add_child(root_handle, Rule::BraceExpression, 0, 2);
 
         assert!(!Ast::equivalent(&a, &b));
     }
@@ -368,13 +396,13 @@ mod tests {
         let mut a = Ast::new();
         let mut b = Ast::new();
 
-        let root_handle = a.add_root(Rule::Expression);
+        let root_handle = a.add_root(Rule::Expression, 0, 3);
         let brace_expression_handle =
-            a.add_child(root_handle, Rule::BraceExpression);
-        a.add_child(brace_expression_handle, Rule::BraceStatements);
+            a.add_child(root_handle, Rule::BraceExpression, 0, 3);
+        a.add_child(brace_expression_handle, Rule::BraceStatements, 1, 1);
 
-        let root_handle = b.add_root(Rule::Expression);
-        b.add_child(root_handle, Rule::BraceExpression);
+        let root_handle = b.add_root(Rule::Expression, 0, 3);
+        b.add_child(root_handle, Rule::BraceExpression, 0, 3);
 
         assert!(!Ast::equivalent(&a, &b));
     }
@@ -386,12 +414,16 @@ mod tests {
             parent: None,
             children: vec![],
             data: Some(Token::Assign),
+            start: 0,
+            len: 3,
         };
         let b = AstNode {
             rule: Rule::Expression,
             parent: None,
             children: vec![],
             data: None,
+            start: 0,
+            len: 3,
         };
 
         assert_ne!(&a, &b);
@@ -404,12 +436,16 @@ mod tests {
             parent: None,
             children: vec![],
             data: None,
+            start: 0,
+            len: 3,
         };
         let b = AstNode {
             rule: Rule::Expression,
             parent: None,
             children: vec![],
             data: Some(Token::Assign),
+            start: 0,
+            len: 3,
         };
 
         assert_ne!(&a, &b);
