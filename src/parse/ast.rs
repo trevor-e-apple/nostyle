@@ -238,7 +238,9 @@ impl PartialEq for AstNode {
             if let Some(self_data) = &self.data {
                 if let Some(other_data) = &other.data {
                     // same data
-                    *self_data == *other_data
+                    (*self_data == *other_data)
+                        && (self.start == other.start)
+                        && (self.len == other.len)
                 } else {
                     // self has data, but other does not
                     false
@@ -249,7 +251,7 @@ impl PartialEq for AstNode {
                     false
                 } else {
                     // neither has data
-                    true
+                    (self.start == other.start) && (self.len == other.len)
                 }
             }
         } else {
