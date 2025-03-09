@@ -209,10 +209,10 @@ fn empty_braces() {
         let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
-            0,
             1,
+            0,
         );
-        expected_ast.add_terminal_child(expression_handle, None, 0, 2);
+        expected_ast.add_terminal_child(expression_handle, None, 1, 0);
         expected_ast
     };
 

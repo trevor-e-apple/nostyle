@@ -170,8 +170,6 @@ impl Ast {
     /// prints an AST
     #[cfg(test)]
     pub fn print(&self) {
-        use std::panic;
-
         struct DfsData {
             node_handle: AstNodeHandle,
             depth: i32,
@@ -224,7 +222,10 @@ pub struct AstNode {
 impl AstNode {
     #[cfg(test)]
     pub fn make_terse_string(&self) -> String {
-        format!("Rule: {:?} Data: {:?}", self.rule, self.data)
+        format!(
+            "Rule: {:?} Data: {:?} Start: {:?} Len: {:?}",
+            self.rule, self.data, self.start, self.len
+        )
     }
 
     pub fn get_end_index(&self) -> usize {
@@ -283,7 +284,11 @@ impl<'a> dot::Labeller<'a, AstNodeHandle, AstEdge> for Ast {
     ) -> dot::LabelText<'b> {
         let node = self.get_node(*node_handle);
         dot::LabelText::LabelStr(
-            format!("Rule: {:?}, Data: {:?}", node.rule, node.data).into(),
+            format!(
+                "Rule: {:?}, Data: {:?}, Start: {:?}, Len: {:?}",
+                node.rule, node.data, node.start, node.len
+            )
+            .into(),
         )
     }
 }

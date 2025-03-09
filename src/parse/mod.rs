@@ -415,6 +415,12 @@ fn parse_expression_rule(
         }
     };
 
+    // handle null expression
+    if node.len == 0 {
+        ast.add_child(node_handle, Rule::Terminal, node.start, node.len);
+        return Ok(());
+    }
+
     let rule = match start_token {
         Token::LBrace => Rule::BraceExpression,
         Token::If => Rule::IfElse,
@@ -708,14 +714,14 @@ fn parse_brace_expression_rule(
     }
 
     let brace_contents_start = node.start + 1;
-    let brace_contents_end = node.get_end_index() - 1;
+    let rbrace_index = node.get_end_index();
 
     let end_brace_statements: Option<usize> =
         match find_final_matching_level_token_all_groups(
             tokens,
             &[Token::EndStatement],
             brace_contents_start,
-            brace_contents_end,
+            rbrace_index,
         ) {
             Some((index, _)) => Some(index + 1),
             None => None,
@@ -729,7 +735,7 @@ fn parse_brace_expression_rule(
                     node_handle,
                     Rule::BraceStatements,
                     brace_contents_start,
-                    end_brace_statements,
+                    end_brace_statements - brace_contents_start,
                     ast,
                     stack,
                 );
@@ -739,7 +745,7 @@ fn parse_brace_expression_rule(
                 node_handle,
                 Rule::Expression,
                 end_brace_statements,
-                brace_contents_end,
+                rbrace_index - end_brace_statements + 1,
                 ast,
                 stack,
             );
@@ -749,7 +755,7 @@ fn parse_brace_expression_rule(
                 node_handle,
                 Rule::Expression,
                 brace_contents_start,
-                brace_contents_end,
+                rbrace_index - brace_contents_start,
                 ast,
                 stack,
             );
