@@ -910,11 +910,12 @@ fn get_start_end_lines(
     start: usize,
     end: usize,
 ) -> (usize, usize) {
+    // TODO: document that end is the end index
     let start_line = match tokens.get_line_number(start) {
         Some(line_number) => line_number,
         None => panic!("Cannot parse empty tokens as statement"),
     };
-    let end_line = match tokens.get_line_number(end - 1) {
+    let end_line = match tokens.get_line_number(end) {
         Some(line_number) => line_number,
         None => {
             panic!("Bad parse range.");
@@ -2132,69 +2133,55 @@ fn parse_primary_rule(
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
-    if node_start == node_end {
-        // handle empty expression case
-        let node = ast.get_node_mut(node_handle);
-        node.rule = Rule::Terminal;
-        node.data = None;
-    } else {
-        match tokens.get(node_start) {
-            Some((token, line_number)) => match token {
-                Token::Symbol(_) => {
-                    if (node_end - node_start) > 1 {
-                        add_child_to_search_stack(
-                            node_handle,
-                            Rule::StructAccess,
-                            node_start,
-                            node_end,
-                            ast,
-                            stack,
-                        );
-                    } else {
-                        // update current primary to terminal
-                        let node = ast.get_node_mut(node_handle);
-                        node.rule = Rule::Terminal;
-                        node.data = Some(token.clone());
-                    }
-                }
-                Token::IntLiteral(_)
-                | Token::FloatLiteral(_)
-                | Token::StringLiteral(_) => {
-                    if (node_end - node_start) != 1 {
-                        return Err(ParseError {
-                            start_line,
-                            end_line,
-                            info: "Primary did not begin with grouping token but contained multiple tokens".to_owned(),
-                        });
-                    }
+    match tokens.get(node_start) {
+        Some((token, line_number)) => match token {
+            Token::Symbol(_) => {
+                if (node_end - node_start) > 1 {
+                    add_child_to_search_stack(
+                        node_handle,
+                        Rule::StructAccess,
+                        node_start,
+                        node_end,
+                        ast,
+                        stack,
+                    );
+                } else {
                     // update current primary to terminal
                     let node = ast.get_node_mut(node_handle);
                     node.rule = Rule::Terminal;
                     node.data = Some(token.clone());
                 }
-                Token::LParen => {
-                    // update current node to expression rule
-                    let node = ast.get_node_mut(node_handle);
-                    node.rule = Rule::Expression;
+            }
+            Token::IntLiteral(_)
+            | Token::FloatLiteral(_)
+            | Token::StringLiteral(_) => {
+                if (node_end - node_start) != 1 {
+                    return Err(ParseError {
+                            start_line,
+                            end_line,
+                            info: "Primary did not begin with grouping token but contained multiple tokens".to_owned(),
+                        });
+                }
+                // update current primary to terminal
+                let node = ast.get_node_mut(node_handle);
+                node.rule = Rule::Terminal;
+                node.data = Some(token.clone());
+            }
+            Token::LParen => {
+                // update current node to expression rule
+                let node = ast.get_node_mut(node_handle);
+                node.rule = Rule::Expression;
 
-                    let expected_rparen_index = node.get_end_index();
-                    match tokens.get_token(expected_rparen_index) {
-                        Some(expected_rparen) => {
-                            // check whether we have mismatched parens
-                            if *expected_rparen == Token::RParen {
-                                // add back to stack
-                                node.start = node_start + 1;
-                                node.len -= 2; // remove the parens
-                                stack.push(node_handle);
-                            } else {
-                                return Err(ParseError {
-                                    start_line,
-                                    end_line,
-                                    info: "Mismatched parens".to_owned(),
-                                });
-                            }
-                        }
-                        None => {
+                let expected_rparen_index = node.get_end_index();
+                match tokens.get_token(expected_rparen_index) {
+                    Some(expected_rparen) => {
+                        // check whether we have mismatched parens
+                        if *expected_rparen == Token::RParen {
+                            // add back to stack
+                            node.start = node_start + 1;
+                            node.len -= 2; // remove the parens
+                            stack.push(node_handle);
+                        } else {
                             return Err(ParseError {
                                 start_line,
                                 end_line,
@@ -2202,53 +2189,58 @@ fn parse_primary_rule(
                             });
                         }
                     }
+                    None => {
+                        return Err(ParseError {
+                            start_line,
+                            end_line,
+                            info: "Mismatched parens".to_owned(),
+                        });
+                    }
                 }
-                Token::LBrace => {
-                    // update current node to BraceExpression rule
-                    let node = ast.get_node_mut(node_handle);
-                    node.rule = Rule::BraceExpression;
+            }
+            Token::LBrace => {
+                // update current node to BraceExpression rule
+                let node = ast.get_node_mut(node_handle);
+                node.rule = Rule::BraceExpression;
 
-                    let expected_rbrace_index = node_end - 1;
-                    match tokens.get_token(expected_rbrace_index) {
-                        Some(expected_rbrace) => {
-                            // check whether we have mismatched braces
-                            if *expected_rbrace == Token::RBrace {
-                                node.len =
-                                    expected_rbrace_index - node.start + 1;
-                                stack.push(node_handle);
-                            } else {
-                                return Err(ParseError {
-                                    start_line,
-                                    end_line,
-                                    info: "Mismatched braces".to_owned(),
-                                });
-                            }
-                        }
-                        None => {
+                let expected_rbrace_index = node_end - 1;
+                match tokens.get_token(expected_rbrace_index) {
+                    Some(expected_rbrace) => {
+                        // check whether we have mismatched braces
+                        if *expected_rbrace == Token::RBrace {
+                            node.len = expected_rbrace_index - node.start + 1;
+                            stack.push(node_handle);
+                        } else {
                             return Err(ParseError {
                                 start_line,
                                 end_line,
                                 info: "Mismatched braces".to_owned(),
-                            })
+                            });
                         }
                     }
+                    None => {
+                        return Err(ParseError {
+                            start_line,
+                            end_line,
+                            info: "Mismatched braces".to_owned(),
+                        })
+                    }
                 }
-                _ => {
-                    return Err(ParseError {
-                        start_line: line_number,
-                        end_line: line_number,
-                        info: "Unexpected start token for primary rule"
-                            .to_owned(),
-                    });
-                }
-            },
-            None => {
-                return Err(ParseError {
-                    start_line,
-                    end_line,
-                    info: "Empty primary rule".to_owned(),
-                })
             }
+            _ => {
+                return Err(ParseError {
+                    start_line: line_number,
+                    end_line: line_number,
+                    info: "Unexpected start token for primary rule".to_owned(),
+                });
+            }
+        },
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Empty primary rule".to_owned(),
+            })
         }
     }
 
