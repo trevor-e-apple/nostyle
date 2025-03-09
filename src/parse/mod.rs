@@ -2177,15 +2177,14 @@ fn parse_primary_rule(
                     let node = ast.get_node_mut(node_handle);
                     node.rule = Rule::Expression;
 
-                    let expected_rparen_index = node.get_end_index() - 1;
+                    let expected_rparen_index = node.get_end_index();
                     match tokens.get_token(expected_rparen_index) {
                         Some(expected_rparen) => {
                             // check whether we have mismatched parens
                             if *expected_rparen == Token::RParen {
                                 // add back to stack
                                 node.start = node_start + 1;
-                                node.len =
-                                    expected_rparen_index - node_start + 1;
+                                node.len -= 2; // remove the parens
                                 stack.push(node_handle);
                             } else {
                                 return Err(ParseError {
