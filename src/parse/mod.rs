@@ -745,7 +745,7 @@ fn parse_brace_expression_rule(
                 node_handle,
                 Rule::Expression,
                 end_brace_statements,
-                rbrace_index - end_brace_statements + 1,
+                rbrace_index - end_brace_statements,
                 ast,
                 stack,
             );
@@ -808,7 +808,7 @@ fn parse_brace_statements_rule(
                 None => node.start,
             };
 
-        (non_recursive_start_index, non_recursive_end_index + 1)
+        (non_recursive_start_index, non_recursive_end_index)
     };
 
     let (non_recursive_start_token, _) = match tokens
@@ -841,7 +841,7 @@ fn parse_brace_statements_rule(
         node_handle,
         non_recursive_rule,
         non_recursive_start_index,
-        non_recursive_end_index,
+        non_recursive_end_index - non_recursive_start_index + 1,
         ast,
         stack,
     );
@@ -1055,12 +1055,12 @@ fn parse_statement_rule(
             }
         }
         None => {
-            // Handle the non-assignment statement case
+            // Handle the non-assignment statement case (drop the semicolon)
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
                 node_start,
-                node_end - 1,
+                node_end - node_start,
                 ast,
                 stack,
             );

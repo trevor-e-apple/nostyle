@@ -275,13 +275,14 @@ fn empty_statement_in_braces() {
                 1,
                 1,
             );
+            // statement expression
             let expression_handle = expected_ast.add_child(
                 statement_handle,
                 Rule::Expression,
                 1,
-                1,
+                0,
             );
-            expected_ast.add_terminal_child(expression_handle, None, 1, 1);
+            expected_ast.add_terminal_child(expression_handle, None, 1, 0);
         }
 
         // end expression
