@@ -2155,7 +2155,7 @@ fn parse_primary_rule(
             Token::IntLiteral(_)
             | Token::FloatLiteral(_)
             | Token::StringLiteral(_) => {
-                if (node_end - node_start) != 1 {
+                if (node_end - node_start) != 0 {
                     return Err(ParseError {
                             start_line,
                             end_line,

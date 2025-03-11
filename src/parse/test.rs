@@ -336,7 +336,7 @@ fn single_token() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 0);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
         expected_ast.add_terminal_child(
             root_handle,
             Some(Token::IntLiteral(0)),
@@ -362,13 +362,13 @@ fn single_token_in_braces() {
             brace_expression_handle,
             Rule::Expression,
             1,
-            2,
+            1,
         );
         expected_ast.add_terminal_child(
             expression_handle,
             Some(Token::IntLiteral(0)),
             1,
-            2,
+            1,
         );
         expected_ast
     };
@@ -391,26 +391,26 @@ fn single_token_nested_braces() {
             outer_brace_expression_handle,
             Rule::Expression,
             1,
-            4,
+            3,
         );
 
         let brace_expression_handle = expected_ast.add_child(
             expression_handle,
             Rule::BraceExpression,
             1,
-            4,
+            3,
         );
         let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
             2,
-            3,
+            1,
         );
         expected_ast.add_terminal_child(
             expression_handle,
             Some(Token::IntLiteral(0)),
             2,
-            3,
+            1,
         );
         expected_ast
     };
