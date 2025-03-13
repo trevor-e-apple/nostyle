@@ -468,7 +468,7 @@ fn mult_expression() {
             mult_div_handle,
             Some(Token::IntLiteral(2)),
             2,
-            3,
+            1,
         );
         expected_ast
     };
