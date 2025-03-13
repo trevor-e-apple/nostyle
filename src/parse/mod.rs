@@ -1358,11 +1358,12 @@ fn parse_binary_op_rule(
                 node.data = Some(binary_op_token);
 
                 // check to see if the split is possible
-                if split_index + 1 == node_end {
+                if split_index == node_end {
                     return Err(ParseError {
                         start_line,
                         end_line,
-                        info: "".to_owned(),
+                        info: "Unexpected binary op at end of expression"
+                            .to_owned(),
                     });
                 }
 
@@ -1371,16 +1372,17 @@ fn parse_binary_op_rule(
                     node_handle,
                     recursive_rule,
                     node_start,
-                    split_index,
+                    split_index - node_start, // b/c we don't include the split, don't add one here for length
                     ast,
                     stack,
                 );
 
+                let rhs_start = split_index + 1;
                 add_child_to_search_stack(
                     node_handle,
                     next_rule,
-                    split_index + 1,
-                    node_end,
+                    rhs_start,
+                    (node_end - rhs_start) + 1,
                     ast,
                     stack,
                 );
