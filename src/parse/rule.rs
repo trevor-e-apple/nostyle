@@ -6,6 +6,7 @@ pub enum Rule {
     FunctionDefParameters,
     ReturnsData,
     Declaration,
+    ParenExpression,
     BraceExpression,
     BraceStatements,
     Statement,

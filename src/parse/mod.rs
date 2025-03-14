@@ -3,7 +3,7 @@ Grammar
 
 this grammar expands in a way that matches operator precedence
 
-expression -> function_defs | brace_expression | if_else | for_loop | data_struct_def| equality;
+expression -> function_defs | brace_expression | paren_expression | if_else | for_loop | data_struct_def| equality;
 if_else -> "if" expression brace_expression ("else" expression)?;
 for_loop -> "for" "(" statement statement statement ")" brace_expression;
 equality -> (equality ("==" | "!=") comparison) | comparison;
@@ -13,13 +13,15 @@ mult_div -> (mult_div ("*" | "/") unary) | unary;
 unary -> (("!" | "-") unary) | function_call;
 function_call -> SYMBOL"(" function_arguments ")" | primary;
 function_arguments -> (function_arguments ",")? expression ","?;
-primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | "(" expression ")" | brace_expression | struct_access;
+primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | paren_expression | brace_expression | struct_access;
 
 struct_access -> struct_access "." struct_access_terminal;
 struct_access_terminal -> function_call | SYMBOL;
 
 brace_expression -> "{" brace_statements? expression "}";
 brace_statements -> brace_statements? (statement | return_statement);
+
+paren_expression -> "(" paren_expression ")"
 
 declaration -> SYMBOL SYMBOL;
 
@@ -90,6 +92,17 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
         match rule {
             Rule::Expression => {
                 match parse_expression_rule(
+                    tokens,
+                    node_handle,
+                    &mut result,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(error) => parse_errors.push(error),
+                };
+            }
+            Rule::ParenExpression => {
+                match parse_paren_expression_rule(
                     tokens,
                     node_handle,
                     &mut result,
@@ -403,8 +416,12 @@ fn parse_expression_rule(
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     let node = ast.get_node(node_handle);
+    let (node_start, node_end) = (node.start, node.get_end_index());
 
-    let start_token = match tokens.get_token(node.start) {
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
+
+    let start_token = match tokens.get_token(node_start) {
         Some(token) => token,
         None => {
             return Err(make_final_line_error(
@@ -417,12 +434,37 @@ fn parse_expression_rule(
 
     // handle null expression
     if node.len == 0 {
-        ast.add_child(node_handle, Rule::Terminal, node.start, node.len);
+        ast.add_child(node_handle, Rule::Terminal, node_start, node.len);
         return Ok(());
     }
 
+    let end_token = match tokens.get_token(node_end) {
+        Some(token) => token,
+        None => {
+            return Err(ParseError {
+                start_line,
+                end_line,
+                info: "Can not parse 'expression' rule (end out of bounds)"
+                    .to_owned(),
+            });
+        }
+    };
+
     let rule = match start_token {
-        Token::LBrace => Rule::BraceExpression,
+        Token::LParen => {
+            if *end_token == Token::RParen {
+                Rule::ParenExpression
+            } else {
+                Rule::Equality
+            }
+        }
+        Token::LBrace => {
+            if *end_token == Token::RBrace {
+                Rule::BraceExpression
+            } else {
+                Rule::Equality
+            }
+        }
         Token::If => Rule::IfElse,
         Token::For => Rule::ForLoop,
         Token::Function => Rule::FunctionDefs,
@@ -435,6 +477,69 @@ fn parse_expression_rule(
         rule,
         node.start,
         node.len,
+        ast,
+        stack,
+    );
+
+    Ok(())
+}
+
+fn parse_paren_expression_rule(
+    tokens: &Tokens,
+    node_handle: AstNodeHandle,
+    ast: &mut Ast,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), ParseError> {
+    let node = ast.get_node(node_handle);
+    let (node_start, node_end) = (node.start, node.get_end_index());
+    let (start_line, end_line) =
+        get_start_end_lines(tokens, node_start, node_end);
+
+    let start_token = match tokens.get_token(node_start) {
+        Some(token) => token,
+        None => {
+            return Err(make_final_line_error(
+                tokens,
+                start_line,
+                "Can not parse 'paren_expression' rule (missing lparen)"
+                    .to_owned(),
+            ));
+        }
+    };
+
+    if *start_token != Token::LParen {
+        return Err(ParseError {
+            start_line,
+            end_line,
+            info: "Missing lparen".to_owned(),
+        });
+    }
+
+    let end_token = match tokens.get_token(node_end) {
+        Some(token) => token,
+        None => {
+            return Err(make_final_line_error(
+                tokens,
+                start_line,
+                "Can not parse 'paren_expression' rule (missing rparen)"
+                    .to_owned(),
+            ));
+        }
+    };
+    if *end_token != Token::RParen {
+        return Err(ParseError {
+            start_line,
+            end_line,
+            info: "Missing rparen".to_owned(),
+        });
+    };
+
+    // add child while removing parens
+    add_child_to_search_stack(
+        node_handle,
+        Rule::Expression,
+        node.start + 1,
+        node.len - 2,
         ast,
         stack,
     );
@@ -1549,7 +1654,7 @@ fn parse_function_call_rule(
                         false
                     }
                 };
-                let has_rparen = match tokens.get_token(node_end - 1) {
+                let has_rparen = match tokens.get_token(node_end) {
                     Some(possible_rparen) => {
                         if *possible_rparen == Token::RParen {
                             true
@@ -2170,64 +2275,16 @@ fn parse_primary_rule(
                 node.data = Some(token.clone());
             }
             Token::LParen => {
-                // update current node to expression rule
+                // update current node to paren expression
                 let node = ast.get_node_mut(node_handle);
-                node.rule = Rule::Expression;
-
-                let expected_rparen_index = node.get_end_index();
-                match tokens.get_token(expected_rparen_index) {
-                    Some(expected_rparen) => {
-                        // check whether we have mismatched parens
-                        if *expected_rparen == Token::RParen {
-                            // add back to stack
-                            node.start = node_start + 1;
-                            node.len -= 2; // remove the parens
-                            stack.push(node_handle);
-                        } else {
-                            return Err(ParseError {
-                                start_line,
-                                end_line,
-                                info: "Mismatched parens".to_owned(),
-                            });
-                        }
-                    }
-                    None => {
-                        return Err(ParseError {
-                            start_line,
-                            end_line,
-                            info: "Mismatched parens".to_owned(),
-                        });
-                    }
-                }
+                node.rule = Rule::ParenExpression;
+                stack.push(node_handle);
             }
             Token::LBrace => {
                 // update current node to BraceExpression rule
                 let node = ast.get_node_mut(node_handle);
                 node.rule = Rule::BraceExpression;
-
-                let expected_rbrace_index = node_end - 1;
-                match tokens.get_token(expected_rbrace_index) {
-                    Some(expected_rbrace) => {
-                        // check whether we have mismatched braces
-                        if *expected_rbrace == Token::RBrace {
-                            node.len = expected_rbrace_index - node.start + 1;
-                            stack.push(node_handle);
-                        } else {
-                            return Err(ParseError {
-                                start_line,
-                                end_line,
-                                info: "Mismatched braces".to_owned(),
-                            });
-                        }
-                    }
-                    None => {
-                        return Err(ParseError {
-                            start_line,
-                            end_line,
-                            info: "Mismatched braces".to_owned(),
-                        })
-                    }
-                }
+                stack.push(node_handle);
             }
             _ => {
                 return Err(ParseError {

@@ -226,8 +226,10 @@ fn empty_parens() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 2);
+        let paren_expression =
+            expected_ast.add_child(root_handle, Rule::ParenExpression, 0, 2);
         let expression_handle =
-            expected_ast.add_child(root_handle, Rule::Expression, 1, 0);
+            expected_ast.add_child(paren_expression, Rule::Expression, 1, 0);
         expected_ast.add_terminal_child(expression_handle, None, 1, 0);
         expected_ast
     };
@@ -503,12 +505,18 @@ fn expression_with_grouping_right() {
 
         // RHS: (2 + 3)
         {
+            let paren_expression = expected_ast.add_child(
+                plus_minus_handle,
+                Rule::ParenExpression,
+                2,
+                5,
+            );
             // 2 + 3
             let expression_handle = expected_ast.add_child(
-                plus_minus_handle,
+                paren_expression,
                 Rule::Expression,
-                2,
-                7,
+                3,
+                3,
             );
             add_expected_add_child(
                 &mut expected_ast,
@@ -544,8 +552,18 @@ fn expression_with_grouping_left() {
 
         // LHS: (1 + 2)
         {
-            let expression_handle =
-                expected_ast.add_child(mult_div_handle, Rule::Expression, 0, 5);
+            let paren_expression = expected_ast.add_child(
+                mult_div_handle,
+                Rule::ParenExpression,
+                0,
+                5,
+            );
+            let expression_handle = expected_ast.add_child(
+                paren_expression,
+                Rule::Expression,
+                1,
+                3,
+            );
             add_expected_add_child(
                 &mut expected_ast,
                 expression_handle,
@@ -560,7 +578,7 @@ fn expression_with_grouping_left() {
             mult_div_handle,
             Some(Token::IntLiteral(3)),
             6,
-            7,
+            1,
         );
 
         expected_ast
@@ -600,13 +618,13 @@ fn expression_with_brace_grouping() {
                 plus_minus_handle,
                 Rule::BraceExpression,
                 2,
-                7,
+                5,
             );
             let expression_handle = expected_ast.add_child(
                 brace_expression_handle,
                 Rule::Expression,
-                2,
-                7,
+                3,
+                3,
             );
             add_expected_add_child(
                 &mut expected_ast,
