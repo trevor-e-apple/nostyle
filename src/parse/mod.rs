@@ -1059,8 +1059,8 @@ fn parse_statement_rule(
         node_end,
     ) {
         Some(assign_index) => {
-            // Hand the assignment statement case
-            match tokens.get(node_end - 1) {
+            // Handle the assignment statement case
+            match tokens.get(node_end) {
                 Some((expected_end_statement, line_number)) => {
                     if expected_end_statement != Token::EndStatement {
                         return Err(ParseError {
@@ -1088,7 +1088,7 @@ fn parse_statement_rule(
                                 node_handle,
                                 Rule::Expression,
                                 node_start,
-                                assign_index,
+                                assign_index - node_start,
                                 ast,
                                 stack,
                             );
@@ -1098,7 +1098,7 @@ fn parse_statement_rule(
                                 node_handle,
                                 Rule::Expression,
                                 assign_index + 1,
-                                node_end - 1,
+                                node_end - assign_index - 1, // remove semicolon
                                 ast,
                                 stack,
                             );

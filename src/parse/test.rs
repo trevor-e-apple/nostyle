@@ -18,7 +18,7 @@ fn add_terminal_expression(
     len: usize,
 ) -> AstNodeHandle {
     let expression_handle =
-        ast.add_child(parent_handle, Rule::Expression, child_start, 1);
+        ast.add_child(parent_handle, Rule::Expression, child_start, len);
     ast.add_terminal_child(expression_handle, terminal_value, child_start, len);
 
     return expression_handle;
@@ -681,7 +681,7 @@ fn assignment_symbol() {
                 brace_expression_handle,
                 Rule::BraceStatements,
                 1,
-                5,
+                4,
             );
             add_assignment_statement(
                 &mut expected_ast,
