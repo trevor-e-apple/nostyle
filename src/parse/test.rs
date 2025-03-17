@@ -723,8 +723,8 @@ fn brace_expression_with_variable_only() {
             &mut expected_ast,
             brace_expression_handle,
             Some(Token::Symbol("a".to_owned())),
-            2,
-            0,
+            1,
+            1,
         );
 
         expected_ast
@@ -740,14 +740,14 @@ fn brace_expression_with_expression_only() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 3);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 5);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 3);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 5);
 
         let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
-            0,
+            1,
             3,
         );
 
@@ -851,7 +851,7 @@ fn brace_expression_statement_only() {
                 statement_handle,
                 Rule::Expression,
                 1,
-                4,
+                3,
             );
             add_expected_add_child(
                 &mut expected_ast,
@@ -1306,8 +1306,18 @@ fn nested_groups() {
 
         // RHS: (b - (c + d))
         {
-            let expression_handle =
-                expected_ast.add_child(mult_div_handle, Rule::Expression, 2, 9);
+            let paren_expression_handle = expected_ast.add_child(
+                mult_div_handle,
+                Rule::ParenExpression,
+                2,
+                9,
+            );
+            let expression_handle = expected_ast.add_child(
+                paren_expression_handle,
+                Rule::Expression,
+                3,
+                7,
+            );
             let plus_minus_handle = expected_ast.add_child_with_data(
                 expression_handle,
                 Rule::PlusMinus,
@@ -1326,11 +1336,17 @@ fn nested_groups() {
 
             // RHS: (c + d)
             {
-                let expression_handle = expected_ast.add_child(
+                let paren_expression_handle = expected_ast.add_child(
                     plus_minus_handle,
+                    Rule::ParenExpression,
+                    5,
+                    5,
+                );
+                let expression_handle = expected_ast.add_child(
+                    paren_expression_handle,
                     Rule::Expression,
-                    5,
-                    5,
+                    6,
+                    3,
                 );
                 let plus_minus_handle = expected_ast.add_child_with_data(
                     expression_handle,
