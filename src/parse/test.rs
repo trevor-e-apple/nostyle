@@ -1398,9 +1398,9 @@ fn nested_brace_expressions() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 20);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 21);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 20);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 21);
 
         // statements
         {
@@ -1478,7 +1478,7 @@ fn nested_brace_expressions() {
                         let statements_handle = expected_ast.add_child(
                             brace_expression_handle,
                             Rule::BraceStatements,
-                            7,
+                            8,
                             6,
                         );
 
@@ -1487,7 +1487,7 @@ fn nested_brace_expressions() {
                             let statement_handle = expected_ast.add_child(
                                 statements_handle,
                                 Rule::Statement,
-                                7,
+                                8,
                                 6,
                             );
 
@@ -1496,7 +1496,7 @@ fn nested_brace_expressions() {
                                 &mut expected_ast,
                                 statement_handle,
                                 Some(Token::Symbol("d".to_owned())),
-                                7,
+                                8,
                                 1,
                             );
 
@@ -1504,14 +1504,14 @@ fn nested_brace_expressions() {
                             let expression_handle = expected_ast.add_child(
                                 statement_handle,
                                 Rule::Expression,
-                                9,
+                                10,
                                 3,
                             );
                             add_expected_mult_child(
                                 &mut expected_ast,
                                 expression_handle,
                                 Token::IntLiteral(2),
-                                9,
+                                10,
                                 Token::Symbol("a".to_owned()),
                             );
                         }
@@ -1522,7 +1522,7 @@ fn nested_brace_expressions() {
                         &mut expected_ast,
                         brace_expression_handle,
                         Some(Token::Symbol("d".to_owned())),
-                        13,
+                        14,
                         1,
                     );
                 }

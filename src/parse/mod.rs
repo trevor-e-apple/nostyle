@@ -935,7 +935,7 @@ fn parse_brace_statements_rule(
             node_handle,
             Rule::BraceStatements,
             node.start,
-            non_recursive_start_index,
+            non_recursive_start_index - node.start,
             ast,
             stack,
         );
