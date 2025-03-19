@@ -1580,7 +1580,7 @@ fn nested_brace_expressions_brace_first() {
                 brace_expression_handle,
                 Rule::BraceStatements,
                 1,
-                19,
+                16,
             );
 
             /*
@@ -1695,7 +1695,7 @@ fn nested_brace_expressions_brace_first() {
                     &mut expected_ast,
                     statements_handle,
                     Token::Symbol("a".to_owned()),
-                    14,
+                    13,
                     Token::Symbol("b".to_owned()),
                 );
             }
@@ -1706,14 +1706,14 @@ fn nested_brace_expressions_brace_first() {
             let end_expression_handle = expected_ast.add_child(
                 brace_expression_handle,
                 Rule::Expression,
-                18,
+                17,
                 3,
             );
             add_expected_add_child(
                 &mut expected_ast,
                 end_expression_handle,
                 Token::Symbol("a".to_owned()),
-                18,
+                17,
                 Token::Symbol("c".to_owned()),
             );
         }
