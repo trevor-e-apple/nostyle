@@ -1747,11 +1747,17 @@ fn if_only() {
             );
             // (a + b)
             {
-                let expression_handle = expected_ast.add_child(
+                let paren_expression = expected_ast.add_child(
                     equality_handle,
-                    Rule::Expression,
+                    Rule::ParenExpression,
                     1,
                     5,
+                );
+                let expression_handle = expected_ast.add_child(
+                    paren_expression,
+                    Rule::Expression,
+                    2,
+                    3,
                 );
                 add_expected_add_child(
                     &mut expected_ast,

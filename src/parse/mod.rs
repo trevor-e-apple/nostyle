@@ -1252,7 +1252,7 @@ fn parse_if_else_rule(
         tokens,
         &[Token::Else],
         node_start + 1,
-        node_end,
+        node_end + 1,
         &Token::LBrace,
         &Token::RBrace,
     ) {
@@ -1316,7 +1316,7 @@ fn parse_if_else_rule(
         }
         None => {
             // check for rbrace
-            let rbrace_line = match tokens.get(node_end - 1) {
+            let rbrace_line = match tokens.get(node_end) {
                 Some((token, line_number)) => {
                     if token != Token::RBrace {
                         return Err(ParseError {
@@ -1354,21 +1354,24 @@ fn parse_if_else_rule(
             };
 
             // condition expression
-            add_child_to_search_stack(
-                node_handle,
-                Rule::Expression,
-                node_start + 1,
-                lbrace_index - 1,
-                ast,
-                stack,
-            );
+            {
+                let condition_start = node_start + 1;
+                add_child_to_search_stack(
+                    node_handle,
+                    Rule::Expression,
+                    condition_start,
+                    lbrace_index - condition_start,
+                    ast,
+                    stack,
+                );
+            }
 
             // executed expression
             add_child_to_search_stack(
                 node_handle,
                 Rule::BraceExpression,
                 lbrace_index,
-                node_end,
+                node_end - lbrace_index + 1,
                 ast,
                 stack,
             );
