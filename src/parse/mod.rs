@@ -1284,11 +1284,12 @@ fn parse_if_else_rule(
             };
 
             // condition expression
+            let condition_start = node_start + 1;
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
-                node_start + 1,
-                if_lbrace_index,
+                condition_start,
+                if_lbrace_index - condition_start,
                 ast,
                 stack,
             );
@@ -1298,18 +1299,19 @@ fn parse_if_else_rule(
                 node_handle,
                 Rule::BraceExpression,
                 if_lbrace_index,
-                else_index,
+                else_index - if_lbrace_index,
                 ast,
                 stack,
             );
 
             // to differentiate between if condition expression and else
             // expression, we always need to add the else expression second
+            let else_expression_start = else_index + 1;
             add_child_to_search_stack(
                 node_handle,
                 Rule::Expression,
-                else_index + 1,
-                node_end,
+                else_expression_start,
+                node_end - else_expression_start + 1,
                 ast,
                 stack,
             );

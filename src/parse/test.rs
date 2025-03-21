@@ -1830,9 +1830,9 @@ fn if_else() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 20);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 21);
         let if_else_handle =
-            expected_ast.add_child(root_handle, Rule::IfElse, 0, 20);
+            expected_ast.add_child(root_handle, Rule::IfElse, 0, 21);
 
         // condition expression
         {
@@ -1847,11 +1847,17 @@ fn if_else() {
             );
             // (a + b)
             {
-                let expression_handle = expected_ast.add_child(
+                let paren_expression = expected_ast.add_child(
                     equality_handle,
-                    Rule::Expression,
+                    Rule::ParenExpression,
                     1,
                     5,
+                );
+                let expression_handle = expected_ast.add_child(
+                    paren_expression,
+                    Rule::Expression,
+                    2,
+                    3,
                 );
                 add_expected_add_child(
                     &mut expected_ast,
