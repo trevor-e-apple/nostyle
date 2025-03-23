@@ -236,7 +236,10 @@ pub fn get_diff_string(ast_one: &Ast, ast_two: &Ast) -> String {
                     for _ in 0..dfs_data_one.depth {
                         result.push_str("    ");
                     }
-                    result.push_str(&format!("{}\n", node_one.make_terse_string()));
+                    result.push_str(&format!(
+                        "{}\n",
+                        node_one.make_terse_string()
+                    ));
 
                     if node_one == node_two {
                         for (child_one_handle, child_two_handle) in (&node_one
@@ -435,6 +438,39 @@ mod tests {
         assert!(!Ast::equivalent(&a, &b));
     }
 
+    fn are_equivalent_asts() -> (Ast, Ast) {
+        let mut a = Ast::new();
+        let mut b = Ast::new();
+
+        let root_handle = a.add_root(Rule::Expression, 0, 1);
+        a.add_child(root_handle, Rule::Equality, 0, 1);
+
+        let root_handle = b.add_root(Rule::Expression, 0, 1);
+        b.add_child(root_handle, Rule::Equality, 0, 1);
+
+        (a, b)
+    }
+
+    #[test]
+    fn are_equivalent() {
+        let (a, b) = are_equivalent_asts();
+
+        assert!(Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn are_equivalent_diff_string() {
+        let (a, b) = are_equivalent_asts();
+        let diff_string = get_diff_string(&a, &b);
+        
+        // expected to print the entire tree
+        let expected_string = concat!(
+            "Rule: Expression Data: None Start: 0 Len: 1 ChildrenLen: 1\n",
+            "    Rule: Equality Data: None Start: 0 Len: 1 ChildrenLen: 0\n"
+        );
+        assert_eq!(expected_string, diff_string);
+    }
+
     fn same_size_not_equivalent_asts() -> (Ast, Ast) {
         let mut a = Ast::new();
         let mut b = Ast::new();
@@ -458,16 +494,17 @@ mod tests {
     fn same_size_not_equivalent_diff_string() {
         let (a, b) = same_size_not_equivalent_asts();
         let diff_string = get_diff_string(&a, &b);
+        // expected to print the whole first tree, since the diff is on a leaf
         let expected_string = concat!(
             "Rule: Expression Data: None Start: 0 Len: 1 ChildrenLen: 1\n",
             "    Rule: BraceExpression Data: None Start: 0 Len: 1 ChildrenLen: 0\n"
         );
         print!("{}", expected_string);
         print!("{}", diff_string);
-        assert!(diff_string == expected_string);
+        assert_eq!(diff_string, expected_string);
     }
 
-    fn same_structure_diff_len_asts() -> (Ast, Ast){
+    fn same_structure_diff_len_asts() -> (Ast, Ast) {
         let mut a = Ast::new();
         let mut b = Ast::new();
 
@@ -490,7 +527,10 @@ mod tests {
     fn same_structure_diff_len_diff_string() {
         let (a, b) = same_structure_diff_len_asts();
         let diff_string = get_diff_string(&a, &b);
-        let expected_string = concat!("Rule: Expression Data: None Start: 0 Len: 2 ChildrenLen: 1\n");
+        // different len is at the root. the root of a is expected to print
+        let expected_string = concat!(
+            "Rule: Expression Data: None Start: 0 Len: 2 ChildrenLen: 1\n"
+        );
         print!("Expected:\n{}", expected_string);
         print!("Actual:\n{}", diff_string);
         assert!(diff_string == expected_string);
