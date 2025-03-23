@@ -467,8 +467,7 @@ mod tests {
         assert!(diff_string == expected_string);
     }
 
-    #[test]
-    fn same_structure_not_equivalent_len() {
+    fn same_structure_diff_len_asts() -> (Ast, Ast){
         let mut a = Ast::new();
         let mut b = Ast::new();
 
@@ -478,7 +477,23 @@ mod tests {
         let root_handle = b.add_root(Rule::Expression, 0, 1);
         b.add_child(root_handle, Rule::BraceExpression, 0, 1);
 
+        (a, b)
+    }
+
+    #[test]
+    fn same_structure_not_equivalent_len() {
+        let (a, b) = same_structure_diff_len_asts();
         assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn same_structure_diff_len_diff_string() {
+        let (a, b) = same_structure_diff_len_asts();
+        let diff_string = get_diff_string(&a, &b);
+        let expected_string = concat!("Rule: Expression Data: None Start: 0 Len: 2 ChildrenLen: 1\n");
+        print!("Expected:\n{}", expected_string);
+        print!("Actual:\n{}", diff_string);
+        assert!(diff_string == expected_string);
     }
 
     #[test]
