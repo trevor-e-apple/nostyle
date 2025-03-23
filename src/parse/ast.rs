@@ -204,6 +204,81 @@ impl Ast {
     }
 }
 
+#[cfg(test)]
+/// prints a tree up to the point where the two input trees diverge
+pub fn get_diff_string(ast_one: &Ast, ast_two: &Ast) -> String {
+    let mut result = String::new();
+    struct DfsData {
+        node_handle: AstNodeHandle,
+        depth: i32,
+    }
+
+    let mut stack_one: Vec<DfsData> = vec![];
+    if let Some(root) = ast_one.get_root() {
+        stack_one.push(DfsData { node_handle: root, depth: 0 })
+    }
+    let mut stack_two: Vec<DfsData> = vec![];
+    if let Some(root) = ast_two.get_root() {
+        stack_two.push(DfsData { node_handle: root, depth: 0 })
+    }
+
+    loop {
+        let dfs_data_one = stack_one.pop();
+        let dfs_data_two = stack_two.pop();
+
+        match dfs_data_one {
+            Some(dfs_data_one) => match dfs_data_two {
+                Some(dfs_data_two) => {
+                    // data from 1 and 2
+                    let node_one = ast_one.get_node(dfs_data_one.node_handle);
+                    let node_two = ast_two.get_node(dfs_data_two.node_handle);
+
+                    for _ in 0..dfs_data_one.depth {
+                        result.push_str("    ");
+                    }
+                    result.push_str(&format!("{}\n", node_one.make_terse_string()));
+
+                    if node_one == node_two {
+                        for (child_one_handle, child_two_handle) in (&node_one
+                            .children)
+                            .into_iter()
+                            .rev()
+                            .zip((&node_two.children).into_iter().rev())
+                        {
+                            stack_one.push(DfsData {
+                                node_handle: child_one_handle.clone(),
+                                depth: dfs_data_one.depth + 1,
+                            });
+                            stack_two.push(DfsData {
+                                node_handle: child_two_handle.clone(),
+                                depth: dfs_data_one.depth + 1,
+                            });
+                        }
+                    } else {
+                        // do not push children onto the stack if the two nodes are unequal
+                    }
+                }
+                None => {
+                    // data from 1, not 2
+                    panic!("Unequal stack sizes")
+                }
+            },
+            None => match dfs_data_two {
+                Some(_) => {
+                    // no data from 1. data from 2
+                    panic!("Unequal stack sizes")
+                }
+                None => {
+                    // no data from 1 or from 2
+                    break;
+                }
+            },
+        }
+    }
+
+    result
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct AstNodeHandle {
     index: usize,
@@ -223,8 +298,12 @@ impl AstNode {
     #[cfg(test)]
     pub fn make_terse_string(&self) -> String {
         format!(
-            "Rule: {:?} Data: {:?} Start: {:?} Len: {:?}",
-            self.rule, self.data, self.start, self.len
+            "Rule: {:?} Data: {:?} Start: {:?} Len: {:?} ChildrenLen: {:?}",
+            self.rule,
+            self.data,
+            self.start,
+            self.len,
+            self.children.len()
         )
     }
 
@@ -356,8 +435,7 @@ mod tests {
         assert!(!Ast::equivalent(&a, &b));
     }
 
-    #[test]
-    fn same_size_not_equivalent() {
+    fn same_size_not_equivalent_asts() -> (Ast, Ast) {
         let mut a = Ast::new();
         let mut b = Ast::new();
 
@@ -367,7 +445,26 @@ mod tests {
         let root_handle = b.add_root(Rule::Expression, 0, 1);
         b.add_child(root_handle, Rule::Equality, 0, 1);
 
+        (a, b)
+    }
+
+    #[test]
+    fn same_size_not_equivalent_equivalent() {
+        let (a, b) = same_size_not_equivalent_asts();
         assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn same_size_not_equivalent_diff_string() {
+        let (a, b) = same_size_not_equivalent_asts();
+        let diff_string = get_diff_string(&a, &b);
+        let expected_string = concat!(
+            "Rule: Expression Data: None Start: 0 Len: 1 ChildrenLen: 1\n",
+            "    Rule: BraceExpression Data: None Start: 0 Len: 1 ChildrenLen: 0\n"
+        );
+        print!("{}", expected_string);
+        print!("{}", diff_string);
+        assert!(diff_string == expected_string);
     }
 
     #[test]
