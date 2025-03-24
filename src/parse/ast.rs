@@ -236,12 +236,14 @@ pub fn get_diff_string(ast_one: &Ast, ast_two: &Ast) -> String {
                     for _ in 0..dfs_data_one.depth {
                         result.push_str("    ");
                     }
-                    result.push_str(&format!(
-                        "{}\n",
-                        node_one.make_terse_string()
-                    ));
 
-                    if node_one == node_two {
+                    if node_one == node_two
+                        && (node_one.children.len() == node_two.children.len())
+                    {
+                        result.push_str(&format!(
+                            "{}\n",
+                            node_one.make_terse_string()
+                        ));
                         for (child_one_handle, child_two_handle) in (&node_one
                             .children)
                             .into_iter()
@@ -258,6 +260,10 @@ pub fn get_diff_string(ast_one: &Ast, ast_two: &Ast) -> String {
                             });
                         }
                     } else {
+                        result.push_str(&format!(
+                            "MISMATCH {}\n",
+                            node_one.make_terse_string()
+                        ));
                         // do not push children onto the stack if the two nodes are unequal
                     }
                 }
@@ -497,11 +503,11 @@ mod tests {
         // expected to print the whole first tree, since the diff is on a leaf
         let expected_string = concat!(
             "Rule: Expression Data: None Start: 0 Len: 1 ChildrenLen: 1\n",
-            "    Rule: BraceExpression Data: None Start: 0 Len: 1 ChildrenLen: 0\n"
+            "    MISMATCH Rule: BraceExpression Data: None Start: 0 Len: 1 ChildrenLen: 0\n"
         );
         print!("{}", expected_string);
         print!("{}", diff_string);
-        assert_eq!(diff_string, expected_string);
+        assert_eq!(expected_string, diff_string);
     }
 
     fn same_structure_diff_len_asts() -> (Ast, Ast) {
@@ -529,11 +535,9 @@ mod tests {
         let diff_string = get_diff_string(&a, &b);
         // different len is at the root. the root of a is expected to print
         let expected_string = concat!(
-            "Rule: Expression Data: None Start: 0 Len: 2 ChildrenLen: 1\n"
+            "MISMATCH Rule: Expression Data: None Start: 0 Len: 2 ChildrenLen: 1\n"
         );
-        print!("Expected:\n{}", expected_string);
-        print!("Actual:\n{}", diff_string);
-        assert!(diff_string == expected_string);
+        assert_eq!(expected_string, diff_string);
     }
 
     #[test]
@@ -578,7 +582,7 @@ mod tests {
         // expecting to see up to the brace expression, where the diff is
         let expected_string = concat!(
             "Rule: Expression Data: None Start: 0 Len: 3 ChildrenLen: 1\n",
-            "    Rule: BraceExpression Data: None Start: 0 Len: 3 ChildrenLen: 1\n",
+            "    MISMATCH Rule: BraceExpression Data: None Start: 0 Len: 3 ChildrenLen: 1\n",
         );
         assert_eq!(expected_string, diff_string);
     }
@@ -625,5 +629,49 @@ mod tests {
         };
 
         assert_ne!(&a, &b);
+    }
+
+    #[test]
+    fn ast_node_children_mismatch_a() {
+        let a = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![AstNodeHandle { index: 1 }],
+            data: Some(Token::Assign),
+            start: 0,
+            len: 3,
+        };
+        let b = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![],
+            data: Some(Token::Assign),
+            start: 0,
+            len: 3,
+        };
+
+        assert_eq!(&a, &b);
+    }
+
+    #[test]
+    fn ast_node_children_mismatch_b() {
+        let a = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![],
+            data: Some(Token::Assign),
+            start: 0,
+            len: 3,
+        };
+        let b = AstNode {
+            rule: Rule::Expression,
+            parent: None,
+            children: vec![AstNodeHandle { index: 1 }],
+            data: Some(Token::Assign),
+            start: 0,
+            len: 3,
+        };
+
+        assert_eq!(&a, &b);
     }
 }
