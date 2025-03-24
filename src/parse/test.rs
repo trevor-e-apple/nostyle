@@ -2181,7 +2181,7 @@ fn assign_if_else_if() {
                 statement_handle,
                 Rule::Expression,
                 3,
-                20,
+                19,
             );
             let if_else_handle =
                 expected_ast.add_child(expression_handle, Rule::IfElse, 3, 19);
@@ -2278,13 +2278,13 @@ fn assign_if_else_if() {
                     let expression_handle = expected_ast.add_child(
                         if_else_handle,
                         Rule::Expression,
-                        18,
+                        19,
                         3,
                     );
                     let brace_expression = expected_ast.add_child(
                         expression_handle,
                         Rule::BraceExpression,
-                        18,
+                        19,
                         3,
                     );
 
@@ -2293,7 +2293,7 @@ fn assign_if_else_if() {
                         &mut expected_ast,
                         brace_expression,
                         Some(Token::Symbol("e".to_owned())),
-                        19,
+                        20,
                         1,
                     );
                 }
@@ -2305,7 +2305,7 @@ fn assign_if_else_if() {
             &mut expected_ast,
             brace_expression_handle,
             None,
-            20,
+            23,
             0,
         );
 
