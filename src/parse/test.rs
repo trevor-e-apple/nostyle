@@ -2122,7 +2122,7 @@ fn if_else_if() {
                     &mut expected_ast,
                     brace_expression_handle,
                     None,
-                    26,
+                    27,
                     0,
                 );
             }
