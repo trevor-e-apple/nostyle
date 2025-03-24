@@ -462,7 +462,7 @@ mod tests {
     fn are_equivalent_diff_string() {
         let (a, b) = are_equivalent_asts();
         let diff_string = get_diff_string(&a, &b);
-        
+
         // expected to print the entire tree
         let expected_string = concat!(
             "Rule: Expression Data: None Start: 0 Len: 1 ChildrenLen: 1\n",
@@ -550,8 +550,7 @@ mod tests {
         assert!(!Ast::equivalent(&a, &b));
     }
 
-    #[test]
-    fn a_excess_data() {
+    fn a_excess_data_asts() -> (Ast, Ast) {
         let mut a = Ast::new();
         let mut b = Ast::new();
 
@@ -563,7 +562,25 @@ mod tests {
         let root_handle = b.add_root(Rule::Expression, 0, 3);
         b.add_child(root_handle, Rule::BraceExpression, 0, 3);
 
+        (a, b)
+    }
+
+    #[test]
+    fn a_excess_data() {
+        let (a, b) = a_excess_data_asts();
         assert!(!Ast::equivalent(&a, &b));
+    }
+
+    #[test]
+    fn a_excess_data_diff_string() {
+        let (a, b) = a_excess_data_asts();
+        let diff_string = get_diff_string(&a, &b);
+        // expecting to see up to the brace expression, where the diff is
+        let expected_string = concat!(
+            "Rule: Expression Data: None Start: 0 Len: 3 ChildrenLen: 1\n",
+            "    Rule: BraceExpression Data: None Start: 0 Len: 3 ChildrenLen: 1\n",
+        );
+        assert_eq!(expected_string, diff_string);
     }
 
     #[test]
