@@ -3,6 +3,7 @@ use std::path::Path;
 use std::println;
 use std::time::SystemTime;
 
+use crate::parse::ast::get_diff_string;
 use crate::parse::*;
 
 #[cfg(test)]
@@ -171,6 +172,9 @@ fn check_ast_equal(ast: &Ast, expected_ast: &Ast) {
     ast.print();
     println!("expected_ast:");
     expected_ast.print();
+    println!("diff_ast:");
+    print!("{}", get_diff_string(&ast, &expected_ast));
+
     let equivalent = Ast::equivalent(ast, expected_ast);
     if !equivalent {
         // write out dot file for comparing asts
