@@ -736,7 +736,7 @@ fn parse_for_rule(
         node_handle,
         Rule::Statement,
         lparen_index + 1,
-        init_semicolon_index + 1,
+        init_semicolon_index - lparen_index,
         ast,
         stack,
     );
@@ -746,7 +746,7 @@ fn parse_for_rule(
         node_handle,
         Rule::Statement,
         init_semicolon_index + 1,
-        condition_semicolon_index + 1,
+        condition_semicolon_index - init_semicolon_index,
         ast,
         stack,
     );
@@ -756,7 +756,7 @@ fn parse_for_rule(
         node_handle,
         Rule::Statement,
         condition_semicolon_index + 1,
-        increment_semicolon_index + 1,
+        increment_semicolon_index - condition_semicolon_index,
         ast,
         stack,
     );
@@ -765,7 +765,7 @@ fn parse_for_rule(
         node_handle,
         Rule::BraceExpression,
         expression_lbrace_index,
-        expression_rbrace_index + 1,
+        expression_rbrace_index - expression_lbrace_index + 1,
         ast,
         stack,
     );
