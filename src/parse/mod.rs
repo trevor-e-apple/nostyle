@@ -557,7 +557,7 @@ fn parse_for_rule(
     let node = ast.get_node(node_handle);
 
     let (start_line, end_line) =
-        get_start_end_lines(tokens, node.start, node.len);
+        get_start_end_lines(tokens, node.start, node.get_end_index());
 
     match tokens.get(node.get_end_index()) {
         Some((end_token, line_number)) => {
