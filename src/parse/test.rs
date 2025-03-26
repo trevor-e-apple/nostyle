@@ -2321,13 +2321,14 @@ fn add_for_loop_declaration(
     ast: &mut Ast,
     parent_handle: AstNodeHandle,
     for_loop_start: usize,
+    brace_expression_len: usize,
 ) -> (AstNodeHandle, usize) {
     let declaration_len = 17;
     let for_handle = ast.add_child(
         parent_handle,
         Rule::ForLoop,
         for_loop_start,
-        declaration_len,
+        declaration_len + brace_expression_len,
     );
 
     // init statement
@@ -2426,8 +2427,13 @@ fn add_basic_for_loop(
     parent_handle: AstNodeHandle,
     for_loop_start: usize,
 ) -> AstNodeHandle {
-    let (for_handle, declaration_len) =
-        add_for_loop_declaration(ast, parent_handle, for_loop_start);
+    let brace_expression_len = 8;
+    let (for_handle, declaration_len) = add_for_loop_declaration(
+        ast,
+        parent_handle,
+        for_loop_start,
+        brace_expression_len,
+    );
 
     // brace_expression
     {
@@ -2436,7 +2442,7 @@ fn add_basic_for_loop(
             for_handle,
             Rule::BraceExpression,
             brace_expression_start,
-            8,
+            brace_expression_len,
         );
         // brace statements
         {
@@ -2487,7 +2493,7 @@ fn add_basic_for_loop(
             ast,
             brace_expression,
             None,
-            for_loop_start + 7,
+            brace_expression_start + brace_expression_len - 1,
             0,
         );
     }
@@ -6451,10 +6457,12 @@ fn for_loop_return() {
             );
 
             let for_loop_start = 11;
+            let for_loop_brace_expression_len = 5;
             let (for_handle, declaration_len) = add_for_loop_declaration(
                 &mut expected_ast,
                 expression_handle,
                 for_loop_start,
+                for_loop_brace_expression_len,
             );
             // for loop brace_expression
             {
@@ -6463,7 +6471,7 @@ fn for_loop_return() {
                     for_handle,
                     Rule::BraceExpression,
                     brace_start,
-                    5,
+                    for_loop_brace_expression_len,
                 );
                 // brace statements
                 {
