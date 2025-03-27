@@ -2774,7 +2774,7 @@ fn nested_assignment_in_brace_expressions() {
             brace_expression,
             Some(Token::Symbol("a".to_owned())),
             8,
-            0,
+            1,
         );
 
         expected_ast
