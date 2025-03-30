@@ -3224,7 +3224,7 @@ fn braced_statements_and_braced_expression() {
                 &mut expected_ast,
                 statements_handle,
                 Token::Symbol("e".to_owned()),
-                5,
+                9,
                 Token::Symbol("f".to_owned()),
             );
         }
