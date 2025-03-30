@@ -2796,9 +2796,9 @@ fn for_loop_brace() {
 
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 28);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 29);
         let for_handle =
-            expected_ast.add_child(root_handle, Rule::ForLoop, 0, 28);
+            expected_ast.add_child(root_handle, Rule::ForLoop, 0, 29);
 
         // init statement
         add_assignment_statement(
@@ -2877,19 +2877,27 @@ fn for_loop_brace() {
                     13,
                     5,
                 );
-                let paren_group_handle = expected_ast.add_child(
-                    end_expression_handle,
-                    Rule::Expression,
-                    14,
-                    3,
-                );
-                add_expected_add_child(
-                    &mut expected_ast,
-                    paren_group_handle,
-                    Token::Symbol("a".to_owned()),
-                    14,
-                    Token::IntLiteral(1),
-                )
+                {
+                    let paren_expression_handle = expected_ast.add_child(
+                        end_expression_handle,
+                        Rule::ParenExpression,
+                        13,
+                        5,
+                    );
+                    let inner_expression_handle = expected_ast.add_child(
+                        paren_expression_handle,
+                        Rule::Expression,
+                        14,
+                        3,
+                    );
+                    add_expected_add_child(
+                        &mut expected_ast,
+                        inner_expression_handle,
+                        Token::Symbol("a".to_owned()),
+                        14,
+                        Token::IntLiteral(1),
+                    );
+                }
             }
         }
 
@@ -2948,7 +2956,7 @@ fn for_loop_brace() {
                 &mut expected_ast,
                 brace_expression,
                 None,
-                27,
+                28,
                 0,
             );
         }

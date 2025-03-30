@@ -247,8 +247,8 @@ pub fn get_diff_string(ast_one: &Ast, ast_two: &Ast) -> String {
                         for (child_one_handle, child_two_handle) in (&node_one
                             .children)
                             .into_iter()
+                            .zip((&node_two.children).into_iter())
                             .rev()
-                            .zip((&node_two.children).into_iter().rev())
                         {
                             stack_one.push(DfsData {
                                 node_handle: child_one_handle.clone(),
