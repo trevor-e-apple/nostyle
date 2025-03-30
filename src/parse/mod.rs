@@ -1609,7 +1609,7 @@ fn parse_unary_rule(
                     node_handle,
                     Rule::Unary,
                     node_start + 1,
-                    node_end,
+                    node_end - node_start,
                     ast,
                     stack,
                 );
