@@ -973,20 +973,25 @@ fn binary_comp_statement(
         node_handle,
         Rule::Expression,
         node_start,
-        assign_index,
+        assign_index - node_start,
         ast,
         stack,
     );
 
     // Statement RHS. Requires some scaffolding to set up a consistent parse with non-composed version
-    let rhs_expression =
-        ast.add_child(node_handle, Rule::Expression, node_start, node_end);
+    let rhs_expression_len = node_end - node_start; // don't include trailing semicolon
+    let rhs_expression = ast.add_child(
+        node_handle,
+        Rule::Expression,
+        node_start,
+        rhs_expression_len,
+    );
     let rhs_op_node = ast.add_child_with_data(
         rhs_expression,
         composite_rule,
         Some(composite_token),
         node_start,
-        node_end,
+        rhs_expression_len,
     );
 
     // LHS (same as statement LHS)
@@ -994,17 +999,18 @@ fn binary_comp_statement(
         rhs_op_node,
         Rule::Expression,
         node_start,
-        assign_index - 1,
+        assign_index - node_start,
         ast,
         stack,
     );
 
     // RHS (everything past the binary op and assignment token)
+    // don't include trailing semi colon or assignment token
     add_child_to_search_stack(
         rhs_op_node,
         Rule::Expression,
         assign_index + 1,
-        node_end - 1,
+        node_end - 1 - assign_index,
         ast,
         stack,
     );

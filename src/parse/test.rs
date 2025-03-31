@@ -3581,14 +3581,18 @@ fn binary_op_and_assign_expected_ast(
 
         // RHS
         let rhs_start = statements_start + 2;
-        let rhs =
-            expected_ast.add_child(statement, Rule::Expression, rhs_start, 1);
+        let rhs = expected_ast.add_child(
+            statement,
+            Rule::Expression,
+            statements_start,
+            3,
+        );
         let binary_op_node_handle = expected_ast.add_child_with_data(
             rhs,
             rule,
             Some(data),
-            rhs_start,
-            1,
+            statements_start,
+            3,
         );
         add_terminal_expression(
             &mut expected_ast,
