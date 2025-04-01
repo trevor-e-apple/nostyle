@@ -2244,9 +2244,9 @@ fn parse_primary_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = {
+    let (node_start, node_end, node_len) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.get_end_index())
+        (node.start, node.get_end_index(), node.len)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
@@ -2254,15 +2254,34 @@ fn parse_primary_rule(
     match tokens.get(node_start) {
         Some((token, line_number)) => match token {
             Token::Symbol(_) => {
-                if (node_end - node_start) > 1 {
-                    add_child_to_search_stack(
-                        node_handle,
-                        Rule::StructAccess,
-                        node_start,
-                        node_end,
-                        ast,
-                        stack,
-                    );
+                if node_len > 1 {
+                    let contains_dot =
+                        match find_prev_matching_level_token_all_groups(
+                            tokens,
+                            &[Token::Dot],
+                            node_start,
+                            node_end + 1,
+                        ) {
+                            Some(_) => true,
+                            None => false,
+                        };
+
+                    if contains_dot {
+                        add_child_to_search_stack(
+                            node_handle,
+                            Rule::StructAccess,
+                            node_start,
+                            node_len,
+                            ast,
+                            stack,
+                        );
+                    } else {
+                        return Err(ParseError {
+                            start_line,
+                            end_line,
+                            info: "Primary started with a symbol and contained multiple tokens but could not be interpreted as a struct".to_owned()
+                        });
+                    }
                 } else {
                     // update current primary to terminal
                     let node = ast.get_node_mut(node_handle);
@@ -2557,14 +2576,14 @@ fn parse_struct_access_terminal(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = {
+    let (node_start, node_end, node_len) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.get_end_index())
+        (node.start, node.get_end_index(), node.len)
     };
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
-    if (node_end - node_start) == 1 {
+    if node_len == 1 {
         match tokens.get_token(node_start) {
             Some(token) => {
                 let node = ast.get_node_mut(node_handle);
@@ -2584,7 +2603,7 @@ fn parse_struct_access_terminal(
             node_handle,
             Rule::FunctionCall,
             node_start,
-            node_end,
+            node_len,
             ast,
             stack,
         );
