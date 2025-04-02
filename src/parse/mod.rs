@@ -10,18 +10,14 @@ equality -> (equality ("==" | "!=") comparison) | comparison;
 comparison -> (comparison (">" | ">=" | "<" | "<=") plus_minus) | plus_minus;
 plus_minus -> (plus_minus ("+" | "-") mult_div) | mult_div;
 mult_div -> (mult_div ("*" | "/") unary) | unary;
-unary -> (("!" | "-") unary) | function_call;
-function_call -> SYMBOL"(" function_arguments ")" | primary;
+unary -> (("!" | "-") unary) | struct_access;
+struct_access -> (struct_access "." function_call) | function_call;
+function_call -> SYMBOL"(" function_arguments ")" | paren_expression;
 function_arguments -> (function_arguments ",")? expression ","?;
-primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE | paren_expression | brace_expression | struct_access;
-
-struct_access -> struct_access "." struct_access_terminal;
-struct_access_terminal -> function_call | SYMBOL;
-
-brace_expression -> "{" brace_statements? expression "}";
+paren_expression -> "(" expression ")" | brace_expression;
+brace_expression -> "{" brace_statements? expression "}" | primary;
 brace_statements -> brace_statements? (statement | return_statement);
-
-paren_expression -> "(" paren_expression ")"
+primary -> TRUE | FALSE | SYMBOL | NUMBER | STRING | NONE;
 
 declaration -> SYMBOL SYMBOL;
 
@@ -350,17 +346,6 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     Err(error) => parse_errors.push(error),
                 }
             }
-            Rule::StructAccessTerminal => {
-                match parse_struct_access_terminal(
-                    tokens,
-                    node_handle,
-                    &mut result,
-                    &mut stack,
-                ) {
-                    Ok(_) => {}
-                    Err(error) => parse_errors.push(error),
-                }
-            }
         }
     }
 
@@ -508,43 +493,40 @@ fn parse_paren_expression_rule(
     };
 
     if *start_token != Token::LParen {
-        return Err(ParseError {
-            start_line,
-            end_line,
-            info: "Missing lparen".to_owned(),
-        });
-    }
-
-    let end_token = match tokens.get_token(node_end) {
-        Some(token) => token,
-        None => {
-            return Err(make_final_line_error(
-                tokens,
+        next_rule_updates(node_handle, ast, stack, Rule::BraceExpression);
+        Ok(())
+    } else {
+        let end_token = match tokens.get_token(node_end) {
+            Some(token) => token,
+            None => {
+                return Err(make_final_line_error(
+                    tokens,
+                    start_line,
+                    "Can not parse 'paren_expression' rule (missing rparen)"
+                        .to_owned(),
+                ));
+            }
+        };
+        if *end_token != Token::RParen {
+            return Err(ParseError {
                 start_line,
-                "Can not parse 'paren_expression' rule (missing rparen)"
-                    .to_owned(),
-            ));
-        }
-    };
-    if *end_token != Token::RParen {
-        return Err(ParseError {
-            start_line,
-            end_line,
-            info: "Missing rparen".to_owned(),
-        });
-    };
+                end_line,
+                info: "Missing rparen".to_owned(),
+            });
+        };
 
-    // add child while removing parens
-    add_child_to_search_stack(
-        node_handle,
-        Rule::Expression,
-        node.start + 1,
-        node.len - 2,
-        ast,
-        stack,
-    );
+        // add child while removing parens
+        add_child_to_search_stack(
+            node_handle,
+            Rule::Expression,
+            node.start + 1,
+            node.len - 2,
+            ast,
+            stack,
+        );
 
-    Ok(())
+        Ok(())
+    }
 }
 
 /// parses the for rule
@@ -791,83 +773,80 @@ fn parse_brace_expression_rule(
     };
 
     if first_token != Token::LBrace {
-        return Err(ParseError {
-            start_line,
-            end_line: start_line,
-            info: "Missing expected lbrace at start of brace expression"
-                .to_owned(),
-        });
-    }
+        next_rule_updates(node_handle, ast, stack, Rule::Primary);
+        Ok(())
+    } else {
+        let final_token = match tokens.get_token(node.get_end_index()) {
+            Some(token) => token,
+            None => {
+                return Err(ParseError {
+                    start_line,
+                    end_line: start_line,
+                    info: "Missing rbrace at end of brace expression"
+                        .to_owned(),
+                })
+            }
+        };
 
-    let final_token = match tokens.get_token(node.get_end_index()) {
-        Some(token) => token,
-        None => {
+        if *final_token != Token::RBrace {
             return Err(ParseError {
                 start_line,
                 end_line: start_line,
                 info: "Missing rbrace at end of brace expression".to_owned(),
-            })
+            });
         }
-    };
 
-    if *final_token != Token::RBrace {
-        return Err(ParseError {
-            start_line,
-            end_line: start_line,
-            info: "Missing rbrace at end of brace expression".to_owned(),
-        });
-    }
+        let brace_contents_start = node.start + 1;
+        let rbrace_index = node.get_end_index();
 
-    let brace_contents_start = node.start + 1;
-    let rbrace_index = node.get_end_index();
+        let end_brace_statements: Option<usize> =
+            match find_final_matching_level_token_all_groups(
+                tokens,
+                &[Token::EndStatement],
+                brace_contents_start,
+                rbrace_index,
+            ) {
+                Some((index, _)) => Some(index + 1),
+                None => None,
+            };
 
-    let end_brace_statements: Option<usize> =
-        match find_final_matching_level_token_all_groups(
-            tokens,
-            &[Token::EndStatement],
-            brace_contents_start,
-            rbrace_index,
-        ) {
-            Some((index, _)) => Some(index + 1),
-            None => None,
-        };
+        match end_brace_statements {
+            Some(end_brace_statements) => {
+                // some braces don't have brace statements
+                if brace_contents_start < end_brace_statements {
+                    add_child_to_search_stack(
+                        node_handle,
+                        Rule::BraceStatements,
+                        brace_contents_start,
+                        end_brace_statements - brace_contents_start,
+                        ast,
+                        stack,
+                    );
+                }
 
-    match end_brace_statements {
-        Some(end_brace_statements) => {
-            // some braces don't have brace statements
-            if brace_contents_start < end_brace_statements {
                 add_child_to_search_stack(
                     node_handle,
-                    Rule::BraceStatements,
-                    brace_contents_start,
-                    end_brace_statements - brace_contents_start,
+                    Rule::Expression,
+                    end_brace_statements,
+                    rbrace_index - end_brace_statements,
                     ast,
                     stack,
                 );
             }
+            None => {
+                add_child_to_search_stack(
+                    node_handle,
+                    Rule::Expression,
+                    brace_contents_start,
+                    rbrace_index - brace_contents_start,
+                    ast,
+                    stack,
+                );
+            }
+        }
 
-            add_child_to_search_stack(
-                node_handle,
-                Rule::Expression,
-                end_brace_statements,
-                rbrace_index - end_brace_statements,
-                ast,
-                stack,
-            );
-        }
-        None => {
-            add_child_to_search_stack(
-                node_handle,
-                Rule::Expression,
-                brace_contents_start,
-                rbrace_index - brace_contents_start,
-                ast,
-                stack,
-            );
-        }
+        Ok(())
     }
-
-    Ok(())
 }
 
 /// parse brace_statements rule
@@ -1620,7 +1599,7 @@ fn parse_unary_rule(
                     stack,
                 );
             } else {
-                next_rule_updates(node_handle, ast, stack, Rule::FunctionCall);
+                next_rule_updates(node_handle, ast, stack, Rule::StructAccess);
             }
         }
         None => {
@@ -1705,13 +1684,18 @@ fn parse_function_call_rule(
                         });
                     }
                 } else {
-                    // no parens, symbol can't be parsed as function call
+                    // no parens in correct position, symbol can't be parsed as function call
                     next_rule_updates(node_handle, ast, stack, Rule::Primary);
                 }
             }
             _ => {
                 // if not a symbol, move on to next rule
-                next_rule_updates(node_handle, ast, stack, Rule::Primary);
+                next_rule_updates(
+                    node_handle,
+                    ast,
+                    stack,
+                    Rule::ParenExpression,
+                );
             }
         },
         None => {
@@ -2253,46 +2237,11 @@ fn parse_primary_rule(
 
     match tokens.get(node_start) {
         Some((token, line_number)) => match token {
-            Token::Symbol(_) => {
-                if node_len > 1 {
-                    let contains_dot =
-                        match find_prev_matching_level_token_all_groups(
-                            tokens,
-                            &[Token::Dot],
-                            node_start,
-                            node_end + 1,
-                        ) {
-                            Some(_) => true,
-                            None => false,
-                        };
-
-                    if contains_dot {
-                        add_child_to_search_stack(
-                            node_handle,
-                            Rule::StructAccess,
-                            node_start,
-                            node_len,
-                            ast,
-                            stack,
-                        );
-                    } else {
-                        return Err(ParseError {
-                            start_line,
-                            end_line,
-                            info: "Primary started with a symbol and contained multiple tokens but could not be interpreted as a struct".to_owned()
-                        });
-                    }
-                } else {
-                    // update current primary to terminal
-                    let node = ast.get_node_mut(node_handle);
-                    node.rule = Rule::Terminal;
-                    node.data = Some(token.clone());
-                }
-            }
-            Token::IntLiteral(_)
+            Token::Symbol(_)
+            | Token::IntLiteral(_)
             | Token::FloatLiteral(_)
             | Token::StringLiteral(_) => {
-                if (node_end - node_start) != 0 {
+                if node_len > 1 {
                     return Err(ParseError {
                             start_line,
                             end_line,
@@ -2303,18 +2252,6 @@ fn parse_primary_rule(
                 let node = ast.get_node_mut(node_handle);
                 node.rule = Rule::Terminal;
                 node.data = Some(token.clone());
-            }
-            Token::LParen => {
-                // update current node to paren expression
-                let node = ast.get_node_mut(node_handle);
-                node.rule = Rule::ParenExpression;
-                stack.push(node_handle);
-            }
-            Token::LBrace => {
-                // update current node to BraceExpression rule
-                let node = ast.get_node_mut(node_handle);
-                node.rule = Rule::BraceExpression;
-                stack.push(node_handle);
             }
             _ => {
                 return Err(ParseError {
@@ -2513,12 +2450,10 @@ fn parse_struct_access(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = {
+    let (node_start, node_end, node_len) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.get_end_index())
+        (node.start, node.get_end_index(), node.len)
     };
-    let (start_line, end_line) =
-        get_start_end_lines(tokens, node_start, node_end);
 
     // split on the right most dot
     match find_final_matching_level_token_all_groups(
@@ -2532,82 +2467,26 @@ fn parse_struct_access(
                 node_handle,
                 Rule::StructAccess,
                 node_start,
-                split_index,
+                split_index - node_start,
                 ast,
                 stack,
             );
 
+            // exclude dot token by adding 1
+            let terminal_start = split_index + 1;
             add_child_to_search_stack(
                 node_handle,
-                Rule::StructAccessTerminal,
-                split_index + 1, // exclude dot token
-                node_end,
+                Rule::FunctionCall,
+                terminal_start,
+                node_end - split_index,
                 ast,
                 stack,
             );
             Ok(())
         }
         None => {
-            if (node_end - node_start) == 1 {
-                add_child_to_search_stack(
-                    node_handle,
-                    Rule::StructAccessTerminal,
-                    node_start,
-                    node_end,
-                    ast,
-                    stack,
-                );
-                Ok(())
-            } else {
-                Err(ParseError {
-                    start_line,
-                    end_line,
-                    info: "Expected dot when parsing multi-token primary"
-                        .to_owned(),
-                })
-            }
+            next_rule_updates(node_handle, ast, stack, Rule::FunctionCall);
+            Ok(())
         }
     }
-}
-
-fn parse_struct_access_terminal(
-    tokens: &Tokens,
-    node_handle: AstNodeHandle,
-    ast: &mut Ast,
-    stack: &mut Vec<AstNodeHandle>,
-) -> Result<(), ParseError> {
-    let (node_start, node_end, node_len) = {
-        let node = ast.get_node(node_handle);
-        (node.start, node.get_end_index(), node.len)
-    };
-    let (start_line, end_line) =
-        get_start_end_lines(tokens, node_start, node_end);
-
-    if node_len == 1 {
-        match tokens.get_token(node_start) {
-            Some(token) => {
-                let node = ast.get_node_mut(node_handle);
-                node.rule = Rule::Terminal;
-                node.data = Some(token.clone());
-            }
-            None => {
-                return Err(ParseError {
-                    start_line,
-                    end_line,
-                    info: "".to_owned(),
-                })
-            }
-        }
-    } else {
-        add_child_to_search_stack(
-            node_handle,
-            Rule::FunctionCall,
-            node_start,
-            node_len,
-            ast,
-            stack,
-        );
-    }
-
-    Ok(())
 }

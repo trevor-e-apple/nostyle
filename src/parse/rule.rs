@@ -25,5 +25,4 @@ pub enum Rule {
     DeclarationStatements,
     DataStructure,
     StructAccess,
-    StructAccessTerminal,
 }

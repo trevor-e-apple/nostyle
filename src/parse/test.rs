@@ -3692,13 +3692,13 @@ fn binary_op_and_assign_rhs_expression() {
             );
 
             // RHS
-            let rhs = expected_ast.add_child(statement, Rule::Expression, 3, 3);
+            let rhs = expected_ast.add_child(statement, Rule::Expression, 1, 5);
             let plus_minus = expected_ast.add_child_with_data(
                 rhs,
                 Rule::PlusMinus,
                 Some(Token::Plus),
-                3,
-                3,
+                1,
+                5,
             );
             add_terminal_expression(
                 &mut expected_ast,
@@ -6962,7 +6962,7 @@ fn parse_struct_field_function_call() {
             {
                 let terminal_handle = expected_ast.add_child(
                     struct_access_handle,
-                    Rule::StructAccessTerminal,
+                    Rule::Primary,
                     2,
                     3,
                 );
