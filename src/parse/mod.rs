@@ -1664,7 +1664,7 @@ fn parse_function_call_rule(
                         node_handle,
                         Rule::FunctionArguments,
                         node_start + 2,
-                        node_end - 1,
+                        node_end - node_start - 2,
                         ast,
                         stack,
                     );
@@ -1716,9 +1716,9 @@ fn parse_function_arguments_rule(
     ast: &mut Ast,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = {
+    let (node_start, node_end, node_len) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.get_end_index())
+        (node.start, node.get_end_index(), node.len)
     };
 
     // find the final comma in the search range
@@ -1774,7 +1774,7 @@ fn parse_function_arguments_rule(
                     node_handle,
                     Rule::FunctionArguments,
                     node_start,
-                    rhs_start - 1,
+                    rhs_start - node_start,
                     ast,
                     stack,
                 );
@@ -1784,7 +1784,7 @@ fn parse_function_arguments_rule(
                     node_handle,
                     Rule::Expression,
                     rhs_start,
-                    rhs_end,
+                    rhs_end - rhs_start + 1,
                     ast,
                     stack,
                 );
@@ -1796,7 +1796,7 @@ fn parse_function_arguments_rule(
                 node_handle,
                 Rule::Expression,
                 node_start,
-                node_end,
+                node_len,
                 ast,
                 stack,
             );

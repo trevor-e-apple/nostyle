@@ -3936,7 +3936,7 @@ fn statement_lhs_is_function() {
                     Rule::FunctionCall,
                     Some(Token::Symbol("fun".to_owned())),
                     1,
-                    1,
+                    4,
                 );
                 let fun_arg_handle = expected_ast.add_child(
                     fun_call_handle,
