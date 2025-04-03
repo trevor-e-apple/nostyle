@@ -4028,8 +4028,8 @@ fn add_function_call_no_arg(
     let args_handle = ast.add_child(
         function_call_handle,
         Rule::FunctionArguments,
-        start + 1,
-        2,
+        start + 2,
+        0,
     );
     add_terminal_expression(ast, args_handle, None, start + 2, 0);
 }

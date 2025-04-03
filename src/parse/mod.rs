@@ -1721,6 +1721,19 @@ fn parse_function_arguments_rule(
         (node.start, node.get_end_index(), node.len)
     };
 
+    // no arguments in this function
+    if node_len == 0 {
+        add_child_to_search_stack(
+            node_handle,
+            Rule::Expression,
+            node_start,
+            node_len,
+            ast,
+            stack,
+        );
+        return Ok(());
+    }
+
     // find the final comma in the search range
     match find_final_matching_level_token_all_groups(
         tokens,
