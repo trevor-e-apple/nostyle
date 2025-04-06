@@ -4071,8 +4071,8 @@ fn add_function_call_one_arg(
     let args_handle = ast.add_child(
         function_call_handle,
         Rule::FunctionArguments,
-        start + 1,
-        3,
+        start + 2,
+        1,
     );
     add_terminal_expression(
         ast,
