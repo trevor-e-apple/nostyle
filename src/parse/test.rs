@@ -4122,8 +4122,8 @@ fn function_call_two_arguments() {
         let args_handle = expected_ast.add_child(
             function_call_handle,
             Rule::FunctionArguments,
-            1,
-            5,
+            2,
+            3,
         );
 
         // "me" argument
@@ -4133,7 +4133,7 @@ fn function_call_two_arguments() {
                 args_handle,
                 Rule::FunctionArguments,
                 2,
-                1,
+                2,
             );
             add_terminal_expression(
                 &mut expected_ast,

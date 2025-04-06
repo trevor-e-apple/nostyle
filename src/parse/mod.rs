@@ -1710,6 +1710,7 @@ fn parse_function_call_rule(
     Ok(())
 }
 
+// TODO: document and simplify the flow control of this function
 fn parse_function_arguments_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1739,7 +1740,7 @@ fn parse_function_arguments_rule(
         tokens,
         &[Token::Comma],
         node_start,
-        node_end,
+        node_end + 1,
     ) {
         Some((final_comma_index, _)) => {
             // find the RHS expression start and end. if there is no left hand side,
@@ -1761,7 +1762,7 @@ fn parse_function_arguments_rule(
                                     node_handle,
                                     Rule::Expression,
                                     node_start,
-                                    final_comma_index,
+                                    final_comma_index - node_start, // don't include the comma
                                     ast,
                                     stack,
                                 );
