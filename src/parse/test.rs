@@ -4060,19 +4060,20 @@ fn add_function_call_one_arg(
     function_name: String,
     arg_name: String,
     start: usize,
+    expected_len: usize,
 ) {
     let function_call_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionCall,
         Some(Token::Symbol(function_name)),
         start,
-        4,
+        expected_len,
     );
     let args_handle = ast.add_child(
         function_call_handle,
         Rule::FunctionArguments,
         start + 2,
-        1,
+        expected_len - 3,
     );
     add_terminal_expression(
         ast,
@@ -4097,6 +4098,7 @@ fn function_call_one_argument() {
             "test".to_owned(),
             "me".to_owned(),
             0,
+            4,
         );
 
         expected_ast
@@ -4265,6 +4267,7 @@ fn function_call_trailing_comma_single_arg() {
             "test".to_owned(),
             "me".to_owned(),
             0,
+            5,
         );
         expected_ast
     };
@@ -4367,6 +4370,7 @@ fn function_calls_nested() {
                 "d".to_owned(),
                 "e".to_owned(),
                 15,
+                4,
             );
         }
         expected_ast
@@ -4655,6 +4659,7 @@ fn multiple_function_calls() {
                 "fun_b".to_owned(),
                 "b".to_owned(),
                 7,
+                4,
             );
         }
 
