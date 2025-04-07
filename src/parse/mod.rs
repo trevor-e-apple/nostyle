@@ -1771,8 +1771,8 @@ fn parse_function_arguments_rule(
                         };
                     (
                         added_to_stack,
-                        prev_arg_comma_index + 1, // don't include the comma
-                        final_comma_index,
+                        prev_arg_comma_index + 1, // rhs starts after prev argument's comma
+                        final_comma_index - 1, // rhs ends before the trailing comma
                     )
                 } else {
                     (

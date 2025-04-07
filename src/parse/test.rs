@@ -4181,22 +4181,22 @@ fn add_function_call_multiple_arguments(
     let args_handle = ast.add_child(
         function_call_handle,
         Rule::FunctionArguments,
-        start + 1,
-        len - 1,
+        start + 2,
+        len - 3, // don't include parens or function name
     );
 
     // arg 1 and 2
     {
         // recursive arg
         let args_handle =
-            ast.add_child(args_handle, Rule::FunctionArguments, start + 2, 3);
+            ast.add_child(args_handle, Rule::FunctionArguments, start + 2, 4);
 
         {
             let args_handle = ast.add_child(
                 args_handle,
                 Rule::FunctionArguments,
                 start + 2,
-                1,
+                2,
             );
             add_terminal_expression(
                 ast,
