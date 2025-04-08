@@ -4319,8 +4319,8 @@ fn function_calls_nested() {
         let args_handle = expected_ast.add_child(
             function_call_handle,
             Rule::FunctionArguments,
-            1,
-            20,
+            2,
+            18,
         );
 
         // arg 1
@@ -4329,7 +4329,7 @@ fn function_calls_nested() {
                 args_handle,
                 Rule::FunctionArguments,
                 2,
-                18,
+                10,
             );
             let expression_handle =
                 expected_ast.add_child(args_handle, Rule::Expression, 2, 9);
@@ -4348,28 +4348,28 @@ fn function_calls_nested() {
         // arg 2
         {
             let expression_handle =
-                expected_ast.add_child(args_handle, Rule::Expression, 13, 8);
+                expected_ast.add_child(args_handle, Rule::Expression, 12, 8);
             let function_call_handle = expected_ast.add_child_with_data(
                 expression_handle,
                 Rule::FunctionCall,
                 Some(Token::Symbol("second_inner".to_owned())),
-                13,
+                12,
                 8,
             );
             let args_handle = expected_ast.add_child(
                 function_call_handle,
                 Rule::FunctionArguments,
-                15,
+                14,
                 5,
             );
             let expression_handle =
-                expected_ast.add_child(args_handle, Rule::Expression, 15, 5);
+                expected_ast.add_child(args_handle, Rule::Expression, 14, 4);
             add_function_call_one_arg(
                 &mut expected_ast,
                 expression_handle,
                 "d".to_owned(),
                 "e".to_owned(),
-                15,
+                14,
                 4,
             );
         }
