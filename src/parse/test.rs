@@ -2596,12 +2596,12 @@ fn for_loop_no_init() {
         // init statement
         {
             let statement_handle =
-                expected_ast.add_child(for_handle, Rule::Statement, 1, 1);
+                expected_ast.add_child(for_handle, Rule::Statement, 2, 1);
             add_terminal_expression(
                 &mut expected_ast,
                 statement_handle,
                 None,
-                1,
+                2,
                 0,
             );
         }
@@ -2642,7 +2642,7 @@ fn for_loop_no_init() {
         // increment
         {
             let statement_handle =
-                expected_ast.add_child(for_handle, Rule::Statement, 7, 7);
+                expected_ast.add_child(for_handle, Rule::Statement, 7, 6);
 
             // lhs
             add_terminal_expression(
