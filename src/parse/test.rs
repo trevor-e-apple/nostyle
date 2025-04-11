@@ -4396,8 +4396,8 @@ fn function_call_argument_expression() {
         let args_handle = expected_ast.add_child(
             function_call_handle,
             Rule::FunctionArguments,
-            1,
-            8,
+            2,
+            6,
         );
 
         // 1 + 2 argument
@@ -4407,7 +4407,7 @@ fn function_call_argument_expression() {
                 args_handle,
                 Rule::FunctionArguments,
                 2,
-                3,
+                4,
             );
 
             // 1 + 2
