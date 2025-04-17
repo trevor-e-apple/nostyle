@@ -4454,8 +4454,8 @@ fn function_call_parens_in_expression() {
         let args_handle = expected_ast.add_child(
             function_call_handle,
             Rule::FunctionArguments,
-            1,
-            10,
+            2,
+            8,
         );
 
         // (1 + 2) argument
@@ -4465,14 +4465,15 @@ fn function_call_parens_in_expression() {
                 args_handle,
                 Rule::FunctionArguments,
                 2,
-                5,
+                6,
             );
 
             // (1 + 2)
             let expression_handle =
                 expected_ast.add_child(args_handle, Rule::Expression, 2, 5);
+            let paren_expression_handle = expected_ast.add_child(expression_handle, Rule::ParenExpression, 2, 5);
             let expression_handle = expected_ast.add_child(
-                expression_handle,
+                paren_expression_handle,
                 Rule::Expression,
                 3,
                 3,
