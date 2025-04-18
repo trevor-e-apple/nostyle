@@ -4587,9 +4587,9 @@ fn multiple_function_calls() {
     let ast = parse(&tokens).expect("Unexpected parse error");
     let expected_ast = {
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 23);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 22);
         let brace_expression_handle =
-            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 23);
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 22);
         let brace_statements_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::BraceStatements,
@@ -4629,7 +4629,7 @@ fn multiple_function_calls() {
                     statement_handle,
                     Rule::Expression,
                     3,
-                    2,
+                    3,
                 );
                 add_function_call_no_arg(
                     &mut expected_ast,
@@ -4646,7 +4646,7 @@ fn multiple_function_calls() {
                 brace_statements_handle,
                 Rule::Statement,
                 7,
-                4,
+                5,
             );
             let expression_handle = expected_ast.add_child(
                 statement_handle,
