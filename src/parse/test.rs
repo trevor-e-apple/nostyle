@@ -4520,8 +4520,8 @@ fn function_call_braced_expression() {
         let args_handle = expected_ast.add_child(
             function_call_handle,
             Rule::FunctionArguments,
-            1,
-            10,
+            2,
+            8,
         );
 
         // {1 + 2} argument
@@ -4531,7 +4531,7 @@ fn function_call_braced_expression() {
                 args_handle,
                 Rule::FunctionArguments,
                 2,
-                5,
+                6,
             );
 
             // {1 + 2}
