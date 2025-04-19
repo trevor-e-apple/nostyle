@@ -1838,7 +1838,7 @@ fn parse_function_defs_rule(
             &tokens,
             &[Token::Function],
             node_start,
-            node_end,
+            node_end + 1,
         ) {
             Some(index) => index,
             None => {
@@ -2023,7 +2023,7 @@ fn parse_function_def_rule(
         node_handle,
         Rule::FunctionDefParameters,
         lparen_index + 1,
-        rparen_index,
+        rparen_index - lparen_index - 1,
         ast,
         stack,
     );
@@ -2034,7 +2034,7 @@ fn parse_function_def_rule(
                 node_handle,
                 Rule::ReturnsData,
                 returns_index,
-                lbrace_index,
+                returns_index - lbrace_index,
                 ast,
                 stack,
             );
@@ -2046,7 +2046,7 @@ fn parse_function_def_rule(
         node_handle,
         Rule::BraceExpression,
         lbrace_index,
-        node_end,
+        node_end - lbrace_index + 1,
         ast,
         stack,
     );
@@ -2062,7 +2062,7 @@ fn parse_function_parameters_rule(
 ) -> Result<(), ParseError> {
     let node = ast.get_node(node_handle);
 
-    if node.start == node.get_end_index() {
+    if node.len == 0 {
         // this function has no parameters. nothing to do
         return Ok(());
     }
@@ -2089,21 +2089,24 @@ fn parse_function_parameters_rule(
             let declaration_start = final_symbol_index - 1;
 
             // LHS is the recursive side
-            add_child_to_search_stack(
-                node_handle,
-                Rule::FunctionDefParameters,
-                node.start,
-                declaration_start,
-                ast,
-                stack,
-            );
+            let lhs_len = declaration_start - node.start;
+            if lhs_len > 0 {
+                add_child_to_search_stack(
+                    node_handle,
+                    Rule::FunctionDefParameters,
+                    node.start,
+                    lhs_len,
+                    ast,
+                    stack,
+                );
+            }
 
-            // RHS is a declaration
+            // RHS is a declaration, should always have length 2
             add_child_to_search_stack(
                 node_handle,
                 Rule::Declaration,
                 declaration_start,
-                final_symbol_index + 1,
+                2,
                 ast,
                 stack,
             );
@@ -2168,16 +2171,16 @@ fn parse_declaration_rule(
     node_handle: AstNodeHandle,
     ast: &mut Ast,
 ) -> Result<(), ParseError> {
-    let (node_start, node_end) = {
+    let (node_start, node_end, node_len) = {
         let node = ast.get_node(node_handle);
-        (node.start, node.get_end_index())
+        (node.start, node.get_end_index(), node.len)
     };
 
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
     // check that search data is len 2
-    if (node_end - node_start + 1) != 2 {
+    if node_len != 2 {
         return Err(ParseError {
             start_line,
             end_line,

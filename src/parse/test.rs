@@ -4839,16 +4839,16 @@ fn empty_function() {
             root_handle,
             Rule::FunctionDef,
             Some(Token::Symbol("test".to_owned())),
-            1,
-            3,
+            0,
+            6,
         );
 
         // no parameters, so this has no children
         expected_ast.add_child(
             function_def_handle,
             Rule::FunctionDefParameters,
-            2,
-            2,
+            3,
+            0,
         );
 
         // brace expression
