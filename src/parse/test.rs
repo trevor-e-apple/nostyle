@@ -4709,16 +4709,16 @@ fn function_call_no_arg_comma() {
         let function_arguments_handle = expected_ast.add_child(
             function_call_handle,
             Rule::FunctionArguments,
-            1,
+            2,
             1,
         );
         let expression_handle = expected_ast.add_child(
             function_arguments_handle,
             Rule::Expression,
-            1,
-            1,
+            2,
+            0,
         );
-        expected_ast.add_terminal_child(expression_handle, None, 1, 0);
+        expected_ast.add_terminal_child(expression_handle, None, 2, 0);
 
         expected_ast
     };
