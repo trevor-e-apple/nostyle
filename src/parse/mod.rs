@@ -1195,7 +1195,7 @@ fn parse_return_statement(
         node_handle,
         Rule::Expression,
         start_index,
-        end_statement_index,
+        end_statement_index - start_index,
         ast,
         stack,
     );
@@ -2195,7 +2195,7 @@ fn parse_declaration_rule(
                     node_handle,
                     Some(token.clone()),
                     node_start,
-                    node_end,
+                    1,
                 );
             }
             _ => {
@@ -2218,8 +2218,8 @@ fn parse_declaration_rule(
                 ast.add_terminal_child(
                     node_handle,
                     Some(token.clone()),
-                    node_start,
-                    node_end,
+                    node_start + 1,
+                    1,
                 );
             }
             _ => {

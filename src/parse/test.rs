@@ -4915,6 +4915,7 @@ fn multiple_function_defs() {
                 &param_two_name,
                 0,
                 7,
+                2,
             );
             // brace expression
             let brace_expression_handle = expected_ast.add_child(
@@ -4939,6 +4940,7 @@ fn multiple_function_defs() {
                 &param_two_name,
                 12,
                 7,
+                2,
             );
             // brace expression
             let brace_expression_handle = expected_ast.add_child(
@@ -4964,6 +4966,7 @@ fn multiple_function_defs() {
             &param_two_name,
             23,
             7,
+            2,
         );
 
         // brace expression
@@ -5076,6 +5079,7 @@ fn for_loop_function() {
             &param_two,
             0,
             7,
+            29,
         );
 
         // brace expression
@@ -5141,6 +5145,7 @@ fn expression_for_loop_function() {
             &param_two,
             0,
             7,
+            26,
         );
 
         // brace expression
@@ -5564,13 +5569,14 @@ fn add_basic_function_declaration(
     param2_name: &String,
     start: usize,
     param_len: usize,
+    brace_expression_len: usize,
 ) -> AstNodeHandle {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
         Some(Token::Symbol(function_name.clone())),
         start,
-        2 + param_len,
+        2 + param_len + brace_expression_len,
     );
 
     // parameters
@@ -5578,26 +5584,18 @@ fn add_basic_function_declaration(
         let function_parameters_handle = ast.add_child(
             function_def_handle,
             Rule::FunctionDefParameters,
-            start + 2,
-            param_len,
+            start + 3,
+            param_len - 2, // exclude parens
         );
 
         // recursive side
-        let first_param_start = start + 2;
+        let first_param_start = start + 3; // move past fn, symbol, lparen
         {
             let function_parameters_handle = ast.add_child(
                 function_parameters_handle,
                 Rule::FunctionDefParameters,
                 first_param_start,
-                2,
-            );
-
-            // recursive side
-            ast.add_child(
-                function_parameters_handle,
-                Rule::FunctionDefParameters,
-                first_param_start,
-                2,
+                3, // 3 includes the comma
             );
 
             // non-recursive side
@@ -5624,7 +5622,7 @@ fn add_basic_function_declaration(
         // non-recursive side
         {
             let second_param_start = first_param_start + 3;
-            let second_param_len = param_len - 3 - 2; // remove the first param and the parens to get this length
+            let second_param_len = param_len - 3 - 2 - 1; // remove the first param and the parens and the trailing comma to get this length
             let declaration_handle = ast.add_child(
                 function_parameters_handle,
                 Rule::Declaration,
@@ -5640,7 +5638,7 @@ fn add_basic_function_declaration(
             ast.add_terminal_child(
                 declaration_handle,
                 Some(Token::Symbol(param2_name.clone())),
-                second_param_start,
+                second_param_start + 1,
                 1,
             );
         }
@@ -5665,7 +5663,7 @@ fn function_definition_return() {
         let param2_name = "b".to_owned();
 
         let mut expected_ast = Ast::new();
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 16);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 17);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -5675,6 +5673,7 @@ fn function_definition_return() {
             &param2_name,
             0,
             8,
+            7,
         );
 
         let brace_expression_handle = expected_ast.add_child(
@@ -5701,8 +5700,8 @@ fn function_definition_return() {
             let return_expression = expected_ast.add_child(
                 return_statement,
                 Rule::Expression,
-                11,
-                4,
+                12,
+                3,
             );
             add_expected_add_child(
                 &mut expected_ast,
@@ -5758,6 +5757,7 @@ fn function_definition_multiple_returns() {
             &param2_name,
             0,
             8,
+            18,
         );
 
         let brace_expression_handle = expected_ast.add_child(
@@ -5952,6 +5952,7 @@ fn function_definition_if_else() {
             &param2_name,
             0,
             8,
+            15,
         );
 
         let brace_expression_handle = expected_ast.add_child(
@@ -6085,6 +6086,7 @@ fn function_definition_early_return() {
                 &param2_name,
                 0,
                 8,
+                15,
             );
 
             let brace_expression_handle = expected_ast.add_child(
@@ -6263,6 +6265,7 @@ fn function_definition_final_expression() {
                 &param2_name,
                 0,
                 8,
+                13,
             );
 
             let brace_expression_handle = expected_ast.add_child(
@@ -6444,6 +6447,7 @@ fn for_loop_return() {
             &param2_name,
             0,
             8,
+            25,
         );
 
         let brace_expression_handle = expected_ast.add_child(
@@ -6595,6 +6599,7 @@ fn return_then_expression() {
             &param2_name,
             0,
             8,
+            6,
         );
 
         let brace_expression_handle = expected_ast.add_child(
