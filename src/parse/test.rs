@@ -5007,8 +5007,8 @@ fn function_with_returns() {
         expected_ast.add_child(
             function_def_handle,
             Rule::FunctionDefParameters,
-            2,
-            2,
+            3,
+            0,
         );
 
         let returns_data_handle = expected_ast.add_child(

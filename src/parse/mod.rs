@@ -2034,7 +2034,7 @@ fn parse_function_def_rule(
                 node_handle,
                 Rule::ReturnsData,
                 returns_index,
-                returns_index - lbrace_index,
+                lbrace_index - returns_index,
                 ast,
                 stack,
             );
