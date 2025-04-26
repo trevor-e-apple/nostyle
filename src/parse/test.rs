@@ -4904,7 +4904,7 @@ fn multiple_function_defs() {
                 function_defs_handle,
                 Rule::FunctionDefs,
                 0,
-                11,
+                22,
             );
 
             let test1_handle = add_basic_function_declaration(
@@ -4938,7 +4938,7 @@ fn multiple_function_defs() {
                 &"test2".to_string(),
                 &param_one_name,
                 &param_two_name,
-                12,
+                11,
                 7,
                 2,
             );
@@ -4964,7 +4964,7 @@ fn multiple_function_defs() {
             &"test3".to_string(),
             &param_one_name,
             &param_two_name,
-            23,
+            22,
             7,
             2,
         );
@@ -5622,12 +5622,11 @@ fn add_basic_function_declaration(
         // non-recursive side
         {
             let second_param_start = first_param_start + 3;
-            let second_param_len = param_len - 3 - 2 - 1; // remove the first param and the parens and the trailing comma to get this length
             let declaration_handle = ast.add_child(
                 function_parameters_handle,
                 Rule::Declaration,
                 second_param_start,
-                second_param_len,
+                2,
             );
             ast.add_terminal_child(
                 declaration_handle,

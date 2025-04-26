@@ -1833,7 +1833,7 @@ fn parse_function_defs_rule(
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
-    let ultimate_function_def_token_index =
+    let final_function_def_token_index =
         match find_prev_matching_level_token_all_groups(
             &tokens,
             &[Token::Function],
@@ -1856,22 +1856,22 @@ fn parse_function_defs_rule(
         tokens,
         &[Token::Function],
         node_start,
-        ultimate_function_def_token_index,
+        final_function_def_token_index,
     ) {
         Some(_) => {
             add_child_to_search_stack(
                 node_handle,
                 Rule::FunctionDefs,
                 node_start,
-                ultimate_function_def_token_index,
+                final_function_def_token_index - node_start, // don't include final_function_def_token_index
                 ast,
                 stack,
             );
             add_child_to_search_stack(
                 node_handle,
                 Rule::FunctionDef,
-                ultimate_function_def_token_index,
-                node_end,
+                final_function_def_token_index,
+                node_end - final_function_def_token_index + 1, // include final_function_def_token_index
                 ast,
                 stack,
             );
