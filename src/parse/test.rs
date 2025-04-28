@@ -5086,28 +5086,28 @@ fn for_loop_function() {
         let brace_expression_handle = expected_ast.add_child(
             function_def_handle,
             Rule::BraceExpression,
-            10,
-            27,
+            9,
+            29,
         );
 
         // brace statements
         let brace_statements = expected_ast.add_child(
             brace_expression_handle,
             Rule::BraceStatements,
-            0,
-            1,
+            10,
+            26,
         );
         let statement_handle =
-            expected_ast.add_child(brace_statements, Rule::Statement, 0, 1);
+            expected_ast.add_child(brace_statements, Rule::Statement, 10, 26);
         let expression_handle =
-            expected_ast.add_child(statement_handle, Rule::Expression, 0, 1);
-        add_basic_for_loop(&mut expected_ast, expression_handle, 0);
+            expected_ast.add_child(statement_handle, Rule::Expression, 10, 25);
+        add_basic_for_loop(&mut expected_ast, expression_handle, 10);
 
         add_terminal_expression(
             &mut expected_ast,
             brace_expression_handle,
             Some(Token::Symbol("b".to_owned())),
-            0,
+            36,
             1,
         );
 
