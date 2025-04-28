@@ -5135,7 +5135,7 @@ fn expression_for_loop_function() {
         let param_one = "a".to_owned();
         let param_two = "b".to_owned();
 
-        let root_handle = expected_ast.add_root(Rule::Expression, 0, 1);
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 36);
 
         let function_def_handle = add_basic_function_declaration(
             &mut expected_ast,
@@ -5145,25 +5145,25 @@ fn expression_for_loop_function() {
             &param_two,
             0,
             7,
-            26,
+            27,
         );
 
         // brace expression
         let brace_expression_handle = expected_ast.add_child(
             function_def_handle,
             Rule::BraceExpression,
-            0,
-            1,
+            9,
+            27,
         );
 
-        // trailing expression
-        let expression_handle = expected_ast.add_child(
+         // trailing expression
+         let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
-            0,
-            1,
+            10,
+            25,
         );
-        add_basic_for_loop(&mut expected_ast, expression_handle, 0);
+        add_basic_for_loop(&mut expected_ast, expression_handle, 10);
 
         expected_ast
     };
