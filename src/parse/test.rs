@@ -5197,8 +5197,8 @@ fn function_definition_no_params() {
         expected_ast.add_child(
             function_def_handle,
             Rule::FunctionDefParameters,
-            1,
-            2,
+            3,
+            0,
         );
 
         // brace expression
