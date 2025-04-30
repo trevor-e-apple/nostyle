@@ -5236,13 +5236,14 @@ fn add_one_param_function(
     param_name: String,
     start: usize,
     function_param_len: usize,
+    brace_expression_len: usize,
 ) {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
         Some(Token::Symbol(function_name)),
         start,
-        function_param_len + 5,
+        function_param_len + brace_expression_len + 2,
     );
 
     // parameters
@@ -5250,53 +5251,42 @@ fn add_one_param_function(
         let function_parameters_handle = ast.add_child(
             function_def_handle,
             Rule::FunctionDefParameters,
-            start + 2,
-            function_param_len,
-        );
-
-        // recursive side
-        ast.add_child(
-            function_parameters_handle,
-            Rule::FunctionDefParameters,
             start + 3,
-            function_param_len,
+            function_param_len - 2,
         );
 
-        // non-recursive side
-        {
-            let declaration_handle = ast.add_child(
-                function_parameters_handle,
-                Rule::Declaration,
-                start + 4,
-                1,
-            );
-            ast.add_terminal_child(
-                declaration_handle,
-                Some(Token::Symbol(param_type)),
-                start + 4,
-                1,
-            );
-            ast.add_terminal_child(
-                declaration_handle,
-                Some(Token::Symbol(param_name.clone())),
-                start + 4,
-                1,
-            );
-        }
+        let declaration_handle = ast.add_child(
+            function_parameters_handle,
+            Rule::Declaration,
+            start + 3,
+            2,
+        );
+        ast.add_terminal_child(
+            declaration_handle,
+            Some(Token::Symbol(param_type)),
+            start + 3,
+            1,
+        );
+        ast.add_terminal_child(
+            declaration_handle,
+            Some(Token::Symbol(param_name.clone())),
+            start + 4,
+            1,
+        );
     }
 
-    let brace_start = start + function_param_len;
+    let brace_start = start + function_param_len + 2;
     let brace_expression_handle = ast.add_child(
         function_def_handle,
         Rule::BraceExpression,
         brace_start,
-        5,
+        brace_expression_len,
     );
     let expression_handle = ast.add_child(
         brace_expression_handle,
         Rule::Expression,
-        brace_start,
-        5,
+        brace_start + 1,
+        brace_expression_len - 2,
     );
     add_expected_add_child(
         ast,
@@ -5330,6 +5320,7 @@ fn function_definition_one_param() {
             "a".to_owned(),
             0,
             4,
+            5,
         );
         expected_ast
     };
@@ -5501,6 +5492,7 @@ fn function_definition_trailing_comma_one_arg() {
             "a".to_owned(),
             0,
             5,
+            6,
         );
         expected_ast
     };
