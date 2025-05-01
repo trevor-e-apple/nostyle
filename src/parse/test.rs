@@ -5340,6 +5340,7 @@ fn add_two_param_function(
     param_len: usize,
     brace_expression_len: usize,
 ) {
+    // TODO: I think that param_len should reflect the length of the FunctionDefParameters function, rather than the length with the parens
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
