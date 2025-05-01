@@ -5485,7 +5485,7 @@ fn function_definition_trailing_comma_one_arg() {
             "a".to_owned(),
             0,
             5,
-            6,
+            5,
         );
         expected_ast
     };
