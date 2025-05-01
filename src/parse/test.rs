@@ -5338,13 +5338,14 @@ fn add_two_param_function(
     param2_name: String,
     start: usize,
     param_len: usize,
+    brace_expression_len: usize,
 ) {
     let function_def_handle = ast.add_child_with_data(
         parent_handle,
         Rule::FunctionDef,
         Some(Token::Symbol(function_name)),
         start,
-        2 + param_len + 5,
+        2 + param_len + brace_expression_len,
     );
 
     // parameters
@@ -5352,8 +5353,8 @@ fn add_two_param_function(
         let function_parameters_handle = ast.add_child(
             function_def_handle,
             Rule::FunctionDefParameters,
-            2,
-            param_len,
+            3,
+            param_len - 2,
         );
 
         // recursive side
@@ -5362,18 +5363,9 @@ fn add_two_param_function(
                 function_parameters_handle,
                 Rule::FunctionDefParameters,
                 3,
-                2,
-            );
-
-            // recursive side
-            ast.add_child(
-                function_parameters_handle,
-                Rule::FunctionDefParameters,
                 3,
-                2,
             );
 
-            // non-recursive side
             let declaration_handle = ast.add_child(
                 function_parameters_handle,
                 Rule::Declaration,
@@ -5417,12 +5409,12 @@ fn add_two_param_function(
         }
     }
 
-    let brace_start = start + param_len;
+    let brace_start = start + param_len + 2;
     let brace_expression_handle = ast.add_child(
         function_def_handle,
         Rule::BraceExpression,
         brace_start,
-        5,
+        brace_expression_len,
     );
     let expression_handle = ast.add_child(
         brace_expression_handle,
@@ -5463,6 +5455,7 @@ fn function_definition_multiple_params() {
             "b".to_owned(),
             0,
             7,
+            5
         );
         expected_ast
     };
@@ -5524,6 +5517,7 @@ fn function_definition_trailing_comma_multiple_args() {
             "b".to_owned(),
             0,
             8,
+            5,
         );
         expected_ast
     };
