@@ -6257,7 +6257,7 @@ fn function_definition_final_expression() {
             let brace_expression_handle = expected_ast.add_child(
                 function_def_handle,
                 Rule::BraceExpression,
-                8,
+                10,
                 13,
             );
 
@@ -6266,7 +6266,7 @@ fn function_definition_final_expression() {
                 let brace_statements = expected_ast.add_child(
                     brace_expression_handle,
                     Rule::BraceStatements,
-                    9,
+                    11,
                     10,
                 );
 
@@ -6275,31 +6275,31 @@ fn function_definition_final_expression() {
                     let statement_handle = expected_ast.add_child(
                         brace_statements,
                         Rule::Statement,
-                        9,
+                        11,
                         10,
                     );
                     let expression_handle = expected_ast.add_child(
                         statement_handle,
                         Rule::Expression,
-                        9,
+                        11,
                         9,
                     );
                     let if_else_handle = expected_ast.add_child(
                         expression_handle,
                         Rule::IfElse,
-                        9,
+                        11,
                         9,
                     );
 
                     // condition
                     {
                         let condition_expression_handle = expected_ast
-                            .add_child(if_else_handle, Rule::Expression, 10, 3);
+                            .add_child(if_else_handle, Rule::Expression, 12, 3);
                         let equality_handle = expected_ast.add_child_with_data(
                             condition_expression_handle,
                             Rule::Comparison,
                             Some(Token::GreaterThan),
-                            10,
+                            12,
                             3,
                         );
 
@@ -6308,7 +6308,7 @@ fn function_definition_final_expression() {
                             equality_handle,
                             Rule::Terminal,
                             Some(Token::Symbol("a".to_owned())),
-                            10,
+                            12,
                             1,
                         );
 
@@ -6317,7 +6317,7 @@ fn function_definition_final_expression() {
                             equality_handle,
                             Rule::Terminal,
                             Some(Token::IntLiteral(0)),
-                            10,
+                            14,
                             1,
                         );
                     }
@@ -6327,26 +6327,26 @@ fn function_definition_final_expression() {
                         let brace_expression_handle = expected_ast.add_child(
                             if_else_handle,
                             Rule::BraceExpression,
-                            13,
+                            15,
                             5,
                         );
                         let brace_statements_handle = expected_ast.add_child(
                             brace_expression_handle,
                             Rule::BraceStatements,
-                            14,
+                            16,
                             3,
                         );
                         let return_statement_handle = expected_ast.add_child(
                             brace_statements_handle,
                             Rule::ReturnStatement,
-                            14,
+                            16,
                             3,
                         );
                         add_terminal_expression(
                             &mut expected_ast,
                             return_statement_handle,
                             Some(Token::Symbol("a".to_owned())),
-                            15,
+                            17,
                             1,
                         );
 
@@ -6354,7 +6354,7 @@ fn function_definition_final_expression() {
                             &mut expected_ast,
                             brace_expression_handle,
                             None,
-                            17,
+                            19,
                             0,
                         );
                     }
