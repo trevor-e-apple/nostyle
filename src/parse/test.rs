@@ -5960,9 +5960,13 @@ fn function_definition_if_else() {
         // condition
         {
             let condition_expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::Expression, 12, 5);
-
-            // b/c of the parens, we actually have two expressions in a row
+                expected_ast.add_child(if_else_handle, Rule::Expression, 12, 5);            
+            let condition_expression_handle = expected_ast.add_child(
+                condition_expression_handle,
+                Rule::ParenExpression,
+                12,
+                5,
+            );
             let condition_expression_handle = expected_ast.add_child(
                 condition_expression_handle,
                 Rule::Expression,
