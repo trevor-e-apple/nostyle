@@ -38,7 +38,7 @@ returns_data -> "returns" SYMBOL;
 function_def_parameters -> (function_def_parameters",")? declaration ","?;
 
 declaration_statements -> declaration_statements? declaration ";";
-data_structure -> "struct" SYMBOL "{" declaration_statements? "}";
+data_structure_def -> "struct" SYMBOL "{" declaration_statements? "}";
 */
 
 pub mod ast;
@@ -2312,15 +2312,16 @@ fn parse_declaration_statements(
                 node_handle,
                 Rule::DeclarationStatements,
                 node_start,
-                split_index + 1,
+                split_index - node_start,
                 ast,
                 stack,
             );
+            let declaration_start = split_index + 1;
             add_child_to_search_stack(
                 node_handle,
                 Rule::Declaration,
-                split_index + 1,
-                node_end - 1, // exclude trailing semicolon
+                declaration_start,
+                node_end - declaration_start, // exclude trailing semicolon
                 ast,
                 stack,
             );
@@ -2330,7 +2331,7 @@ fn parse_declaration_statements(
                 node_handle,
                 Rule::Declaration,
                 node_start,
-                node_end - 1, // exclude trailing semicolon
+                node_end - node_start, // exclude trailing semicolon
                 ast,
                 stack,
             );
@@ -2407,7 +2408,7 @@ fn parse_data_structure(
     };
 
     // find rbrace
-    let rbrace_index = node_end - 1;
+    let rbrace_index = node_end;
     match tokens.get_token(rbrace_index) {
         Some(expected_rbrace) => {
             if *expected_rbrace != Token::RBrace {
@@ -2449,7 +2450,7 @@ fn parse_data_structure(
             node_handle,
             Rule::DeclarationStatements,
             lbrace_index + 1,
-            rbrace_index,
+            rbrace_index - lbrace_index - 1,
             ast,
             stack,
         );
