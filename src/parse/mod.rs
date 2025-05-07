@@ -2312,7 +2312,7 @@ fn parse_declaration_statements(
                 node_handle,
                 Rule::DeclarationStatements,
                 node_start,
-                split_index - node_start,
+                split_index - node_start + 1, // include trailing semicolon
                 ast,
                 stack,
             );

@@ -6803,11 +6803,11 @@ fn parse_data_struct_multiple_fields() {
         let declaration_statements_handle = expected_ast.add_child(
             data_structure_handle,
             Rule::DeclarationStatements,
-            2,
-            8,
+            3,
+            6,
         );
 
-        // LHS
+        // Recursive side
         {
             let recursive_handle = expected_ast.add_child(
                 declaration_statements_handle,
@@ -6836,12 +6836,12 @@ fn parse_data_struct_multiple_fields() {
             );
         }
 
-        // RHS
+        // Non-recursive side
         let declaration_statement = expected_ast.add_child(
             declaration_statements_handle,
             Rule::Declaration,
             6,
-            3,
+            2,
         );
         expected_ast.add_terminal_child(
             declaration_statement,
