@@ -6750,14 +6750,14 @@ fn parse_data_structure_declaration() {
         let declaration_statements_handle = expected_ast.add_child(
             data_structure_handle,
             Rule::DeclarationStatements,
-            2,
-            5,
+            3,
+            3,
         );
         let declaration_statement = expected_ast.add_child(
             declaration_statements_handle,
             Rule::Declaration,
             3,
-            3,
+            2,
         );
         expected_ast.add_terminal_child(
             declaration_statement,
