@@ -6924,10 +6924,8 @@ fn parse_struct_field_function_call() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 7);
-        let primary_handle =
-            expected_ast.add_child(root_handle, Rule::Primary, 0, 7);
         let struct_access_handle =
-            expected_ast.add_child(primary_handle, Rule::StructAccess, 0, 7);
+            expected_ast.add_child(root_handle, Rule::StructAccess, 0, 7);
 
         // a.b()
         {
@@ -6939,36 +6937,21 @@ fn parse_struct_field_function_call() {
             );
 
             // a
-            {
-                let struct_access_handle = expected_ast.add_child(
-                    struct_access_handle,
-                    Rule::StructAccess,
-                    0,
-                    1,
-                );
-                expected_ast.add_terminal_child(
-                    struct_access_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                    0,
-                    1,
-                );
-            }
+            expected_ast.add_terminal_child(
+                struct_access_handle,
+                Some(Token::Symbol("a".to_owned())),
+                0,
+                1,
+            );
 
-            // b()
-            {
-                let terminal_handle = expected_ast.add_child(
-                    struct_access_handle,
-                    Rule::Primary,
-                    2,
-                    3,
-                );
-                add_function_call_no_arg(
-                    &mut expected_ast,
-                    terminal_handle,
-                    "b".to_owned(),
-                    2,
-                );
-            }
+            // b()            
+            add_function_call_no_arg(
+                &mut expected_ast,
+                struct_access_handle,
+                "b".to_owned(),
+                2,
+            );
+            
         }
 
         // c
