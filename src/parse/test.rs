@@ -6625,7 +6625,7 @@ fn return_then_expression() {
                     &mut expected_ast,
                     return_statement_handle,
                     Some(Token::Symbol("a".to_owned())),
-                    11,
+                    12,
                     1,
                 );
             }
