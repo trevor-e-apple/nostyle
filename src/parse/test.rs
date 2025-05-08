@@ -4471,7 +4471,12 @@ fn function_call_parens_in_expression() {
             // (1 + 2)
             let expression_handle =
                 expected_ast.add_child(args_handle, Rule::Expression, 2, 5);
-            let paren_expression_handle = expected_ast.add_child(expression_handle, Rule::ParenExpression, 2, 5);
+            let paren_expression_handle = expected_ast.add_child(
+                expression_handle,
+                Rule::ParenExpression,
+                2,
+                5,
+            );
             let expression_handle = expected_ast.add_child(
                 paren_expression_handle,
                 Rule::Expression,
@@ -5156,8 +5161,8 @@ fn expression_for_loop_function() {
             27,
         );
 
-         // trailing expression
-         let expression_handle = expected_ast.add_child(
+        // trailing expression
+        let expression_handle = expected_ast.add_child(
             brace_expression_handle,
             Rule::Expression,
             10,
@@ -5456,7 +5461,7 @@ fn function_definition_multiple_params() {
             "b".to_owned(),
             0,
             7,
-            5
+            5,
         );
         expected_ast
     };
@@ -5960,7 +5965,7 @@ fn function_definition_if_else() {
         // condition
         {
             let condition_expression_handle =
-                expected_ast.add_child(if_else_handle, Rule::Expression, 12, 5);            
+                expected_ast.add_child(if_else_handle, Rule::Expression, 12, 5);
             let condition_expression_handle = expected_ast.add_child(
                 condition_expression_handle,
                 Rule::ParenExpression,
@@ -6869,10 +6874,8 @@ fn parse_struct_field_access() {
     let expected_ast = {
         let mut expected_ast = Ast::new();
         let root_handle = expected_ast.add_root(Rule::Expression, 0, 5);
-        let primary_handle =
-            expected_ast.add_child(root_handle, Rule::Primary, 0, 5);
         let struct_access_handle =
-            expected_ast.add_child(primary_handle, Rule::StructAccess, 0, 5);
+            expected_ast.add_child(root_handle, Rule::StructAccess, 0, 5);
 
         // a.b
         {
@@ -6884,20 +6887,12 @@ fn parse_struct_field_access() {
             );
 
             // a
-            {
-                let struct_access_handle = expected_ast.add_child(
-                    struct_access_handle,
-                    Rule::StructAccess,
-                    0,
-                    1,
-                );
-                expected_ast.add_terminal_child(
-                    struct_access_handle,
-                    Some(Token::Symbol("a".to_owned())),
-                    0,
-                    1,
-                );
-            }
+            expected_ast.add_terminal_child(
+                struct_access_handle,
+                Some(Token::Symbol("a".to_owned())),
+                0,
+                1,
+            );
 
             // b
             expected_ast.add_terminal_child(
