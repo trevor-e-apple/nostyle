@@ -41,6 +41,17 @@ declaration_statements -> declaration_statements? declaration ";";
 data_structure_def -> "struct" SYMBOL "{" declaration_statements? "}";
 */
 
+/*
+NOTE ON PARSER FUNCTIONS
+
+All functions with the name "parse_<rule_name>_rule" are responsible for inspecting their tokens and
+determining how the expand the next rule or terminate. If they cannot determine a way to expand their 
+next rules or terminate, they should return a ParseError.
+
+Expanding their rules involves both adding any child nodes to the AST and adding the child nodes to the search stack.
+
+ */
+
 pub mod ast;
 pub mod error;
 pub mod rule;
@@ -66,7 +77,7 @@ use self::{
     },
 };
 
-/// parses tokens and returns an abstract syntax tree
+/// Parses tokens and returns an abstract syntax tree
 pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
     let mut result = Ast::new();
     let mut parse_errors: Vec<ParseError> = Vec::new();
@@ -356,7 +367,14 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
     }
 }
 
-/// function for creating a child and adding it to the search stack
+/// Helper function for creating a child and adding it to the search stack
+/// Args:
+///     parent_handle: The handle for the node that will be the parent of the child
+///     child_rule: The rule that the child node will have
+///     start: The index of the start token in the child's span
+///     len: The number of tokens in the child's span
+///     ast: The AST to add the child to
+///     stack: The search stack to add the child's handle to
 fn add_child_to_search_stack(
     parent_handle: AstNodeHandle,
     child_rule: Rule,
@@ -371,7 +389,21 @@ fn add_child_to_search_stack(
     stack.push(child_handle);
 }
 
-/// function for all data updates related to moving through one grammar rule and onto the next one
+/// Helper function for all data updates related to moving through one grammar rule and onto the next one
+/// This is used to make the tree more terse, since there are many cases where the only need for a rule
+/// is to expand the next one. For example, using this function in parse_equality, parse_comparison, etc. 
+/// can turn the following unbranching tree... 
+/// expression -> equality -> comparison -> plus_minus -> <branches>
+/// into
+/// expression -> plus_minus -> <branches>
+/// 
+/// This function will modify the node handle passed in and push it back onto the search stack.
+/// 
+/// Args:
+///     node_handle: The node handle of node to modify
+///     ast: The AST that owns the node
+///     stack: The search stack
+///     next_rule: The rule to change the node to
 fn next_rule_updates(
     node_handle: AstNodeHandle,
     ast: &mut Ast,
@@ -386,6 +418,12 @@ fn next_rule_updates(
     stack.push(node_handle);
 }
 
+/// A helper function for making a parse error that reflects an issue spanning from the start line for the node to the final line of the tokens 
+/// 
+/// Args:
+///     tokens: The tokens being parsed
+///     start_line: The start line of the error
+///     info: The information associated with the error
 fn make_final_line_error(
     tokens: &Tokens,
     start_line: usize,
@@ -394,6 +432,7 @@ fn make_final_line_error(
     return ParseError { start_line, end_line: tokens.get_final_line(), info };
 }
 
+/// Parses the expression rule.
 fn parse_expression_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -406,22 +445,22 @@ fn parse_expression_rule(
     let (start_line, end_line) =
         get_start_end_lines(tokens, node_start, node_end);
 
-    let start_token = match tokens.get_token(node_start) {
-        Some(token) => token,
-        None => {
-            return Err(make_final_line_error(
-                tokens,
-                0,
-                "Can not parse 'expression' rule (empty tokens)".to_owned(),
-            ));
-        }
-    };
-
     // handle null expression
     if node.len == 0 {
         ast.add_child(node_handle, Rule::Terminal, node_start, node.len);
         return Ok(());
     }
+
+    let start_token = match tokens.get_token(node_start) {
+        Some(token) => token,
+        None => {
+            return Err(make_final_line_error(
+                tokens,
+                start_line,
+                "Can not parse 'expression' rule (empty tokens)".to_owned(),
+            ));
+        }
+    };
 
     let end_token = match tokens.get_token(node_end) {
         Some(token) => token,
