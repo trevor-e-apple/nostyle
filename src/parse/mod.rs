@@ -317,7 +317,6 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     tokens,
                     node_handle,
                     &mut result,
-                    &mut stack,
                 ) {
                     Ok(_) => {}
                     Err(error) => parse_errors.push(error),
@@ -508,6 +507,8 @@ fn parse_expression_rule(
     Ok(())
 }
 
+/// Parses the paren expression rule. Note that the children of the paren expression rule
+/// do not include the lparen and rparen.
 fn parse_paren_expression_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -568,7 +569,12 @@ fn parse_paren_expression_rule(
     }
 }
 
-/// parses the for rule
+/// Parses the for loop rule
+/// A for loop node has three child statement nodes: the initialize statement, the break condition statement, and the iterate statement. It
+/// also has a brace expression child node.
+/// The 0th child should be the initialize statement
+/// The 1th child should be the break condition statement
+/// The 2th child should be the iterate statement
 fn parse_for_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -794,7 +800,8 @@ fn parse_for_rule(
     return Ok(());
 }
 
-/// parses the brace expression rule
+/// Parses the brace expression rule
+/// The braces are not included in the children nodes.
 fn parse_brace_expression_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -888,7 +895,7 @@ fn parse_brace_expression_rule(
     }
 }
 
-/// parse brace_statements rule
+/// Parse brace statements rule
 fn parse_brace_statements_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -972,7 +979,21 @@ fn parse_brace_statements_rule(
     Ok(())
 }
 
-// TODO: document me!
+/// A helper function for generating the children nodes and adding them to the stack of 
+/// binary composition assignment statements (e.g. "a += b;")
+/// 
+/// Note that binary composition nodes are unusual in that they break what would otherwise
+/// be a fairly safe assumption: that the children nodes partition the token span of the
+/// parent. Because the LHS of the operation acts both as something that gets assigned to
+/// AND as the LHS of a binary operation, it will be included in both children nodes' token spans.
+/// 
+/// Args:
+///     node_handle: The parent node for the binary composition statement
+///     ast: The AST that owns the nodes
+///     stack: The search stack
+///     assign_index: The index of the assigment token (e.g. Token::PlusEquals)
+///     composite_rule: The parsing rule for this binary composition op
+///     composite_token: The token associated with this binary composition op
 fn binary_comp_statement(
     node_handle: AstNodeHandle,
     ast: &mut Ast,
@@ -1034,12 +1055,16 @@ fn binary_comp_statement(
     );
 }
 
+/// A helper function for getting the start and end lines of a node
+/// Args:
+///     tokens: The collection of tokens that we're parsing
+///     start: The index for the start token
+///     end: The index for the end token (not one-past the end)
 fn get_start_end_lines(
     tokens: &Tokens,
     start: usize,
     end: usize,
 ) -> (usize, usize) {
-    // TODO: document that end is the end index
     let start_line = match tokens.get_line_number(start) {
         Some(line_number) => line_number,
         None => panic!("Cannot parse empty tokens as statement"),
@@ -1054,7 +1079,7 @@ fn get_start_end_lines(
     return (start_line, end_line);
 }
 
-/// parse statement rule
+/// Parse statement rule
 fn parse_statement_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1199,6 +1224,7 @@ fn parse_statement_rule(
     Ok(())
 }
 
+/// Parse return statement
 fn parse_return_statement(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1242,7 +1268,7 @@ fn parse_return_statement(
     Ok(())
 }
 
-/// parse the if_else rule
+/// Parse the if else rule
 fn parse_if_else_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1407,7 +1433,13 @@ fn parse_if_else_rule(
     Ok(())
 }
 
-/// for parsing binary operations in an expression
+/// Helper function for parsing binary operations (e.g. plus_minus, div_mult, equality)
+/// 
+/// Searches for a binary token in the token span in order to generate its two children
+/// 
+/// Handles the possibility that a minus token is both a unary and a binary operator by
+/// assuming that binary operations cannot be adjacent to one another. This handles cases
+/// such as "a - -b"
 fn parse_binary_op_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1468,7 +1500,7 @@ fn parse_binary_op_rule(
                             break;
                         }
                     } else {
-                        // not a minus token, so must not be a unary operator, continue
+                        // Not a minus token, so must not be a unary operator. Break.
                         break;
                     }
                 }
@@ -1530,7 +1562,7 @@ fn parse_binary_op_rule(
     Ok(())
 }
 
-// parses the equality rule
+// Parses the equality rule
 fn parse_equality_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1548,7 +1580,7 @@ fn parse_equality_rule(
     )
 }
 
-/// parse comparison rule
+/// Parses the comparison rule
 fn parse_comparison_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1571,7 +1603,7 @@ fn parse_comparison_rule(
     )
 }
 
-/// parse plus_minus rule
+/// Parses the plus minus rule
 fn parse_plus_minus_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1589,7 +1621,7 @@ fn parse_plus_minus_rule(
     )
 }
 
-/// parse mult div
+/// Parses the mult div rule
 fn parse_mult_div_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1607,6 +1639,7 @@ fn parse_mult_div_rule(
     )
 }
 
+/// Parses the unary rule
 fn parse_unary_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -2278,11 +2311,14 @@ fn parse_declaration_rule(
     Ok(())
 }
 
+/// Parse primary rule
+/// 
+/// The buck stops here. The primary rule should not expand and should always terminate. This prevents infinite loops where
+/// new nodes are generated without removing any tokens, thus attempting to parse the same set of tokens forever. 
 fn parse_primary_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     let (node_start, node_end, node_len) = {
         let node = ast.get_node(node_handle);
