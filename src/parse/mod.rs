@@ -1686,6 +1686,7 @@ fn parse_unary_rule(
     Ok(())
 }
 
+/// Parses the function call rule
 fn parse_function_call_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1782,7 +1783,7 @@ fn parse_function_call_rule(
     Ok(())
 }
 
-// TODO: document and simplify the flow control of this function
+// Parses the function arguments rule
 fn parse_function_arguments_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
