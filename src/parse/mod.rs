@@ -45,7 +45,7 @@ data_structure_def -> "struct" SYMBOL "{" declaration_statements? "}";
 NOTE ON PARSER FUNCTIONS
 
 All functions with the name "parse_<rule_name>_rule" are responsible for inspecting their tokens and
-determining how the expand the next rule or terminate. If they cannot determine a way to expand their 
+determining how the expand the next rule or terminate. If they cannot determine a way to expand their
 next rules or terminate, they should return a ParseError.
 
 Expanding their rules involves both adding any child nodes to the AST and adding the child nodes to the search stack.
@@ -153,11 +153,8 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                 }
             }
             Rule::ReturnsData => {
-                match parse_returns_data_rule(
-                    tokens,
-                    node_handle,
-                    &mut result,
-                ) {
+                match parse_returns_data_rule(tokens, node_handle, &mut result)
+                {
                     Ok(_) => {}
                     Err(error) => parse_errors.push(error),
                 }
@@ -312,11 +309,7 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                 };
             }
             Rule::Primary => {
-                match parse_primary_rule(
-                    tokens,
-                    node_handle,
-                    &mut result,
-                ) {
+                match parse_primary_rule(tokens, node_handle, &mut result) {
                     Ok(_) => {}
                     Err(error) => parse_errors.push(error),
                 };
@@ -389,14 +382,14 @@ fn add_child_to_search_stack(
 
 /// Helper function for all data updates related to moving through one grammar rule and onto the next one
 /// This is used to make the tree more terse, since there are many cases where the only need for a rule
-/// is to expand the next one. For example, using this function in parse_equality, parse_comparison, etc. 
-/// can turn the following unbranching tree... 
+/// is to expand the next one. For example, using this function in parse_equality, parse_comparison, etc.
+/// can turn the following unbranching tree...
 /// expression -> equality -> comparison -> plus_minus -> <branches>
 /// into
 /// expression -> plus_minus -> <branches>
-/// 
+///
 /// This function will modify the node handle passed in and push it back onto the search stack.
-/// 
+///
 /// Args:
 ///     node_handle: The node handle of node to modify
 ///     ast: The AST that owns the node
@@ -416,8 +409,8 @@ fn next_rule_updates(
     stack.push(node_handle);
 }
 
-/// A helper function for making a parse error that reflects an issue spanning from the start line for the node to the final line of the tokens 
-/// 
+/// A helper function for making a parse error that reflects an issue spanning from the start line for the node to the final line of the tokens
+///
 /// Args:
 ///     tokens: The tokens being parsed
 ///     start_line: The start line of the error
@@ -978,14 +971,14 @@ fn parse_brace_statements_rule(
     Ok(())
 }
 
-/// A helper function for generating the children nodes and adding them to the stack of 
+/// A helper function for generating the children nodes and adding them to the stack of
 /// binary composition assignment statements (e.g. "a += b;")
-/// 
+///
 /// Note that binary composition nodes are unusual in that they break what would otherwise
 /// be a fairly safe assumption: that the children nodes partition the token span of the
 /// parent. Because the LHS of the operation acts both as something that gets assigned to
 /// AND as the LHS of a binary operation, it will be included in both children nodes' token spans.
-/// 
+///
 /// Args:
 ///     node_handle: The parent node for the binary composition statement
 ///     ast: The AST that owns the nodes
@@ -1433,9 +1426,9 @@ fn parse_if_else_rule(
 }
 
 /// Helper function for parsing binary operations (e.g. plus_minus, div_mult, equality)
-/// 
+///
 /// Searches for a binary token in the token span in order to generate its two children
-/// 
+///
 /// Handles the possibility that a minus token is both a unary and a binary operator by
 /// assuming that binary operations cannot be adjacent to one another. This handles cases
 /// such as "a - -b"
@@ -2317,9 +2310,9 @@ fn parse_declaration_rule(
 }
 
 /// Parse primary rule
-/// 
+///
 /// The buck stops here. The primary rule should not expand and should always terminate. This prevents infinite loops where
-/// new nodes are generated without removing any tokens, thus attempting to parse the same set of tokens forever. 
+/// new nodes are generated without removing any tokens, thus attempting to parse the same set of tokens forever.
 fn parse_primary_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
