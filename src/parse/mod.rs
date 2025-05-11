@@ -157,7 +157,6 @@ pub fn parse(tokens: &Tokens) -> Result<Ast, Vec<ParseError>> {
                     tokens,
                     node_handle,
                     &mut result,
-                    &mut stack,
                 ) {
                     Ok(_) => {}
                     Err(error) => parse_errors.push(error),
@@ -1562,7 +1561,7 @@ fn parse_binary_op_rule(
     Ok(())
 }
 
-// Parses the equality rule
+/// Parses the equality rule
 fn parse_equality_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1783,7 +1782,7 @@ fn parse_function_call_rule(
     Ok(())
 }
 
-// Parses the function arguments rule
+/// Parses the function arguments rule
 fn parse_function_arguments_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1893,6 +1892,7 @@ fn parse_function_arguments_rule(
     Ok(())
 }
 
+/// Parses the function defs rule
 fn parse_function_defs_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -1958,6 +1958,7 @@ fn parse_function_defs_rule(
     Ok(())
 }
 
+/// Parses the function def rule
 fn parse_function_def_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -2127,6 +2128,8 @@ fn parse_function_def_rule(
     Ok(())
 }
 
+/// Parses the function parameters rule
+/// The function parameters rule does not include the parentheses
 fn parse_function_parameters_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -2196,11 +2199,11 @@ fn parse_function_parameters_rule(
     Ok(())
 }
 
+/// Parses the returns rule
 fn parse_returns_data_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
     ast: &mut Ast,
-    stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), ParseError> {
     let node = ast.get_node(node_handle);
 
@@ -2239,6 +2242,7 @@ fn parse_returns_data_rule(
     Ok(())
 }
 
+/// Parses the declaration rule
 fn parse_declaration_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -2366,6 +2370,7 @@ fn parse_primary_rule(
     Ok(())
 }
 
+/// Parses declaration statements rule
 fn parse_declaration_statements(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -2417,6 +2422,7 @@ fn parse_declaration_statements(
     Ok(())
 }
 
+/// Parses data structure rule
 fn parse_data_structure(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
@@ -2538,6 +2544,7 @@ fn parse_data_structure(
     Ok(())
 }
 
+/// Parses struct access rule
 fn parse_struct_access(
     tokens: &Tokens,
     node_handle: AstNodeHandle,
