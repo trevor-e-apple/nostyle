@@ -288,7 +288,7 @@ pub fn get_diff_string(ast_one: &Ast, ast_two: &Ast) -> String {
     result
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, std::cmp::Eq, Hash)]
 pub struct AstNodeHandle {
     index: usize,
 }

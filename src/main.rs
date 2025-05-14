@@ -1,3 +1,4 @@
+mod dependency_check;
 mod parse;
 mod tokenize;
 mod type_check;
