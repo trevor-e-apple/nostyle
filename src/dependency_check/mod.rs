@@ -12,8 +12,12 @@ struct SearchData {
     dependent_ancestor: Option<AstNodeHandle>,
 }
 
+enum DependencyError {
+    CircularDependency
+}
+
 /// If the search data contains a dependent ancestor, update
-fn add_dependency(search_data: &SearchData, node_handle: AstNodeHandle, dependency_graph: &mut DependencyGraph) {
+fn add_dependency(search_data: &SearchData, new_dependency_handle: AstNodeHandle, dependency_graph: &mut DependencyGraph) {
     match search_data.dependent_ancestor {
         Some(dependent_ancestor) => {
             let edges = match dependency_graph.get_mut(&dependent_ancestor) {
@@ -21,15 +25,13 @@ fn add_dependency(search_data: &SearchData, node_handle: AstNodeHandle, dependen
                 None => panic!("Bad dependent ancestor"),
             };
 
-            edges.push(node_handle);
+            edges.push(new_dependency_handle);
         },
         None => {}, // nothing to do if there is no dependent ancestor
     };
 }
 
-/// Makes the dependency graph and checks it for circular dependencies
-/// Provides a mapping of functions to their return types (for use by type check stage)
-pub fn dependency_check(ast: Ast) -> Option<DependencyGraph> {
+fn make_dependency_graph(ast: &Ast) -> Option<DependencyGraph> {
     let ast_root = match ast.get_root() {
         Some(ast_root) => ast_root,
         None => return None,
@@ -75,6 +77,64 @@ pub fn dependency_check(ast: Ast) -> Option<DependencyGraph> {
         }
     }
 
+    Some(dependency_graph)
+}
+
+/// Makes the dependency graph and checks it for circular dependencies
+/// Provides a mapping of functions to their return types (for use by type check stage)
+pub fn dependency_check(ast: &Ast) -> Result<(), Vec<DependencyError>> {
+    let dependency_graph = make_dependency_graph(ast);
+
     // TODO: check for circular dependencies
     todo!()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{parse::parse, tokenize::tokenize};
+
+    use super::*;
+
+    #[test]
+    fn no_function_def() {
+        let tokens = tokenize("a + b").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        let dependency_graph = make_dependency_graph(&ast).expect("Unexpected error making dependency graph");
+        assert_eq!(dependency_graph.len(), 0);
+    }
+
+    #[test]
+    fn no_dependencies() {
+        todo!();
+    }
+
+    #[test]
+    fn one_dependency() {
+        todo!();
+    }
+
+    #[test]
+    fn two_dependencies() {
+        todo!();
+    }
+
+    #[test]
+    fn three_dependencies() {
+        todo!();
+    }
+
+    #[test]
+    fn multiple_function_defs_with_dependencies() {
+        todo!();
+    }
+
+    #[test]
+    fn out_of_order_dependencies() {
+        todo!();
+    }
+
+    #[test]
+    fn circular_dependency() {
+        todo!();
+    }
 }
