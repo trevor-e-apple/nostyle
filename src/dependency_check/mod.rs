@@ -1,10 +1,13 @@
 // TODO: check for function call dependency validity
-// TODO: check for structure 
-use std::{collections::HashMap};
+// TODO: check for structure
+use std::collections::HashMap;
 
-use crate::parse::{ast::{Ast, AstNodeHandle}, rule::Rule};
+use crate::parse::{
+    ast::{Ast, AstNodeHandle},
+    rule::Rule,
+};
 
-// The dependency graph abstractly is a directed graph. The list of edges is the list of dependencies for   
+// The dependency graph abstractly is a directed graph. The list of edges is the list of dependencies for
 type DependencyGraph = HashMap<AstNodeHandle, Vec<AstNodeHandle>>;
 
 struct SearchData {
@@ -13,11 +16,15 @@ struct SearchData {
 }
 
 enum DependencyError {
-    CircularDependency
+    CircularDependency,
 }
 
 /// If the search data contains a dependent ancestor, update
-fn add_dependency(search_data: &SearchData, new_dependency_handle: AstNodeHandle, dependency_graph: &mut DependencyGraph) {
+fn add_dependency(
+    search_data: &SearchData,
+    new_dependency_handle: AstNodeHandle,
+    dependency_graph: &mut DependencyGraph,
+) {
     match search_data.dependent_ancestor {
         Some(dependent_ancestor) => {
             let edges = match dependency_graph.get_mut(&dependent_ancestor) {
@@ -26,8 +33,8 @@ fn add_dependency(search_data: &SearchData, new_dependency_handle: AstNodeHandle
             };
 
             edges.push(new_dependency_handle);
-        },
-        None => {}, // nothing to do if there is no dependent ancestor
+        }
+        None => {} // nothing to do if there is no dependent ancestor
     };
 }
 
@@ -37,7 +44,8 @@ fn make_dependency_graph(ast: &Ast) -> Option<DependencyGraph> {
         None => return None,
     };
 
-    let mut stack = vec![SearchData {ast_handle: ast_root, dependent_ancestor: None}];
+    let mut stack =
+        vec![SearchData { ast_handle: ast_root, dependent_ancestor: None }];
     let mut dependency_graph = DependencyGraph::new();
 
     while let Some(search_data) = stack.pop() {
@@ -50,28 +58,48 @@ fn make_dependency_graph(ast: &Ast) -> Option<DependencyGraph> {
                 dependency_graph.insert(node_handle, vec![]);
 
                 for child in &node.children {
-                    stack.push(SearchData {ast_handle: child.clone(), dependent_ancestor: Some(node_handle)});
+                    stack.push(SearchData {
+                        ast_handle: child.clone(),
+                        dependent_ancestor: Some(node_handle),
+                    });
                 }
-            },
+            }
             Rule::FunctionCall => {
-                add_dependency(&search_data, node_handle, &mut dependency_graph);
+                add_dependency(
+                    &search_data,
+                    node_handle,
+                    &mut dependency_graph,
+                );
 
                 for child in &node.children {
-                    stack.push(SearchData {ast_handle: child.clone(), dependent_ancestor: search_data.dependent_ancestor});
+                    stack.push(SearchData {
+                        ast_handle: child.clone(),
+                        dependent_ancestor: search_data.dependent_ancestor,
+                    });
                 }
             }
             Rule::DataStructure => {
                 dependency_graph.insert(node_handle, vec![]);
-                add_dependency(&search_data, node_handle, &mut dependency_graph);
+                add_dependency(
+                    &search_data,
+                    node_handle,
+                    &mut dependency_graph,
+                );
 
                 for child in &node.children {
-                    stack.push(SearchData {ast_handle: child.clone(), dependent_ancestor: Some(node_handle)});
+                    stack.push(SearchData {
+                        ast_handle: child.clone(),
+                        dependent_ancestor: Some(node_handle),
+                    });
                 }
-            },
+            }
             _ => {
                 // The default is to pass the dependent ancestor onto the children
                 for child in &node.children {
-                    stack.push(SearchData {ast_handle: child.clone(), dependent_ancestor: search_data.dependent_ancestor});
+                    stack.push(SearchData {
+                        ast_handle: child.clone(),
+                        dependent_ancestor: search_data.dependent_ancestor,
+                    });
                 }
             }
         }
@@ -99,13 +127,25 @@ mod tests {
     fn no_function_def() {
         let tokens = tokenize("a + b").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
-        let dependency_graph = make_dependency_graph(&ast).expect("Unexpected error making dependency graph");
+        let dependency_graph = make_dependency_graph(&ast)
+            .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 0);
     }
 
     #[test]
     fn no_dependencies() {
-        todo!();
+        let tokens =
+            tokenize("fn test() {a + b}").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        let dependency_graph = make_dependency_graph(&ast)
+            .expect("Unexpected error making dependency graph");
+        assert_eq!(dependency_graph.len(), 1);
+
+        for (node_handle, dependencies) in dependency_graph {
+            let node = ast.get_node(node_handle);
+            assert_eq!(node.rule, Rule::FunctionDef);
+            assert_eq!(dependencies.len(), 0);
+        }
     }
 
     #[test]
