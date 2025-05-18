@@ -126,6 +126,21 @@ mod tests {
 
     use super::*;
 
+    fn check_dependencies_count(
+        ast: &Ast,
+        dependency_graph: &DependencyGraph,
+        dependencies: &Vec<AstNodeHandle>,
+        expected_count: usize,
+    ) {
+        for (node_handle, print_dependencies) in dependency_graph {
+            let node = ast.get_node(*node_handle);
+            println!("Node: {:?}", node);
+            println!("Dependencies: {:?}", print_dependencies);
+        }
+
+        assert_eq!(dependencies.len(), expected_count);
+    }
+
     #[test]
     fn no_function_def() {
         let tokens = tokenize("a + b").expect("Unexpected tokenize error");
@@ -144,10 +159,10 @@ mod tests {
             .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 1);
 
-        for (node_handle, dependencies) in dependency_graph {
-            let node = ast.get_node(node_handle);
+        for (node_handle, dependencies) in &dependency_graph {
+            let node = ast.get_node(*node_handle);
             assert_eq!(node.rule, Rule::FunctionDef);
-            assert_eq!(dependencies.len(), 0);
+            check_dependencies_count(&ast, &dependency_graph, &dependencies, 0);
         }
     }
 
@@ -165,17 +180,27 @@ mod tests {
             .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 2);
 
-        for (node_handle, dependencies) in dependency_graph {
-            let node = ast.get_node(node_handle);
+        for (node_handle, dependencies) in &dependency_graph {
+            let node = ast.get_node(*node_handle);
             assert_eq!(node.rule, Rule::FunctionDef);
 
             let node_data = node.data.as_ref().expect("Missing node data");
             match node_data {
                 Token::Symbol(function_name) => {
                     if function_name == "test" {
-                        assert_eq!(dependencies.len(), 1);
+                        check_dependencies_count(
+                            &ast,
+                            &dependency_graph,
+                            dependencies,
+                            1,
+                        );
                     } else if function_name == "dependency_one" {
-                        assert_eq!(dependencies.len(), 0);
+                        check_dependencies_count(
+                            &ast,
+                            &dependency_graph,
+                            dependencies,
+                            0,
+                        );
                     } else {
                         assert!(false, "Unexpected function name");
                     }
@@ -187,7 +212,54 @@ mod tests {
 
     #[test]
     fn two_dependencies() {
-        todo!();
+        let tokens = tokenize(
+            "
+            fn test() returns int32 {dependency_one() + dependency_two()}
+            fn dependency_one() returns int32 {a + b}
+            fn dependency_two() returns int32 {42}
+        ",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        let dependency_graph = make_dependency_graph(&ast)
+            .expect("Unexpected error making dependency graph");
+        assert_eq!(dependency_graph.len(), 3);
+
+        for (node_handle, dependencies) in &dependency_graph {
+            let node = ast.get_node(*node_handle);
+            assert_eq!(node.rule, Rule::FunctionDef);
+
+            let node_data = node.data.as_ref().expect("Missing node data");
+            match node_data {
+                Token::Symbol(function_name) => {
+                    if function_name == "test" {
+                        check_dependencies_count(
+                            &ast,
+                            &dependency_graph,
+                            dependencies,
+                            2,
+                        );
+                    } else if function_name == "dependency_one" {
+                        check_dependencies_count(
+                            &ast,
+                            &dependency_graph,
+                            dependencies,
+                            0,
+                        );
+                    } else if function_name == "dependency_two" {
+                        check_dependencies_count(
+                            &ast,
+                            &dependency_graph,
+                            dependencies,
+                            0,
+                        );
+                    } else {
+                        assert!(false, "Unexpected function name");
+                    }
+                }
+                _ => assert!(false, "Unexpected node data"),
+            }
+        }
     }
 
     #[test]
