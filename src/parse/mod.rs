@@ -25,11 +25,11 @@ return_statement -> "return" expression ";";
 statement ->
     plus_equals_statement | minus_equals_statement | times_equals_statement | div_equals_statement | assign_statment |
     effect_statement;
-plus_equals_statement -> ((expression | declaration) "+=" expression ";");
-minus_equals_statement -> ((expression | declaration) "-=" expression ";");
-times_equals_statement -> ((expression | declaration) "*=" expression ";") | (expression ";");
-div_equals_statement -> ((expression | declaration) "/=" expression ";") | (expression ";");
-assign_statement -> ((expression | declaration) "=" expression ";");
+plus_equals_statement -> expression "+=" expression ";";
+minus_equals_statement -> expression "-=" expression ";";
+times_equals_statement -> expression "*=" expression ";";
+div_equals_statement -> expression "/=" expression ";";
+assign_statement -> (expression | declaration) "=" expression ";";
 effect_statement -> expression ";";
 
 function_defs -> function_defs? function_def;
@@ -1124,15 +1124,45 @@ fn parse_statement_rule(
                     // Handle various kinds of assignment tokens
                     match assign_token {
                         Token::Assign => {
-                            // LHS expression
-                            add_child_to_search_stack(
-                                node_handle,
-                                Rule::Expression,
-                                node_start,
-                                assign_index - node_start,
-                                ast,
-                                stack,
-                            );
+                            // LHS
+                            let both_symbols: bool = {
+                                match tokens.get_token(node_start) {
+                                    Some(token_one) => match tokens
+                                        .get_token(node_start + 1)
+                                    {
+                                        Some(token_two) => match token_one {
+                                            Token::Symbol(_) => match token_two
+                                            {
+                                                Token::Symbol(_) => true,
+                                                _ => false,
+                                            },
+                                            _ => false,
+                                        },
+                                        None => false,
+                                    },
+                                    None => false,
+                                }
+                            };
+
+                            if both_symbols {
+                                add_child_to_search_stack(
+                                    node_handle,
+                                    Rule::Declaration,
+                                    node_start,
+                                    assign_index - node_start,
+                                    ast,
+                                    stack,
+                                );
+                            } else {
+                                add_child_to_search_stack(
+                                    node_handle,
+                                    Rule::Expression,
+                                    node_start,
+                                    assign_index - node_start,
+                                    ast,
+                                    stack,
+                                );
+                            }
 
                             // RHS expression
                             add_child_to_search_stack(
