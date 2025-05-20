@@ -6136,3 +6136,77 @@ fn parse_struct_field_function_call() {
 
     check_ast_equal(&ast, &expected_ast);
 }
+
+#[test]
+fn declaration_assignment() {
+    /*
+    "Rule: Expression Data: None Start: 0 Len: 7 ChildrenLen: 1"
+    "Rule: BraceExpression Data: None Start: 0 Len: 7 ChildrenLen: 2"
+        "Rule: BraceStatements Data: None Start: 1 Len: 5 ChildrenLen: 1"
+            "Rule: Statement Data: None Start: 1 Len: 5 ChildrenLen: 2"
+                "Rule: Declaration Data: None Start: 1 Len: 2 ChildrenLen: 2"
+                    "Rule: Terminal Data: Some(Symbol(\"int32\")) Start: 1 Len: 1 ChildrenLen: 0"
+                    "Rule: Terminal Data: Some(Symbol(\"a\")) Start: 2 Len: 1 ChildrenLen: 0"
+                "Rule: Expression Data: None Start: 4 Len: 1 ChildrenLen: 1"
+                    "Rule: Terminal Data: Some(IntLiteral(0)) Start: 4 Len: 1 ChildrenLen: 0"
+        "Rule: Expression Data: None Start: 6 Len: 0 ChildrenLen: 1"
+            "Rule: Terminal Data: None Start: 6 Len: 0 ChildrenLen: 0"
+     */
+    let tokens = tokenize("{int32 a = 0;}").expect("Unexpected tokenize error");
+    let ast = parse(&tokens).expect("Unexpected parse error");
+    let expected_ast = {
+        let mut expected_ast = Ast::new();
+        let root_handle = expected_ast.add_root(Rule::Expression, 0, 7);
+        let brace_expression =
+            expected_ast.add_child(root_handle, Rule::BraceExpression, 0, 7);
+        let brace_statements_handle = expected_ast.add_child(
+            brace_expression,
+            Rule::BraceStatements,
+            1,
+            5,
+        );
+        let statement_handle = expected_ast.add_child(
+            brace_statements_handle,
+            Rule::Statement,
+            1,
+            5,
+        );
+
+        let declaration_handle =
+            expected_ast.add_child(statement_handle, Rule::Declaration, 1, 2);
+        expected_ast.add_terminal_child(
+            declaration_handle,
+            Some(Token::Symbol("int32".to_owned())),
+            1,
+            1,
+        );
+        expected_ast.add_terminal_child(
+            declaration_handle,
+            Some(Token::Symbol("a".to_owned())),
+            2,
+            1,
+        );
+
+        let rhs_handle =
+            expected_ast.add_child(statement_handle, Rule::Expression, 4, 1);
+        expected_ast.add_terminal_child(
+            rhs_handle,
+            Some(Token::IntLiteral(0)),
+            4,
+            1,
+        );
+
+        // return expression
+        add_terminal_expression(
+            &mut expected_ast,
+            brace_expression,
+            None,
+            6,
+            0,
+        );
+
+        expected_ast
+    };
+
+    check_ast_equal(&ast, &expected_ast);
+}
