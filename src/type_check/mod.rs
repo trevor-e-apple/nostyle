@@ -62,26 +62,25 @@ fn find_function_struct_definitions(
                     match child_node.rule {
                         Rule::FunctionArguments => {
                             todo!()
-                        },
+                        }
                         Rule::Declaration => {
                             assert_eq!(child_node.children.len(), 2);
                             let symbol_one_name = {
-                                let symbol_node = ast.get_node(child_node.children[0]);
+                                let symbol_node =
+                                    ast.get_node(child_node.children[0]);
                                 match symbol_node.data {
                                     Some(token) => match token {
-                                        Token::Symbol(name) => {
-                                            name
-                                        },
-                                        _ => todo!()
+                                        Token::Symbol(name) => name,
+                                        _ => todo!(),
                                     },
                                     None => todo!(),
                                 }
                             };
                             argument_types.push(symbol_one_name);
-                        },
+                        }
                         Rule::ReturnsData => {
                             todo!()
-                        },
+                        }
                         _ => {
                             todo!()
                         }
@@ -96,7 +95,7 @@ fn find_function_struct_definitions(
                     },
                 ) {
                     Some(_) => todo!(), // this function is getting redefined
-                    None => {},
+                    None => {}
                 };
             }
             Rule::DataStructure => {
