@@ -141,6 +141,32 @@ mod tests {
         assert_eq!(dependencies.len(), expected_count);
     }
 
+    fn check_all_dependencies_count(
+        ast: &Ast,
+        dependency_graph: &DependencyGraph,
+        expected_results: HashMap<String, usize>,
+    ) {
+        for (node_handle, dependencies) in dependency_graph {
+            let node = ast.get_node(*node_handle);
+            assert_eq!(node.rule, Rule::FunctionDef);
+
+            let node_data = node.data.as_ref().expect("Missing node data");
+            match node_data {
+                Token::Symbol(function_name) => {
+                    match expected_results.get(function_name) {
+                        Some(expected_count) => {
+                            check_dependencies_count(ast, dependency_graph, dependencies, *expected_count);
+                        },
+                        None => {
+                            assert!(false, "Missing expected count for function")
+                        },
+                    };
+                }
+                _ => assert!(false, "Unexpected node data"),
+            }
+        }
+    }
+
     #[test]
     fn no_function_def() {
         let tokens = tokenize("a + b").expect("Unexpected tokenize error");
@@ -159,11 +185,13 @@ mod tests {
             .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 1);
 
-        for (node_handle, dependencies) in &dependency_graph {
-            let node = ast.get_node(*node_handle);
-            assert_eq!(node.rule, Rule::FunctionDef);
-            check_dependencies_count(&ast, &dependency_graph, &dependencies, 0);
-        }
+        let expected_results = {
+            let mut expected_results: HashMap<String, usize> = HashMap::new();
+            expected_results.insert("test".to_owned(), 0);
+            expected_results
+        };
+
+        check_all_dependencies_count(&ast, &dependency_graph, expected_results);
     }
 
     #[test]
@@ -180,34 +208,16 @@ mod tests {
             .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 2);
 
-        for (node_handle, dependencies) in &dependency_graph {
-            let node = ast.get_node(*node_handle);
-            assert_eq!(node.rule, Rule::FunctionDef);
+        let expected_results = {
+            let mut expected_results: HashMap<String, usize> = HashMap::new();
+            
+            expected_results.insert("test".to_owned(), 1);
+            expected_results.insert("dependency_one".to_owned(), 0);
 
-            let node_data = node.data.as_ref().expect("Missing node data");
-            match node_data {
-                Token::Symbol(function_name) => {
-                    if function_name == "test" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            1,
-                        );
-                    } else if function_name == "dependency_one" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            0,
-                        );
-                    } else {
-                        assert!(false, "Unexpected function name");
-                    }
-                }
-                _ => assert!(false, "Unexpected node data"),
-            }
-        }
+            expected_results
+        };
+
+        check_all_dependencies_count(&ast, &dependency_graph, expected_results);
     }
 
     #[test]
@@ -225,41 +235,17 @@ mod tests {
             .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 3);
 
-        for (node_handle, dependencies) in &dependency_graph {
-            let node = ast.get_node(*node_handle);
-            assert_eq!(node.rule, Rule::FunctionDef);
+        let expected_results = {
+            let mut expected_results: HashMap<String, usize> = HashMap::new();
 
-            let node_data = node.data.as_ref().expect("Missing node data");
-            match node_data {
-                Token::Symbol(function_name) => {
-                    if function_name == "test" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            2,
-                        );
-                    } else if function_name == "dependency_one" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            0,
-                        );
-                    } else if function_name == "dependency_two" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            0,
-                        );
-                    } else {
-                        assert!(false, "Unexpected function name");
-                    }
-                }
-                _ => assert!(false, "Unexpected node data"),
-            }
-        }
+            expected_results.insert("test".to_owned(), 2);
+            expected_results.insert("dependency_one".to_owned(), 0);
+            expected_results.insert("dependency_two".to_owned(), 0);
+
+            expected_results
+        };
+
+        check_all_dependencies_count(&ast, &dependency_graph, expected_results);
     }
 
     #[test]
@@ -278,53 +264,47 @@ mod tests {
             .expect("Unexpected error making dependency graph");
         assert_eq!(dependency_graph.len(), 4);
 
-        for (node_handle, dependencies) in &dependency_graph {
-            let node = ast.get_node(*node_handle);
-            assert_eq!(node.rule, Rule::FunctionDef);
+        let expected_results = {
+            let mut expected_results: HashMap<String, usize> = HashMap::new();
 
-            let node_data = node.data.as_ref().expect("Missing node data");
-            match node_data {
-                Token::Symbol(function_name) => {
-                    if function_name == "test" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            3,
-                        );
-                    } else if function_name == "dependency_one" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            0,
-                        );
-                    } else if function_name == "dependency_two" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            0,
-                        );
-                    } else if function_name == "dependency_three" {
-                        check_dependencies_count(
-                            &ast,
-                            &dependency_graph,
-                            dependencies,
-                            0,
-                        );
-                    } else {
-                        assert!(false, "Unexpected function name");
-                    }
-                }
-                _ => assert!(false, "Unexpected node data"),
-            }
-        }
+            expected_results.insert("test".to_owned(), 3);
+            expected_results.insert("dependency_one".to_owned(), 0);
+            expected_results.insert("dependency_two".to_owned(), 0);
+            expected_results.insert("dependency_three".to_owned(), 0);
+
+            expected_results
+        };
+
+        check_all_dependencies_count(&ast, &dependency_graph, expected_results);
     }
 
     #[test]
     fn multiple_function_defs_with_dependencies() {
-        todo!();
+        let tokens = tokenize(
+            "
+            fn test() returns int32 {int32 a = dependency_three(); a + dependency_one()}
+            fn dependency_one() returns int32 {42 + dependency_two()}
+            fn dependency_two() returns int32 {21 * 2}
+            fn dependency_three() returns int32 {7 * 6}
+        ",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        let dependency_graph = make_dependency_graph(&ast).expect("Unexpected error making dependency graph");
+        assert_eq!(dependency_graph.len(), 4);
+
+        let expected_results = {
+            let mut expected_results: HashMap<String, usize> = HashMap::new();
+
+            expected_results.insert("test".to_owned(), 2);
+            expected_results.insert("dependency_one".to_owned(), 1);
+            expected_results.insert("dependency_two".to_owned(), 0);
+            expected_results.insert("dependency_three".to_owned(), 0);
+
+            expected_results
+        };
+
+        check_all_dependencies_count(&ast, &dependency_graph, expected_results);
     }
 
     #[test]
