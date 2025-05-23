@@ -30,8 +30,8 @@ pub fn type_check(ast: &Ast) -> Result<(), Vec<TypeError>> {
 fn find_function_struct_definitions(
     ast: &Ast,
 ) -> (HashMap<String, FunctionTypeData>, HashMap<String, StructTypeData>) {
-    let function_type_map: HashMap<String, FunctionTypeData> = HashMap::new();
-    let struct_type_map: HashMap<String, StructTypeData> = HashMap::new();
+    let mut function_type_map: HashMap<String, FunctionTypeData> = HashMap::new();
+    let mut struct_type_map: HashMap<String, StructTypeData> = HashMap::new();
 
     let ast_root = match ast.get_root() {
         Some(ast_root) => ast_root,
@@ -62,8 +62,8 @@ fn find_function_struct_definitions(
                     let descendent_node = ast.get_node(descendent_handle);
                     match descendent_node.rule {
                         Rule::FunctionArguments => {
-                            for child in descendent_node.children {
-                                function_def_stack.push(child);
+                            for child in &descendent_node.children {
+                                function_def_stack.push(*child);
                             }
                         }
                         Rule::Declaration => {
@@ -71,9 +71,9 @@ fn find_function_struct_definitions(
                             let symbol_one_name = {
                                 let symbol_node =
                                     ast.get_node(descendent_node.children[0]);
-                                match symbol_node.data {
+                                match &symbol_node.data {
                                     Some(token) => match token {
-                                        Token::Symbol(name) => name,
+                                        Token::Symbol(name) => name.clone(),
                                         _ => todo!(),
                                     },
                                     None => todo!(),
@@ -82,11 +82,11 @@ fn find_function_struct_definitions(
                             argument_types.push(symbol_one_name);
                         }
                         Rule::ReturnsData => {
-                            match descendent_node.data {
+                            match &descendent_node.data {
                                 Some(token) => {
                                     match token {
                                         Token::Symbol(name) => {
-                                            return_type = Some(name);
+                                            return_type = Some(name.clone());
                                         },
                                         _ => todo!()
                                     }
@@ -123,5 +123,5 @@ fn find_function_struct_definitions(
         }
     }
 
-    Some(dependency_graph)
+    (function_type_map, struct_type_map)
 }
