@@ -57,17 +57,20 @@ fn find_function_struct_definitions(
 
                 let mut argument_types: Vec<String> = vec![];
                 let mut return_type: Option<String> = None;
-                for child in &node.children {
-                    let child_node = ast.get_node(*child);
-                    match child_node.rule {
+                let mut function_def_stack = node.children.clone();
+                while let Some(descendent_handle) = function_def_stack.pop() {
+                    let descendent_node = ast.get_node(descendent_handle);
+                    match descendent_node.rule {
                         Rule::FunctionArguments => {
-                            todo!()
+                            for child in descendent_node.children {
+                                function_def_stack.push(child);
+                            }
                         }
                         Rule::Declaration => {
-                            assert_eq!(child_node.children.len(), 2);
+                            assert_eq!(descendent_node.children.len(), 2);
                             let symbol_one_name = {
                                 let symbol_node =
-                                    ast.get_node(child_node.children[0]);
+                                    ast.get_node(descendent_node.children[0]);
                                 match symbol_node.data {
                                     Some(token) => match token {
                                         Token::Symbol(name) => name,
@@ -79,7 +82,17 @@ fn find_function_struct_definitions(
                             argument_types.push(symbol_one_name);
                         }
                         Rule::ReturnsData => {
-                            todo!()
+                            match descendent_node.data {
+                                Some(token) => {
+                                    match token {
+                                        Token::Symbol(name) => {
+                                            return_type = Some(name);
+                                        },
+                                        _ => todo!()
+                                    }
+                                },
+                                None => todo!(),
+                            }
                         }
                         _ => {
                             todo!()
