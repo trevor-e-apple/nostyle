@@ -113,6 +113,10 @@ impl Tokens {
         }
     }
 
+    pub fn expect_line_number(&self, index: usize) -> usize {
+        self.get_line_number(index).expect("Missing line number")
+    }
+
     pub fn get_final_line(&self) -> usize {
         if self.line_numbers.len() == 0 {
             return 0;

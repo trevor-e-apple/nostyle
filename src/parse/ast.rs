@@ -116,6 +116,20 @@ impl Ast {
         }
     }
 
+    pub fn expect_node_name(&self, node_handle: AstNodeHandle) -> &String {
+        let node = self.get_node(node_handle);
+
+        match &node.data {
+            Some(name_token) => match name_token {
+                Token::Symbol(name) => name,
+                _ => {
+                    panic!("Node does not have symbol data");
+                }
+            },
+            None => panic!("Node does not have data"),
+        }
+    }
+
     /// whether or not two ast's are equivalent
     #[cfg(test)]
     pub fn equivalent(a: &Self, b: &Self) -> bool {
