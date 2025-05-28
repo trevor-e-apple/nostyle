@@ -76,44 +76,29 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                         &mut stack,
                     );
                 }
-                Rule::PlusMinus => {
-                    type_check_two_children(
-                        tokens,
-                        &node_handle,
-                        node,
-                        &mut node_type_info,
-                        &mut stack,
-                    );
-                }
-                Rule::MultDiv => {
-                    type_check_two_children(
-                        tokens,
-                        &node_handle,
-                        node,
-                        &mut node_type_info,
-                        &mut stack,
-                    );
-                }
                 Rule::Terminal => {
-
+                    let node_token = node.data.expect("Missing token for terminal node");
+                    match node_token {
+                        Token::Symbol(_) => todo!("Symbol terminals not yet implemented"),
+                        Token::IntLiteral(_) => {
+                            // TODO: type inference
+                            node_type_info.insert(node_handle, "int32".to_owned());
+                        },
+                        Token::FloatLiteral(_) => {
+                            // TODO: type inference
+                            node_type_info.insert(node_handle, "float32".to_owned());
+                        },
+                        Token::StringLiteral(_) => todo!("String literal terminals not yet implemented"),
+                        _ => panic!("Unexpected token for terminal node")
+                    }
                 }
                 _ => {
-                    let children_evaluated: bool = {
-                        let mut children_evaluated = true;
-                        for child in &node.children {
-                            if !node_type_info.contains_key(child) {
-                                children_evaluated = false;
-                                break;
-                            }
-                        }
-                        children_evaluated
-                    };
-
-                    if children_evaluated {
-                        node_type_info.insert(node_handle, v);
+                    if node.children.len() == 1 {
+                        type_check_one_child(&node_handle, node, &mut node_type_info, &mut stack);
                     } else {
-                        for child in &node.children {
-                            stack.push(*child);
+                        match type_check_two_children(tokens, &node_handle, node, &mut node_type_info, &mut stack) {
+                            Ok(_) => {},
+                            Err(e) => errors.push(e),
                         }
                     }
                 }
@@ -183,6 +168,28 @@ fn type_check_statement(
     Ok(())
 }
 
+fn type_check_one_child(
+    node_handle: &AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, String>,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), TypeError> {
+    let child_handle = node.children[0];
+
+    match node_type_info.get(&child_handle) {
+        Some(child_type) => {
+            // inherit type from child
+            node_type_info.insert(*node_handle, child_type.clone());
+        },
+        None => {
+            // child not evaluated, add to stack
+            stack.push(child_handle);
+        },
+    }
+
+    Ok(())
+}
+
 /// A type check for two child nodes that can either evaluate whether there is a type error or
 /// add the two children to the stack for evaluation
 fn type_check_two_children(
@@ -196,7 +203,6 @@ fn type_check_two_children(
     let lhs_handle = node.children[0];
     let rhs_handle = node.children[1];
 
-    // check if both children have their type information
     match node_type_info.get(&lhs_handle) {
         Some(lhs_type_info) => match node_type_info.get(&rhs_handle) {
             Some(rhs_type_info) => {
