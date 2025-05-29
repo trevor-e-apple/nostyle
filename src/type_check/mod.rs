@@ -44,7 +44,7 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         let mut variable_type_info = HashMap::<String, Option<String>>::new();
 
         loop {
-            let node_handle = match stack.get(stack.len()) {
+            let node_handle = match stack.get(stack.len() - 1) {
                 Some(node_handle) => node_handle.clone(),
                 None => break,
             };
@@ -67,17 +67,20 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                         .insert(variable_name, Some(type_name.clone()));
                 }
                 Rule::Statement => {
-                    type_check_statement(
+                    match type_check_statement(
                         ast,
                         tokens,
                         node,
                         &mut node_type_info,
                         &mut variable_type_info,
                         &mut stack,
-                    );
+                    ) {
+                        Ok(_) => {},
+                        Err(e) => errors.push(e),
+                    }
                 }
                 Rule::Terminal => {
-                    let node_token = node.data.expect("Missing token for terminal node");
+                    let node_token = node.data.as_ref().expect("Missing token for terminal node");
                     match node_token {
                         Token::Symbol(_) => todo!("Symbol terminals not yet implemented"),
                         Token::IntLiteral(_) => {
@@ -94,7 +97,10 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                 }
                 _ => {
                     if node.children.len() == 1 {
-                        type_check_one_child(&node_handle, node, &mut node_type_info, &mut stack);
+                        match type_check_one_child(&node_handle, node, &mut node_type_info, &mut stack) {
+                            Ok(_) => {},
+                            Err(e) => errors.push(e),
+                        }
                     } else {
                         match type_check_two_children(tokens, &node_handle, node, &mut node_type_info, &mut stack) {
                             Ok(_) => {},
@@ -338,12 +344,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn find_function_defs() {
+        todo!()
+    }
+
+    #[test]
+    fn find_struct_defs() {
+        todo!()
+    }
+
+    #[test]
     fn arithmetic_expression() {
         let tokens = tokenize("1 + 2").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
-            Ok(_) => assert!(true),
+            Ok(_) => {},
             Err(_) => assert!(false),
         }
+    }
+
+    #[test]
+    fn multiple_type_errors() {
+        todo!()
     }
 }

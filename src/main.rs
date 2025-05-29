@@ -24,7 +24,7 @@ fn main() {
         Err(_) => todo!(),
     };
 
-    let type_check_result = match type_check(&ast) {
+    let type_check_result = match type_check(&tokens, &ast) {
         Ok(type_check_result) => type_check_result,
         Err(_) => todo!(),
     };
