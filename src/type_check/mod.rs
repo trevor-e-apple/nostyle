@@ -419,4 +419,9 @@ mod tests {
     fn multiple_type_errors() {
         todo!()
     }
+
+    #[test]
+    fn unknown_function() {
+        todo!()
+    }
 }
