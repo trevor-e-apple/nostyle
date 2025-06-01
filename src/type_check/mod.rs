@@ -29,7 +29,7 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         find_function_struct_definitions(ast);
 
     // Perform type checks on AST
-    {
+    let errors = {
         let ast_root = match ast.get_root() {
             Some(root_handle) => root_handle,
             None => todo!(),
@@ -38,9 +38,12 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         // TODO: we have to break this up function by function (sets up parallelization)
         let mut errors: Vec<TypeError> = vec![];
         let mut stack = vec![ast_root];
-        let mut node_type_info = HashMap::<AstNodeHandle, String>::new();
 
-        // For values, None means that an error occurred and future errors based on this variable info should be ignored (since its type is ambiguous)
+        // Key value pair not present -> child hasn't been evaluated
+        // Value is None -> variable / branch had an error
+        // Value is Some(String) -> variable / branch evaluated to a type correctly
+        let mut node_type_info =
+            HashMap::<AstNodeHandle, Option<String>>::new();
         let mut variable_type_info = HashMap::<String, Option<String>>::new();
 
         loop {
@@ -66,22 +69,13 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                     let variable_name =
                         ast.expect_node_name(rhs_child_handle).clone();
 
-                    node_type_info.insert(lhs_child_handle, type_name.clone());
+                    node_type_info
+                        .insert(lhs_child_handle, Some(type_name.clone()));
                     variable_type_info
                         .insert(variable_name, Some(type_name.clone()));
                 }
                 Rule::Statement => {
-                    match type_check_statement(
-                        ast,
-                        tokens,
-                        node,
-                        &mut node_type_info,
-                        &mut variable_type_info,
-                        &mut stack,
-                    ) {
-                        Ok(_) => {}
-                        Err(e) => errors.push(e),
-                    }
+                    todo!();
                 }
                 Rule::Terminal => {
                     let node_token = node
@@ -97,7 +91,7 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                             update_node_type_info(
                                 &mut node_type_info,
                                 node_handle,
-                                "int32".to_owned(),
+                                Some("int32".to_owned()),
                                 &mut stack,
                             );
                         }
@@ -106,7 +100,7 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                             update_node_type_info(
                                 &mut node_type_info,
                                 node_handle,
-                                "float32".to_owned(),
+                                Some("float32".to_owned()),
                                 &mut stack,
                             );
                         }
@@ -142,92 +136,38 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                 }
             }
         }
-    }
 
-    Ok(())
+        errors
+    };
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
 }
 
 /// Update the node's type information and pop the node off of the stack
 fn update_node_type_info(
-    node_type_info: &mut HashMap<AstNodeHandle, String>,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     key: AstNodeHandle,
-    value: String,
+    value: Option<String>,
     stack: &mut Vec<AstNodeHandle>,
 ) {
     node_type_info.insert(key, value);
     stack.pop();
 }
 
-fn type_check_statement(
-    ast: &Ast,
-    tokens: &Tokens,
-    node: &AstNode,
-    node_type_info: &mut HashMap<AstNodeHandle, String>,
-    variable_type_info: &mut HashMap<String, Option<String>>,
-    stack: &mut Vec<AstNodeHandle>,
-) -> Result<(), TypeError> {
-    if node.children.len() == 1 {
-        // Effect statement
-        stack.pop(); // doesn't change type info, can be popped off
-
-        // child nodes must still be inspected
-        for child in &node.children {
-            stack.push(*child);
-        }
-    } else if node.children.len() == 2 {
-        // Assignment statement
-        let lhs_handle = node.children[0];
-        let rhs_handle = node.children[1];
-
-        // get LHS variable name
-        let variable_name = ast.expect_node_name(lhs_handle).clone();
-
-        // check if both children have their type information
-        match node_type_info.get(&lhs_handle) {
-            Some(lhs_type_info) => match node_type_info.get(&rhs_handle) {
-                Some(rhs_type_info) => {
-                    if lhs_type_info != rhs_type_info {
-                        variable_type_info.insert(variable_name, None);
-                        return Err(TypeError {
-                            start_line: tokens.expect_line_number(node.start),
-                            end_line: tokens
-                                .expect_line_number(node.start + node.len - 1),
-                            info: format!(
-                                "LHS type {} does not match RHS type {}",
-                                lhs_type_info, rhs_type_info
-                            ),
-                        });
-                    } else {
-                        variable_type_info
-                            .insert(variable_name, Some(lhs_type_info.clone()));
-                    }
-                }
-                None => panic!("LHS info without RHS info"),
-            },
-            None => {
-                for child in &node.children {
-                    stack.push(*child);
-                }
-            }
-        }
-    } else {
-        panic!("Statement node without children");
-    }
-
-    Ok(())
-}
-
 fn type_check_one_child(
     node_handle: &AstNodeHandle,
     node: &AstNode,
-    node_type_info: &mut HashMap<AstNodeHandle, String>,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), TypeError> {
     let child_handle = node.children[0];
 
     match node_type_info.get(&child_handle) {
         Some(child_type) => {
-            // inherit type from child
             update_node_type_info(
                 node_type_info,
                 *node_handle,
@@ -250,7 +190,7 @@ fn type_check_two_children(
     tokens: &Tokens,
     node_handle: &AstNodeHandle,
     node: &AstNode,
-    node_type_info: &mut HashMap<AstNodeHandle, String>,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), TypeError> {
     // Assignment statement
@@ -258,32 +198,69 @@ fn type_check_two_children(
     let rhs_handle = node.children[1];
 
     match node_type_info.get(&lhs_handle) {
-        Some(lhs_type_info) => match node_type_info.get(&rhs_handle) {
-            Some(rhs_type_info) => {
+        Some(lhs_eval_info) => match node_type_info.get(&rhs_handle) {
+            Some(rhs_eval_info) => {
+                let lhs_type_info = match lhs_eval_info {
+                    Some(type_info) => type_info,
+                    None => {
+                        // left-hand branch should have already added error
+                        update_node_type_info(
+                            node_type_info,
+                            *node_handle,
+                            None,
+                            stack,
+                        );
+                        return Ok(());
+                    }
+                };
+                let rhs_type_info = match rhs_eval_info {
+                    Some(type_info) => type_info,
+                    None => {
+                        // right-hand branch should have already added error
+                        update_node_type_info(
+                            node_type_info,
+                            *node_handle,
+                            None,
+                            stack,
+                        );
+                        return Ok(());
+                    }
+                };
+
                 if lhs_type_info != rhs_type_info {
+                    update_node_type_info(
+                        node_type_info,
+                        *node_handle,
+                        None,
+                        stack,
+                    );
                     return Err(TypeError {
                         start_line: tokens.expect_line_number(node.start),
                         end_line: tokens
                             .expect_line_number(node.start + node.len - 1),
-                        info: format!(
-                            "LHS type {} does not match RHS type {}",
-                            lhs_type_info, rhs_type_info
-                        ),
+                        info: format!("LHS type does not match RHS type",),
                     });
                 } else {
                     update_node_type_info(
                         node_type_info,
                         *node_handle,
-                        lhs_type_info.clone(),
+                        Some(lhs_type_info.clone()),
                         stack,
                     );
                 }
             }
-            None => panic!("LHS info without RHS info"),
+            None => panic!("LHS evaluated without RHS evaluation"),
         },
         None => {
-            for child in &node.children {
-                stack.push(*child);
+            // LHS is not evaluated
+            match node_type_info.get(&rhs_handle) {
+                Some(_) => panic!("RHS evaluated without LHS evaluation"),
+                None => {
+                    // Neither side is evaluated, add to stack for evaluation
+                    for child in &node.children {
+                        stack.push(*child);
+                    }
+                }
             }
         }
     }
@@ -406,8 +383,53 @@ mod tests {
     }
 
     #[test]
+    fn float_and_int() {
+        let tokens = tokenize("1 + 2.0").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {
+                assert!(false)
+            }
+            Err(_) => {}
+        }
+    }
+
+    #[test]
+    fn three_term_float_and_int() {
+        let tokens =
+            tokenize("1 + 2.0 * 3.0").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {
+                assert!(false)
+            }
+            Err(_) => {}
+        }
+    }
+
+    #[test]
     fn arithmetic_expression() {
         let tokens = tokenize("1 + 2").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn arithmetic_expression_float() {
+        let tokens = tokenize("1.0 + 2.0").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn three_term_expression() {
+        let tokens = tokenize("1 + 2 * 3").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
