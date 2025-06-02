@@ -374,7 +374,45 @@ mod tests {
 
     #[test]
     fn find_function_defs() {
-        todo!()
+        let tokens = tokenize(
+            "
+            fn test1(int32 a, int32 b) {
+            }
+
+            fn test2(float32 a, float32 b) -> float32 {
+            }
+
+            fn test3(mytype a) {
+            }
+        ",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        let (function_data, _) = find_function_struct_definitions(&ast);
+
+        let test1_data = function_data.get("test1").expect("Missing test1 data");
+        assert_eq!(test1_data.argument_types.len(), 2);
+        assert_eq!(test1_data.argument_types[0], "int32");
+        assert_eq!(test1_data.argument_types[1], "int32");
+        match test1_data.return_type {
+            Some(_) => assert!(false),
+            None => {},
+        };
+
+        let test2_data = function_data.get("test2").expect("Missing test2 data");
+        assert_eq!(test2_data.argument_types.len(), 2);
+        assert_eq!(test2_data.argument_types[0], "float32");
+        assert_eq!(test2_data.argument_types[1], "float32");
+        let test2_return_type = test2_data.return_type.as_ref().expect("Missing test2 return type");
+        assert_eq!(test2_return_type, "float32");
+
+        let test3_data = function_data.get("test3").expect("Missing test3 data");
+        assert_eq!(test3_data.argument_types.len(), 1);
+        assert_eq!(test3_data.argument_types[0], "mytype");
+        match test1_data.return_type {
+            Some(_) => assert!(false),
+            None => {},
+        };
     }
 
     #[test]
@@ -390,7 +428,9 @@ mod tests {
             Ok(_) => {
                 assert!(false)
             }
-            Err(_) => {}
+            Err(errors) => {
+                assert_eq!(errors.len(), 1)
+            }
         }
     }
 
@@ -403,7 +443,24 @@ mod tests {
             Ok(_) => {
                 assert!(false)
             }
-            Err(_) => {}
+            Err(errors) => {
+                assert_eq!(errors.len(), 1)
+            }
+        }
+    }
+
+    #[test]
+    fn four_term_float_and_int() {
+        let tokens =
+            tokenize("2 * 3.0 + 4 * 5.0").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {
+                assert!(false)
+            }
+            Err(errors) => {
+                assert_eq!(errors.len(), 2)
+            }
         }
     }
 
