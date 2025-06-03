@@ -303,7 +303,7 @@ fn find_function_struct_definitions(
                 while let Some(descendent_handle) = function_def_stack.pop() {
                     let descendent_node = ast.get_node(descendent_handle);
                     match descendent_node.rule {
-                        Rule::FunctionArguments => {
+                        Rule::FunctionDefParameters => {
                             for child in &descendent_node.children {
                                 function_def_stack.push(*child);
                             }
@@ -323,14 +323,21 @@ fn find_function_struct_definitions(
                             };
                             argument_types.push(symbol_one_name);
                         }
-                        Rule::ReturnsData => match &descendent_node.data {
-                            Some(token) => match token {
-                                Token::Symbol(name) => {
-                                    return_type = Some(name.clone());
-                                }
-                                _ => todo!(),
-                            },
-                            None => todo!(),
+                        Rule::ReturnsData => {
+                            let terminal_child_handle = descendent_node.children[0];
+                            let terminal_child_node = ast.get_node(terminal_child_handle);
+                            match &terminal_child_node.data {
+                                Some(token) => match token {
+                                    Token::Symbol(name) => {
+                                        return_type = Some(name.clone());
+                                    }
+                                    _ => todo!(),
+                                },
+                                None => todo!(),
+                            }
+                        },
+                        Rule::BraceExpression => {
+                            // nothing to do with a brace expression
                         },
                         _ => {
                             todo!()
@@ -379,7 +386,7 @@ mod tests {
             fn test1(int32 a, int32 b) {
             }
 
-            fn test2(float32 a, float32 b) -> float32 {
+            fn test2(float32 a, float32 b) returns float64 {
             }
 
             fn test3(mytype a) {
@@ -404,7 +411,7 @@ mod tests {
         assert_eq!(test2_data.argument_types[0], "float32");
         assert_eq!(test2_data.argument_types[1], "float32");
         let test2_return_type = test2_data.return_type.as_ref().expect("Missing test2 return type");
-        assert_eq!(test2_return_type, "float32");
+        assert_eq!(test2_return_type, "float64");
 
         let test3_data = function_data.get("test3").expect("Missing test3 data");
         assert_eq!(test3_data.argument_types.len(), 1);
