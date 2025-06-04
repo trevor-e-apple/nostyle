@@ -78,37 +78,50 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                     todo!();
                 }
                 Rule::Terminal => {
-                    let node_token = node
-                        .data
-                        .as_ref()
-                        .expect("Missing token for terminal node");
-                    match node_token {
-                        Token::Symbol(_) => {
-                            todo!("Symbol terminals not yet implemented")
-                        }
-                        Token::IntLiteral(_) => {
-                            // TODO: type inference
-                            update_node_type_info(
-                                &mut node_type_info,
-                                node_handle,
-                                Some("int32".to_owned()),
-                                &mut stack,
-                            );
-                        }
-                        Token::FloatLiteral(_) => {
-                            // TODO: type inference
-                            update_node_type_info(
-                                &mut node_type_info,
-                                node_handle,
-                                Some("float32".to_owned()),
-                                &mut stack,
-                            );
-                        }
-                        Token::StringLiteral(_) => todo!(
+                    match node.data.as_ref() {
+                        Some(node_token) => {
+                            match node_token {
+                                Token::Symbol(_) => {
+                                    todo!(
+                                        "Symbol terminals not yet implemented"
+                                    )
+                                }
+                                Token::IntLiteral(_) => {
+                                    // TODO: type inference
+                                    update_node_type_info(
+                                        &mut node_type_info,
+                                        node_handle,
+                                        Some("int32".to_owned()),
+                                        &mut stack,
+                                    );
+                                }
+                                Token::FloatLiteral(_) => {
+                                    // TODO: type inference
+                                    update_node_type_info(
+                                        &mut node_type_info,
+                                        node_handle,
+                                        Some("float32".to_owned()),
+                                        &mut stack,
+                                    );
+                                }
+                                Token::StringLiteral(_) => todo!(
                             "String literal terminals not yet implemented"
                         ),
-                        _ => panic!("Unexpected token for terminal node"),
-                    }
+                                _ => {
+                                    panic!("Unexpected token for terminal node")
+                                }
+                            }
+                        }
+                        None => {
+                            // No data for this terminal (null terminal)
+                            update_node_type_info(
+                                &mut node_type_info,
+                                node_handle,
+                                None,
+                                &mut stack,
+                            );
+                        }
+                    };
                 }
                 _ => {
                     if node.children.len() == 1 {
@@ -324,8 +337,10 @@ fn find_function_struct_definitions(
                             argument_types.push(symbol_one_name);
                         }
                         Rule::ReturnsData => {
-                            let terminal_child_handle = descendent_node.children[0];
-                            let terminal_child_node = ast.get_node(terminal_child_handle);
+                            let terminal_child_handle =
+                                descendent_node.children[0];
+                            let terminal_child_node =
+                                ast.get_node(terminal_child_handle);
                             match &terminal_child_node.data {
                                 Some(token) => match token {
                                     Token::Symbol(name) => {
@@ -335,10 +350,10 @@ fn find_function_struct_definitions(
                                 },
                                 None => todo!(),
                             }
-                        },
+                        }
                         Rule::BraceExpression => {
                             // nothing to do with a brace expression
-                        },
+                        }
                         _ => {
                             todo!()
                         }
@@ -397,28 +412,32 @@ mod tests {
         let ast = parse(&tokens).expect("Unexpected parse error");
         let (function_data, _) = find_function_struct_definitions(&ast);
 
-        let test1_data = function_data.get("test1").expect("Missing test1 data");
+        let test1_data =
+            function_data.get("test1").expect("Missing test1 data");
         assert_eq!(test1_data.argument_types.len(), 2);
         assert_eq!(test1_data.argument_types[0], "int32");
         assert_eq!(test1_data.argument_types[1], "int32");
         match test1_data.return_type {
             Some(_) => assert!(false),
-            None => {},
+            None => {}
         };
 
-        let test2_data = function_data.get("test2").expect("Missing test2 data");
+        let test2_data =
+            function_data.get("test2").expect("Missing test2 data");
         assert_eq!(test2_data.argument_types.len(), 2);
         assert_eq!(test2_data.argument_types[0], "float32");
         assert_eq!(test2_data.argument_types[1], "float32");
-        let test2_return_type = test2_data.return_type.as_ref().expect("Missing test2 return type");
+        let test2_return_type =
+            test2_data.return_type.as_ref().expect("Missing test2 return type");
         assert_eq!(test2_return_type, "float64");
 
-        let test3_data = function_data.get("test3").expect("Missing test3 data");
+        let test3_data =
+            function_data.get("test3").expect("Missing test3 data");
         assert_eq!(test3_data.argument_types.len(), 1);
         assert_eq!(test3_data.argument_types[0], "mytype");
         match test1_data.return_type {
             Some(_) => assert!(false),
-            None => {},
+            None => {}
         };
     }
 
@@ -494,6 +513,16 @@ mod tests {
     #[test]
     fn three_term_expression() {
         let tokens = tokenize("1 + 2 * 3").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn function_call_no_arguments() {
+        let tokens = tokenize("test()").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
