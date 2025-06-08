@@ -15,6 +15,7 @@ use crate::{
 struct FunctionTypeData {
     argument_types: Vec<String>,
     return_type: Option<String>,
+    root_handle: AstNodeHandle,
 }
 
 struct StructTypeData {
@@ -30,126 +31,12 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
 
     // Perform type checks on AST
     let errors = {
-        let ast_root = match ast.get_root() {
-            Some(root_handle) => root_handle,
-            None => todo!(),
-        };
-
         // TODO: we have to break this up function by function (sets up parallelization)
         let mut errors: Vec<TypeError> = vec![];
-        let mut stack = vec![ast_root];
 
-        // Key value pair not present -> child hasn't been evaluated
-        // Value is None -> variable / branch had an error
-        // Value is Some(String) -> variable / branch evaluated to a type correctly
-        let mut node_type_info =
-            HashMap::<AstNodeHandle, Option<String>>::new();
-        let mut variable_type_info = HashMap::<String, Option<String>>::new();
-
-        loop {
-            let node_handle = if stack.len() > 0 {
-                match stack.get(stack.len() - 1) {
-                    Some(node_handle) => node_handle.clone(),
-                    None => panic!("This should never happen"),
-                }
-            } else {
-                break;
-            };
-
-            let node = ast.get_node(node_handle);
-
-            match node.rule {
-                Rule::Declaration => {
-                    // LHS child is the type, RHS is the variable
-                    let lhs_child_handle = node.children[0].clone();
-                    let type_name =
-                        ast.expect_node_name(lhs_child_handle).clone();
-
-                    let rhs_child_handle = node.children[1].clone();
-                    let variable_name =
-                        ast.expect_node_name(rhs_child_handle).clone();
-
-                    node_type_info
-                        .insert(lhs_child_handle, Some(type_name.clone()));
-                    variable_type_info
-                        .insert(variable_name, Some(type_name.clone()));
-                }
-                Rule::Statement => {
-                    todo!();
-                }
-                Rule::Terminal => {
-                    match node.data.as_ref() {
-                        Some(node_token) => {
-                            match node_token {
-                                Token::Symbol(_) => {
-                                    todo!(
-                                        "Symbol terminals not yet implemented"
-                                    )
-                                }
-                                Token::IntLiteral(_) => {
-                                    // TODO: type inference
-                                    update_node_type_info(
-                                        &mut node_type_info,
-                                        node_handle,
-                                        Some("int32".to_owned()),
-                                        &mut stack,
-                                    );
-                                }
-                                Token::FloatLiteral(_) => {
-                                    // TODO: type inference
-                                    update_node_type_info(
-                                        &mut node_type_info,
-                                        node_handle,
-                                        Some("float32".to_owned()),
-                                        &mut stack,
-                                    );
-                                }
-                                Token::StringLiteral(_) => todo!(
-                            "String literal terminals not yet implemented"
-                        ),
-                                _ => {
-                                    panic!("Unexpected token for terminal node")
-                                }
-                            }
-                        }
-                        None => {
-                            // No data for this terminal (null terminal)
-                            update_node_type_info(
-                                &mut node_type_info,
-                                node_handle,
-                                None,
-                                &mut stack,
-                            );
-                        }
-                    };
-                }
-                _ => {
-                    if node.children.len() == 1 {
-                        match type_check_one_child(
-                            &node_handle,
-                            node,
-                            &mut node_type_info,
-                            &mut stack,
-                        ) {
-                            Ok(_) => {}
-                            Err(e) => errors.push(e),
-                        }
-                    } else {
-                        match type_check_two_children(
-                            tokens,
-                            &node_handle,
-                            node,
-                            &mut node_type_info,
-                            &mut stack,
-                        ) {
-                            Ok(_) => {}
-                            Err(e) => errors.push(e),
-                        }
-                    }
-                }
-            }
+        for (_, function_data) in function_type_map {
+            type_check_function(ast, function_data.root_handle);
         }
-
         errors
     };
 
@@ -157,6 +44,117 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         Ok(())
     } else {
         Err(errors)
+    }
+}
+
+fn type_check_function(ast: &Ast, root_handle: AstNodeHandle) {
+    let mut stack = vec![root_handle];
+
+    // Key value pair not present -> child hasn't been evaluated
+    // Value is None -> variable / branch had an error
+    // Value is Some(String) -> variable / branch evaluated to a type correctly
+    let mut node_type_info = HashMap::<AstNodeHandle, Option<String>>::new();
+    let mut variable_type_info = HashMap::<String, Option<String>>::new();
+
+    loop {
+        let node_handle = if stack.len() > 0 {
+            match stack.get(stack.len() - 1) {
+                Some(node_handle) => node_handle.clone(),
+                None => panic!("This should never happen"),
+            }
+        } else {
+            break;
+        };
+
+        let node = ast.get_node(node_handle);
+
+        match node.rule {
+            Rule::Declaration => {
+                // LHS child is the type, RHS is the variable
+                let lhs_child_handle = node.children[0].clone();
+                let type_name = ast.expect_node_name(lhs_child_handle).clone();
+
+                let rhs_child_handle = node.children[1].clone();
+                let variable_name =
+                    ast.expect_node_name(rhs_child_handle).clone();
+
+                node_type_info
+                    .insert(lhs_child_handle, Some(type_name.clone()));
+                variable_type_info
+                    .insert(variable_name, Some(type_name.clone()));
+            }
+            Rule::Statement => {
+                todo!();
+            }
+            Rule::Terminal => {
+                match node.data.as_ref() {
+                    Some(node_token) => {
+                        match node_token {
+                            Token::Symbol(_) => {
+                                todo!("Symbol terminals not yet implemented")
+                            }
+                            Token::IntLiteral(_) => {
+                                // TODO: type inference
+                                update_node_type_info(
+                                    &mut node_type_info,
+                                    node_handle,
+                                    Some("int32".to_owned()),
+                                    &mut stack,
+                                );
+                            }
+                            Token::FloatLiteral(_) => {
+                                // TODO: type inference
+                                update_node_type_info(
+                                    &mut node_type_info,
+                                    node_handle,
+                                    Some("float32".to_owned()),
+                                    &mut stack,
+                                );
+                            }
+                            Token::StringLiteral(_) => todo!(
+                                "String literal terminals not yet implemented"
+                            ),
+                            _ => {
+                                panic!("Unexpected token for terminal node")
+                            }
+                        }
+                    }
+                    None => {
+                        // No data for this terminal (null terminal)
+                        update_node_type_info(
+                            &mut node_type_info,
+                            node_handle,
+                            None,
+                            &mut stack,
+                        );
+                    }
+                };
+            }
+            _ => {
+                if node.children.len() == 1 {
+                    match type_check_one_child(
+                        &node_handle,
+                        node,
+                        &mut node_type_info,
+                        &mut stack,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => errors.push(e),
+                    }
+                } else {
+                    match type_check_two_children(
+                        tokens,
+                        &node_handle,
+                        node,
+                        &mut node_type_info,
+                        &mut stack,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => errors.push(e),
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -365,6 +363,7 @@ fn find_function_struct_definitions(
                     FunctionTypeData {
                         argument_types: argument_types,
                         return_type: return_type,
+                        root_handle: node_handle,
                     },
                 ) {
                     Some(_) => todo!(
@@ -512,7 +511,10 @@ mod tests {
 
     #[test]
     fn three_term_expression() {
-        let tokens = tokenize("1 + 2 * 3").expect("Unexpected tokenize error");
+        let tokens = tokenize("
+            fn test() returns int32 {
+                1 + 2 * 3
+            }").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
@@ -522,7 +524,14 @@ mod tests {
 
     #[test]
     fn function_call_no_arguments() {
-        let tokens = tokenize("test()").expect("Unexpected tokenize error");
+        let tokens = tokenize("
+            fn test() {
+            }
+
+            fn call() {
+                test()
+            }
+        ").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
@@ -532,33 +541,41 @@ mod tests {
 
     #[test]
     fn function_call_one_argument() {
-        let tokens = tokenize("
-            fn test(int32 a) {
+        let tokens = tokenize(
+            "
+            fn test(int32 a) returns int32 {
                 a
             }
 
-            fn test2 {
+            fn test2() {
                 int32 me = 0;
                 test(me);
-            }").expect("Unexpected tokenize error");
+            }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
-            Ok(_) => {},
-            Err(_) => {assert!(false)},
+            Ok(_) => {}
+            Err(_) => {
+                assert!(false)
+            }
         }
     }
 
     #[test]
     fn function_call_one_argument_undeclared() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             fn test(int32 a) {
                 a
             }
 
-            fn test2 {
+            fn test2() {
                 test(me);
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => todo!(),
@@ -568,22 +585,31 @@ mod tests {
 
     #[test]
     fn function_call_one_argument_bad_type() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             fn test(int32 a) {
                 a
             }
 
-            fn test2 {
+            fn test2() {
                 float32 me = 0.0;
                 test(me);
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => todo!(),
             Err(_) => todo!(),
         }
     }
+
+    #[test]
+    fn bad_return_type() {
+        todo!("Bad return type for function definition")
+    }
+
 
     #[test]
     fn missing_function_definition() {
