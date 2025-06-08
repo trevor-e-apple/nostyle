@@ -531,6 +531,66 @@ mod tests {
     }
 
     #[test]
+    fn function_call_one_argument() {
+        let tokens = tokenize("
+            fn test(int32 a) {
+                a
+            }
+
+            fn test2 {
+                int32 me = 0;
+                test(me);
+            }").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {},
+            Err(_) => {assert!(false)},
+        }
+    }
+
+    #[test]
+    fn function_call_one_argument_undeclared() {
+        let tokens = tokenize("
+            fn test(int32 a) {
+                a
+            }
+
+            fn test2 {
+                test(me);
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => todo!(),
+            Err(_) => todo!(),
+        }
+    }
+
+    #[test]
+    fn function_call_one_argument_bad_type() {
+        let tokens = tokenize("
+            fn test(int32 a) {
+                a
+            }
+
+            fn test2 {
+                float32 me = 0.0;
+                test(me);
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => todo!(),
+            Err(_) => todo!(),
+        }
+    }
+
+    #[test]
+    fn missing_function_definition() {
+        todo!()
+    }
+
+    #[test]
     fn multiple_type_errors() {
         todo!()
     }
