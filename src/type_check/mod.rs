@@ -64,7 +64,7 @@ fn type_check_function(
     // Value is None -> variable / branch had an error
     // Value is Some(String) -> variable / branch evaluated to a type correctly
     let mut node_type_info = HashMap::<AstNodeHandle, Option<String>>::new();
-    let mut variable_type_info = HashMap::<String, Option<String>>::new();
+    let mut variable_type_info = HashMap::<String, String>::new();
 
     loop {
         let node_handle = if stack.len() > 0 {
@@ -90,8 +90,7 @@ fn type_check_function(
 
                 node_type_info
                     .insert(lhs_child_handle, Some(type_name.clone()));
-                variable_type_info
-                    .insert(variable_name, Some(type_name.clone()));
+                variable_type_info.insert(variable_name, type_name.clone());
             }
             Rule::Statement => {
                 todo!();
@@ -100,8 +99,20 @@ fn type_check_function(
                 match node.data.as_ref() {
                     Some(node_token) => {
                         match node_token {
-                            Token::Symbol(_) => {
-                                todo!("Symbol terminals not yet implemented")
+                            Token::Symbol(data) => {
+                                match variable_type_info.get(data) {
+                                    Some(type_info) => {
+                                        update_node_type_info(
+                                            &mut node_type_info,
+                                            node_handle,
+                                            Some(type_info.clone()),
+                                            &mut stack,
+                                        );
+                                    }
+                                    None => {
+                                        // TODO: This should be a struct def or built-in type, but we should check
+                                    }
+                                }
                             }
                             Token::IntLiteral(_) => {
                                 // TODO: type inference
@@ -457,7 +468,8 @@ mod tests {
 
     #[test]
     fn float_and_int() {
-        let tokens = tokenize("fn test() returns int32 {1 + 2.0}").expect("Unexpected tokenize error");
+        let tokens = tokenize("fn test() returns int32 {1 + 2.0}")
+            .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {
@@ -491,8 +503,8 @@ mod tests {
 
     #[test]
     fn four_term_float_and_int() {
-        let tokens =
-            tokenize("fn test() returns float32 {2 * 3.0 + 4 * 5.0}").expect("Unexpected tokenize error");
+        let tokens = tokenize("fn test() returns float32 {2 * 3.0 + 4 * 5.0}")
+            .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {
