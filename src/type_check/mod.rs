@@ -35,7 +35,12 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         let mut errors: Vec<TypeError> = vec![];
 
         for (_, function_data) in function_type_map {
-            type_check_function(ast, function_data.root_handle);
+            type_check_function(
+                tokens,
+                ast,
+                function_data.root_handle,
+                &mut errors,
+            );
         }
         errors
     };
@@ -47,7 +52,12 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
     }
 }
 
-fn type_check_function(ast: &Ast, root_handle: AstNodeHandle) {
+fn type_check_function(
+    tokens: &Tokens,
+    ast: &Ast,
+    root_handle: AstNodeHandle,
+    errors: &mut Vec<TypeError>,
+) {
     let mut stack = vec![root_handle];
 
     // Key value pair not present -> child hasn't been evaluated
@@ -447,7 +457,7 @@ mod tests {
 
     #[test]
     fn float_and_int() {
-        let tokens = tokenize("1 + 2.0").expect("Unexpected tokenize error");
+        let tokens = tokenize("fn test() returns int32 {1 + 2.0}").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {
@@ -461,8 +471,13 @@ mod tests {
 
     #[test]
     fn three_term_float_and_int() {
-        let tokens =
-            tokenize("1 + 2.0 * 3.0").expect("Unexpected tokenize error");
+        let tokens = tokenize(
+            "
+                fn test() returns float32 {
+                    1 + 2.0 * 3.0
+                }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {
@@ -477,7 +492,7 @@ mod tests {
     #[test]
     fn four_term_float_and_int() {
         let tokens =
-            tokenize("2 * 3.0 + 4 * 5.0").expect("Unexpected tokenize error");
+            tokenize("fn test() returns float32 {2 * 3.0 + 4 * 5.0}").expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {
@@ -491,7 +506,13 @@ mod tests {
 
     #[test]
     fn arithmetic_expression() {
-        let tokens = tokenize("1 + 2").expect("Unexpected tokenize error");
+        let tokens = tokenize(
+            "
+            fn test() returns int32 {
+                1 + 2
+            }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
@@ -501,7 +522,14 @@ mod tests {
 
     #[test]
     fn arithmetic_expression_float() {
-        let tokens = tokenize("1.0 + 2.0").expect("Unexpected tokenize error");
+        let tokens = tokenize(
+            "
+            fn test() returns float32 {
+                1.0 + 2.0
+            }
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
@@ -511,10 +539,13 @@ mod tests {
 
     #[test]
     fn three_term_expression() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             fn test() returns int32 {
                 1 + 2 * 3
-            }").expect("Unexpected tokenize error");
+            }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
@@ -524,14 +555,16 @@ mod tests {
 
     #[test]
     fn function_call_no_arguments() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             fn test() {
             }
 
             fn call() {
                 test()
-            }
-        ").expect("Unexpected tokenize error");
+            }",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
@@ -610,7 +643,6 @@ mod tests {
         todo!("Bad return type for function definition")
     }
 
-
     #[test]
     fn missing_function_definition() {
         todo!()
@@ -619,6 +651,16 @@ mod tests {
     #[test]
     fn multiple_type_errors() {
         todo!()
+    }
+
+    #[test]
+    fn scoped_function_accessible() {
+        todo!();
+    }
+
+    #[test]
+    fn out_of_scope_function_inaccessible() {
+        todo!();
     }
 
     #[test]
