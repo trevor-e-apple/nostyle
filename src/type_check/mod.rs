@@ -151,6 +151,35 @@ fn type_check_function(
                     }
                 };
             }
+            Rule::FunctionDef => {
+                if node.children.len() == 2 {
+                    // no ReturnsData child
+                    type_check_function_def_rule_without_returns();
+                } else if node.children.len() == 3 {
+                    // has ReturnsData child
+                    type_check_function_def_rule_with_returns();
+                } else {
+                    panic!(
+                        "Unexpected number of children for function def node"
+                    )
+                }
+            }
+            Rule::ReturnsData => {
+                let token = node
+                    .data
+                    .as_ref()
+                    .expect("ReturnsData rule missing symbol");
+                let symbol = match token {
+                    Token::Symbol(symbol) => symbol,
+                    _ => panic!("ReturnsData rule missing symbol"),
+                };
+                update_node_type_info(
+                    &mut node_type_info,
+                    node_handle,
+                    Some(symbol.clone()),
+                    &mut stack,
+                );
+            }
             _ => {
                 if node.children.len() == 1 {
                     match type_check_one_child(
@@ -216,6 +245,71 @@ fn type_check_one_child(
     Ok(())
 }
 
+fn type_check_function_def_rule_with_returns(
+    tokens: &Tokens,
+    node_handle: &AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), TypeError> {
+    let function_def_parameters_handle = node.children[0];
+    let returns_handle = node.children[1];
+    let brace_expression_handle = node.children[2];
+
+    match node_type_info.get(&function_def_parameters_handle) {
+        Some(_) => {}
+        None => {
+            // not evaluated, add children to the stack
+            for child in &node.children {
+                stack.push(child.clone());
+            }
+            return Ok(());
+        }
+    }
+
+    // check if brace expression type and returns handle type are the same
+    {
+        let returns_type = match node_type_info.get(&returns_handle) {
+            Some(returns_type) => match returns_type {
+                Some(returns_type) => returns_type,
+                None => panic!("ReturnsData node has None type"),
+            },
+            None => panic!("ReturnsData node not evaluated"),
+        };
+
+        let brace_expression_type =
+            match node_type_info.get(&brace_expression_handle) {
+                Some(brace_expression_type) => brace_expression_type,
+                None => panic!("BraceExpression node not evaluated"),
+            };
+
+        match brace_expression_type {
+            Some(brace_expression_type) => {
+                if brace_expression_type != returns_type {
+                    return Err(TypeError {
+                        start_line: tokens.expect_line_number(node.start),
+                        end_line: tokens
+                            .expect_line_number(node.start + node.len - 1),
+                        info: "Returns type does not match expression type"
+                            .to_owned(),
+                    });
+                }
+            }
+            None => {
+                return Err(TypeError {
+                    start_line: tokens.expect_line_number(node.start),
+                    end_line: tokens
+                        .expect_line_number(node.start + node.len - 1),
+                    info: "Returns type does not match expression type"
+                        .to_owned(),
+                })
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// A type check for two child nodes that can either evaluate whether there is a type error or
 /// add the two children to the stack for evaluation
 fn type_check_two_children(
@@ -225,7 +319,6 @@ fn type_check_two_children(
     node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), TypeError> {
-    // Assignment statement
     let lhs_handle = node.children[0];
     let rhs_handle = node.children[1];
 
@@ -270,7 +363,7 @@ fn type_check_two_children(
                         start_line: tokens.expect_line_number(node.start),
                         end_line: tokens
                             .expect_line_number(node.start + node.len - 1),
-                        info: format!("LHS type does not match RHS type",),
+                        info: "LHS type does not match RHS type".to_owned(),
                     });
                 } else {
                     update_node_type_info(
@@ -513,6 +606,40 @@ mod tests {
             Err(errors) => {
                 assert_eq!(errors.len(), 2)
             }
+        }
+    }
+
+    #[test]
+    fn returns_none_function_errors() {
+        let tokens = tokenize(
+            "
+            fn test() returns {
+                1 + 2
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {
+                assert!(false)
+            }
+            Err(errors) => assert_eq!(1, errors.len()),
+        }
+    }
+
+    #[test]
+    fn returns_none_function() {
+        let tokens = tokenize(
+            "
+            fn test() returns {
+                int32 a = 1 + 2;
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
         }
     }
 
