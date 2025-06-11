@@ -116,6 +116,11 @@ impl Ast {
         }
     }
 
+    pub fn get_node_rule(&self, node_handle: AstNodeHandle) -> Rule {
+        let node = self.get_node(node_handle);
+        node.rule
+    }
+
     pub fn expect_node_name(&self, node_handle: AstNodeHandle) -> &String {
         let node = self.get_node(node_handle);
 

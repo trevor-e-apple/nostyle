@@ -154,22 +154,46 @@ fn type_check_function(
             Rule::FunctionDef => {
                 if node.children.len() == 2 {
                     // no ReturnsData child
-                    type_check_function_def_rule_without_returns();
+                    type_check_function_def_rule_without_returns(
+                        tokens,
+                        &node_handle,
+                        node,
+                        &mut node_type_info,
+                        &mut stack,
+                    );
                 } else if node.children.len() == 3 {
                     // has ReturnsData child
-                    type_check_function_def_rule_with_returns();
+                    match type_check_function_def_rule_with_returns(
+                        ast,
+                        tokens,
+                        node,
+                        &mut node_type_info,
+                        &mut stack,
+                    ) {
+                        Ok(_) => {},
+                        Err(error) => {
+                            errors.push(error);
+                        },
+                    };
                 } else {
                     panic!(
                         "Unexpected number of children for function def node"
                     )
                 }
             }
+            Rule::FunctionDefParameters => {
+                todo!();
+            }
             Rule::ReturnsData => {
-                let token = node
-                    .data
-                    .as_ref()
-                    .expect("ReturnsData rule missing symbol");
-                let symbol = match token {
+                // get type that ReturnsData expects
+                let type_info_token = {
+                    let terminal_child = node.children[0];
+                    let child_node = ast.get_node(terminal_child);
+                    assert!(child_node.rule == Rule::Terminal);
+                    child_node.data.as_ref().expect("Missing data in ReturnsData Terminal")
+                };
+
+                let symbol = match type_info_token {
                     Token::Symbol(symbol) => symbol,
                     _ => panic!("ReturnsData rule missing symbol"),
                 };
@@ -245,9 +269,19 @@ fn type_check_one_child(
     Ok(())
 }
 
-fn type_check_function_def_rule_with_returns(
+fn type_check_function_def_rule_without_returns(
     tokens: &Tokens,
     node_handle: &AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
+    stack: &mut Vec<AstNodeHandle>,
+) {
+    todo!();
+}
+
+fn type_check_function_def_rule_with_returns(
+    ast: &Ast,
+    tokens: &Tokens,
     node: &AstNode,
     node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
@@ -255,6 +289,11 @@ fn type_check_function_def_rule_with_returns(
     let function_def_parameters_handle = node.children[0];
     let returns_handle = node.children[1];
     let brace_expression_handle = node.children[2];
+
+    // TODO: it would be nice to get this as a guarantee from the parser
+    assert!(ast.get_node_rule(function_def_parameters_handle) == Rule::FunctionDefParameters);
+    assert!(ast.get_node_rule(returns_handle) == Rule::ReturnsData);
+    assert!(ast.get_node_rule(brace_expression_handle) == Rule::BraceExpression);
 
     match node_type_info.get(&function_def_parameters_handle) {
         Some(_) => {}
