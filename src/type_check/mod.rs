@@ -170,10 +170,10 @@ fn type_check_function(
                         &mut node_type_info,
                         &mut stack,
                     ) {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(error) => {
                             errors.push(error);
-                        },
+                        }
                     };
                 } else {
                     panic!(
@@ -182,7 +182,23 @@ fn type_check_function(
                 }
             }
             Rule::FunctionDefParameters => {
-                todo!();
+                let lhs_child_handle = node.children[0];
+                match node_type_info.get(&lhs_child_handle) {
+                    Some(_) => {
+                        // Child nodes are evaluated, function def parameters
+                        update_node_type_info(
+                            &mut node_type_info,
+                            node_handle,
+                            None,
+                            &mut stack,
+                        );
+                    }
+                    None => {
+                        for child in &node.children {
+                            stack.push(*child);
+                        }
+                    }
+                };
             }
             Rule::ReturnsData => {
                 // get type that ReturnsData expects
@@ -190,7 +206,10 @@ fn type_check_function(
                     let terminal_child = node.children[0];
                     let child_node = ast.get_node(terminal_child);
                     assert!(child_node.rule == Rule::Terminal);
-                    child_node.data.as_ref().expect("Missing data in ReturnsData Terminal")
+                    child_node
+                        .data
+                        .as_ref()
+                        .expect("Missing data in ReturnsData Terminal")
                 };
 
                 let symbol = match type_info_token {
@@ -291,9 +310,14 @@ fn type_check_function_def_rule_with_returns(
     let brace_expression_handle = node.children[2];
 
     // TODO: it would be nice to get this as a guarantee from the parser
-    assert!(ast.get_node_rule(function_def_parameters_handle) == Rule::FunctionDefParameters);
+    assert!(
+        ast.get_node_rule(function_def_parameters_handle)
+            == Rule::FunctionDefParameters
+    );
     assert!(ast.get_node_rule(returns_handle) == Rule::ReturnsData);
-    assert!(ast.get_node_rule(brace_expression_handle) == Rule::BraceExpression);
+    assert!(
+        ast.get_node_rule(brace_expression_handle) == Rule::BraceExpression
+    );
 
     match node_type_info.get(&function_def_parameters_handle) {
         Some(_) => {}
