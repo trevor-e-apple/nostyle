@@ -2151,8 +2151,10 @@ fn parse_function_def_rule(
     Ok(())
 }
 
-/// Parses the function parameters rule
-/// The function parameters rule does not include the parentheses
+/// Parses the function parameters rule.
+/// The function parameters rule does not include the parentheses.
+/// If the function contains no parameters, there will still be a function_def_parameters node
+/// that is the child of the function node, but it will have no children.
 fn parse_function_parameters_rule(
     tokens: &Tokens,
     node_handle: AstNodeHandle,

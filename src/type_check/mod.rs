@@ -182,23 +182,32 @@ fn type_check_function(
                 }
             }
             Rule::FunctionDefParameters => {
-                let lhs_child_handle = node.children[0];
-                match node_type_info.get(&lhs_child_handle) {
-                    Some(_) => {
-                        // Child nodes are evaluated, function def parameters
-                        update_node_type_info(
-                            &mut node_type_info,
-                            node_handle,
-                            None,
-                            &mut stack,
-                        );
-                    }
-                    None => {
-                        for child in &node.children {
-                            stack.push(*child);
+                if node.children.len() > 0 {
+                    let lhs_child_handle = node.children[0];
+                    match node_type_info.get(&lhs_child_handle) {
+                        Some(_) => {
+                            // Child nodes are evaluated, function def parameters
+                            update_node_type_info(
+                                &mut node_type_info,
+                                node_handle,
+                                None,
+                                &mut stack,
+                            );
                         }
-                    }
-                };
+                        None => {
+                            for child in &node.children {
+                                stack.push(*child);
+                            }
+                        }
+                    };
+                } else {
+                    update_node_type_info(
+                        &mut node_type_info,
+                        node_handle,
+                        None,
+                        &mut stack,
+                    );
+                }
             }
             Rule::ReturnsData => {
                 // get type that ReturnsData expects
@@ -716,6 +725,7 @@ mod tests {
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
+        ast.print();
         match type_check(&tokens, &ast) {
             Ok(_) => {}
             Err(_) => assert!(false),
