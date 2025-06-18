@@ -166,6 +166,7 @@ fn type_check_function(
                     match type_check_function_def_rule_with_returns(
                         ast,
                         tokens,
+                        node_handle,
                         node,
                         &mut node_type_info,
                         &mut stack,
@@ -310,6 +311,7 @@ fn type_check_function_def_rule_without_returns(
 fn type_check_function_def_rule_with_returns(
     ast: &Ast,
     tokens: &Tokens,
+    node_handle: AstNodeHandle,
     node: &AstNode,
     node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
@@ -378,6 +380,14 @@ fn type_check_function_def_rule_with_returns(
             }
         }
     }
+
+    // mark current node as evaluated
+    update_node_type_info(
+        node_type_info,
+        node_handle,
+        None,
+        stack,
+    );
 
     Ok(())
 }
