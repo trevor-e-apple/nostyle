@@ -360,6 +360,13 @@ fn type_check_function_def_rule_with_returns(
         match brace_expression_type {
             Some(brace_expression_type) => {
                 if brace_expression_type != returns_type {
+                    // mark current node as evaluated
+                    update_node_type_info(
+                        node_type_info,
+                        node_handle,
+                        None,
+                        stack,
+                    );
                     return Err(TypeError {
                         start_line: tokens.expect_line_number(node.start),
                         end_line: tokens
@@ -370,6 +377,13 @@ fn type_check_function_def_rule_with_returns(
                 }
             }
             None => {
+                // mark current node as evaluated
+                update_node_type_info(
+                    node_type_info,
+                    node_handle,
+                    None,
+                    stack,
+                );
                 return Err(TypeError {
                     start_line: tokens.expect_line_number(node.start),
                     end_line: tokens
