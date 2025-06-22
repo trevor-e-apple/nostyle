@@ -299,13 +299,57 @@ fn type_check_one_child(
 }
 
 fn type_check_function_def_rule_without_returns(
+    ast: &Ast,
     tokens: &Tokens,
     node_handle: &AstNodeHandle,
     node: &AstNode,
     node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
-) {
-    todo!();
+) -> Result<(), TypeError> {
+    let function_def_parameters_handle = node.children[0];
+    let brace_expression_handle = node.children[1];
+
+    assert!(
+        ast.get_node_rule(function_def_parameters_handle)
+            == Rule::FunctionDefParameters
+    );
+    assert!(
+        ast.get_node_rule(brace_expression_handle) == Rule::BraceExpression
+    );
+
+    // check whether this node is ready for evaluation
+    match node_type_info.get(&function_def_parameters_handle) {
+        Some(_) => {}
+        None => {
+            for child in &node.children {
+                stack.push(child.clone());
+            }
+            return Ok(());
+        }
+    }
+
+    // Verify that brace expression does not return a type
+    match node_type_info.get(&brace_expression_handle) {
+        Some(value) => match value {
+            Some(_) => {
+                update_node_type_info(
+                    node_type_info,
+                    *node_handle,
+                    None,
+                    stack,
+                );
+                return Err(TypeError {
+                    start_line: tokens.expect_line_number(node.start),
+                    end_line: tokens.expect_line_number(node.start + node.len - 1),
+                    info: "Unexpected return type for function that does not return value".to_owned(),
+                });
+            }
+            None => {},
+        },
+        None => panic!("Something has gone wrong"),
+    }
+
+    Ok(())
 }
 
 fn type_check_function_def_rule_with_returns(
@@ -378,30 +422,20 @@ fn type_check_function_def_rule_with_returns(
             }
             None => {
                 // mark current node as evaluated
-                update_node_type_info(
-                    node_type_info,
-                    node_handle,
-                    None,
-                    stack,
-                );
+                update_node_type_info(node_type_info, node_handle, None, stack);
                 return Err(TypeError {
                     start_line: tokens.expect_line_number(node.start),
                     end_line: tokens
                         .expect_line_number(node.start + node.len - 1),
                     info: "Returns type does not match expression type"
                         .to_owned(),
-                })
+                });
             }
         }
     }
 
     // mark current node as evaluated
-    update_node_type_info(
-        node_type_info,
-        node_handle,
-        None,
-        stack,
-    );
+    update_node_type_info(node_type_info, node_handle, None, stack);
 
     Ok(())
 }
@@ -790,7 +824,7 @@ mod tests {
     }
 
     #[test]
-    fn function_call_no_arguments() {
+    fn function_call_no_arguments_no_returns() {
         let tokens = tokenize(
             "
             fn test() {
