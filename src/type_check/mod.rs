@@ -154,13 +154,19 @@ fn type_check_function(
             Rule::FunctionDef => {
                 if node.children.len() == 2 {
                     // no ReturnsData child
-                    type_check_function_def_rule_without_returns(
+                    match type_check_function_def_rule_without_returns(
+                        ast,
                         tokens,
                         &node_handle,
                         node,
                         &mut node_type_info,
                         &mut stack,
-                    );
+                    ) {
+                        Ok(_) => {},
+                        Err(error) => {
+                            errors.push(error);
+                        },
+                    }
                 } else if node.children.len() == 3 {
                     // has ReturnsData child
                     match type_check_function_def_rule_with_returns(
@@ -349,6 +355,7 @@ fn type_check_function_def_rule_without_returns(
         None => panic!("Something has gone wrong"),
     }
 
+    update_node_type_info(node_type_info, *node_handle, None, stack);
     Ok(())
 }
 
@@ -696,10 +703,10 @@ mod tests {
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {
-                assert!(false)
+                assert!(false);
             }
             Err(errors) => {
-                assert_eq!(errors.len(), 1)
+                assert_eq!(errors.len(), 1);
             }
         }
     }
@@ -824,6 +831,50 @@ mod tests {
     }
 
     #[test]
+    fn multiple_function_defs() {
+        let tokens = tokenize(
+            "
+            fn test() {
+            }
+
+            fn call() returns int32 {
+                1
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn multiple_function_defs_with_errors() {
+        let tokens = tokenize(
+            "
+            fn test() returns float32 {
+                1
+            }
+
+            fn call() returns int32 {
+                1.0
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn function_def_with_params() {
+        todo!()
+    }
+
+    #[test]
     fn function_call_no_arguments_no_returns() {
         let tokens = tokenize(
             "
@@ -905,6 +956,20 @@ mod tests {
         match type_check(&tokens, &ast) {
             Ok(_) => todo!(),
             Err(_) => todo!(),
+        }
+    }
+
+    #[test]
+    fn function_params_bad_types() {
+        let tokens = tokenize("
+            fn test(int32 a) {
+                a + 1.0
+            }
+        ").expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => assert!(false),
+            Err(errors) => assert_eq!(errors.len(), 1),
         }
     }
 
