@@ -58,7 +58,7 @@ fn type_check_function(
     root_handle: AstNodeHandle,
     errors: &mut Vec<TypeError>,
 ) {
-    let mut stack = vec![root_handle];
+    let mut stack: Vec<AstNodeHandle> = vec![root_handle];
 
     // Key value pair not present -> child hasn't been evaluated
     // Value is None -> variable / branch had an error
@@ -238,6 +238,31 @@ fn type_check_function(
                     Some(symbol.clone()),
                     &mut stack,
                 );
+            }
+            Rule::FunctionCall => {
+                match type_check_function_call(
+                    ast,
+                    tokens,
+                    node_handle,
+                    node,
+                    &mut node_type_info,
+                    &mut stack,
+                ) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        errors.push(e);
+                    }
+                }
+            },
+            Rule::FunctionArguments => {
+                match type_check_function_argument(
+
+                ) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        errors.push(e)
+                    }
+                }
             }
             _ => {
                 if node.children.len() == 1 {
@@ -445,6 +470,24 @@ fn type_check_function_def_rule_with_returns(
     update_node_type_info(node_type_info, node_handle, None, stack);
 
     Ok(())
+}
+
+fn type_check_function_call(
+    ast: &Ast,
+    tokens: &Tokens,
+    node_handle: AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), TypeError> {
+    if node.children.len() == 0 {
+        todo!();
+    } else if node.children.len() == 1 {
+        let child_handle = node.children[0];
+        let child_node = ast.get_node(child_handle);
+        todo!();
+    }
+    todo!()
 }
 
 /// A type check for two child nodes that can either evaluate whether there is a type error or
@@ -864,8 +907,12 @@ mod tests {
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
-            Ok(_) => {}
-            Err(_) => assert!(false),
+            Ok(_) => {
+                assert!(false);
+            }
+            Err(errors) => {
+                assert_eq!(errors.len(), 2)
+            },
         }
     }
 
@@ -971,6 +1018,11 @@ mod tests {
             Ok(_) => assert!(false),
             Err(errors) => assert_eq!(errors.len(), 1),
         }
+    }
+
+    #[test]
+    fn function_call_within_function_call() {
+        todo!("foo(bar())");
     }
 
     #[test]
