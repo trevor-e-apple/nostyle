@@ -34,10 +34,11 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         // TODO: we have to break this up function by function (sets up parallelization)
         let mut errors: Vec<TypeError> = vec![];
 
-        for (_, function_data) in function_type_map {
+        for (_, function_data) in &function_type_map {
             type_check_function(
                 tokens,
                 ast,
+                &function_type_map,
                 function_data.root_handle,
                 &mut errors,
             );
@@ -55,6 +56,7 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
 fn type_check_function(
     tokens: &Tokens,
     ast: &Ast,
+    function_type_map: &HashMap<String, FunctionTypeData>,
     root_handle: AstNodeHandle,
     errors: &mut Vec<TypeError>,
 ) {
@@ -162,10 +164,10 @@ fn type_check_function(
                         &mut node_type_info,
                         &mut stack,
                     ) {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(error) => {
                             errors.push(error);
-                        },
+                        }
                     }
                 } else if node.children.len() == 3 {
                     // has ReturnsData child
@@ -253,15 +255,18 @@ fn type_check_function(
                         errors.push(e);
                     }
                 }
-            },
+            }
             Rule::FunctionArguments => {
-                match type_check_function_argument(
-
+                match type_check_function_arguments(
+                    ast,
+                    tokens,
+                    node_handle,
+                    node,
+                    &mut node_type_info,
+                    &mut stack,
                 ) {
                     Ok(_) => {}
-                    Err(e) => {
-                        errors.push(e)
-                    }
+                    Err(e) => errors.push(e),
                 }
             }
             _ => {
@@ -375,7 +380,7 @@ fn type_check_function_def_rule_without_returns(
                     info: "Unexpected return type for function that does not return value".to_owned(),
                 });
             }
-            None => {},
+            None => {}
         },
         None => panic!("Something has gone wrong"),
     }
@@ -475,6 +480,7 @@ fn type_check_function_def_rule_with_returns(
 fn type_check_function_call(
     ast: &Ast,
     tokens: &Tokens,
+    function_type_map: &HashMap<String, FunctionTypeData>,
     node_handle: AstNodeHandle,
     node: &AstNode,
     node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
@@ -484,7 +490,49 @@ fn type_check_function_call(
         todo!();
     } else if node.children.len() == 1 {
         let child_handle = node.children[0];
-        let child_node = ast.get_node(child_handle);
+        match node_type_info.get(&child_handle) {
+            Some(_) => {
+                let function_name = match node.data {
+                    Some(token) => match token {
+                        Token::Symbol(function_name) => function_name,
+                        _ => {
+                            panic!("Non symbol payload for function node")
+                        }
+                    },
+                    None => {
+                        panic!("Missing function name in function node")
+                    }
+                };
+                // look up the type of this function
+                let function_type_data = function_type_map
+                    .get(&function_name)
+                    .expect("Missing function type info");
+                update_node_type_info(
+                    node_type_info,
+                    node_handle,
+                    function_type_data.return_type.clone(),
+                    stack,
+                );
+            }
+            None => stack.push(child_handle),
+        }
+        todo!();
+    }
+
+    Ok(())
+}
+
+fn type_check_function_arguments(
+    ast: &Ast,
+    tokens: &Tokens,
+    node_handle: AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), TypeError> {
+    if node.children.len() == 0 {
+        todo!();
+    } else {
         todo!();
     }
     todo!()
@@ -912,7 +960,7 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 2)
-            },
+            }
         }
     }
 
@@ -1008,11 +1056,14 @@ mod tests {
 
     #[test]
     fn function_params_bad_types() {
-        let tokens = tokenize("
+        let tokens = tokenize(
+            "
             fn test(int32 a) {
                 a + 1.0
             }
-        ").expect("Unexpected tokenize error");
+        ",
+        )
+        .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => assert!(false),
