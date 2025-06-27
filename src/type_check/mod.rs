@@ -245,6 +245,7 @@ fn type_check_function(
                 match type_check_function_call(
                     ast,
                     tokens,
+                    &function_type_map,
                     node_handle,
                     node,
                     &mut node_type_info,
@@ -492,9 +493,9 @@ fn type_check_function_call(
         let child_handle = node.children[0];
         match node_type_info.get(&child_handle) {
             Some(_) => {
-                let function_name = match node.data {
+                let function_name = match &node.data {
                     Some(token) => match token {
-                        Token::Symbol(function_name) => function_name,
+                        Token::Symbol(function_name) => function_name.clone(),
                         _ => {
                             panic!("Non symbol payload for function node")
                         }
@@ -516,7 +517,6 @@ fn type_check_function_call(
             }
             None => stack.push(child_handle),
         }
-        todo!();
     }
 
     Ok(())
@@ -530,12 +530,21 @@ fn type_check_function_arguments(
     node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), TypeError> {
-    if node.children.len() == 0 {
-        todo!();
-    } else {
-        todo!();
+    match node.children.get(0) {
+        Some(first_child_handle) => {
+            match node_type_info.get(first_child_handle) {
+                Some(_) => todo!(),
+                None => {
+                    for child_handle in &node.children {
+                        stack.push(child_handle.clone());
+                    }
+                },
+            }
+        },
+        None => todo!("No children at all"),
     }
-    todo!()
+
+    Ok(())
 }
 
 /// A type check for two child nodes that can either evaluate whether there is a type error or
