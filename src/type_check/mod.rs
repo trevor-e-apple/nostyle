@@ -533,7 +533,24 @@ fn type_check_function_arguments(
     match node.children.get(0) {
         Some(first_child_handle) => {
             match node_type_info.get(first_child_handle) {
-                Some(_) => todo!(),
+                Some(_) => {
+                    // Find argument types in order
+                    let mut argument_types: Vec<Option<String>> = vec![]; 
+
+                    let mut argument_node_handle = *first_child_handle;
+                    loop {
+                        match node_type_info.get(&argument_node_handle) {
+                            Some(type_info) => argument_types.push(type_info.clone()),
+                            None => todo!(),
+                        }
+
+                        let argument_node = ast.get_node(argument_node_handle);
+                        if argument_node.children.len() > 1 {
+                            // LHS is always the new argument, RHS is the expression
+                            argument_node_handle = argument_node.children[0];
+                        }
+                    }
+                },
                 None => {
                     for child_handle in &node.children {
                         stack.push(child_handle.clone());
