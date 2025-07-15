@@ -93,9 +93,32 @@ fn type_check_function(
                 node_type_info
                     .insert(lhs_child_handle, Some(type_name.clone()));
                 variable_type_info.insert(variable_name, type_name.clone());
+                stack.pop();
             }
             Rule::Statement => {
-                todo!();
+                assert!(node.children.len() == 1 || node.children.len() == 2);
+                if node.children.len() == 1 {
+                    match type_check_one_child(
+                        &node_handle,
+                        node,
+                        &mut node_type_info,
+                        &mut stack,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => errors.push(e),
+                    };
+                } else {
+                    match type_check_two_children(
+                        tokens,
+                        &node_handle,
+                        node,
+                        &mut node_type_info,
+                        &mut stack,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => errors.push(e),
+                    }
+                }
             }
             Rule::Terminal => {
                 match node.data.as_ref() {
@@ -335,6 +358,14 @@ fn type_check_one_child(
     Ok(())
 }
 
+fn add_function_def_children(node: &AstNode, stack: &mut Vec<AstNodeHandle>) {
+    // We need to add them to the stack from right to left so that the parameters are evaluated
+    // -- before the 
+    for child in node.children.iter().rev() {
+        stack.push(child.clone());
+    }
+}
+
 fn type_check_function_def_rule_without_returns(
     ast: &Ast,
     tokens: &Tokens,
@@ -358,9 +389,7 @@ fn type_check_function_def_rule_without_returns(
     match node_type_info.get(&function_def_parameters_handle) {
         Some(_) => {}
         None => {
-            for child in &node.children {
-                stack.push(child.clone());
-            }
+            add_function_def_children(node, stack);
             return Ok(());
         }
     }
@@ -416,9 +445,7 @@ fn type_check_function_def_rule_with_returns(
         Some(_) => {}
         None => {
             // not evaluated, add children to the stack
-            for child in &node.children {
-                stack.push(child.clone());
-            }
+            add_function_def_children(node, stack);
             return Ok(());
         }
     }
@@ -934,6 +961,42 @@ mod tests {
         match type_check(&tokens, &ast) {
             Ok(_) => {}
             Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn function_def_with_returns() {
+        let tokens = tokenize(
+            "
+            fn test() returns float32 {
+                1.0
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn function_def_returns_argument() {
+        let tokens = tokenize(
+            "
+            fn test(float32 arg) returns float32 {
+                arg
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {
+                assert!(false);
+            }
+            Err(errors) => {
+                assert_eq!(errors.len(), 2)
+            }
         }
     }
 
