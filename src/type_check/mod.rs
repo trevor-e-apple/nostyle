@@ -90,8 +90,10 @@ fn type_check_function(
                 let variable_name =
                     ast.expect_node_name(rhs_child_handle).clone();
 
+                // Node types do not evaluate to a type that can be used in expressions
                 node_type_info
-                    .insert(lhs_child_handle, Some(type_name.clone()));
+                    .insert(lhs_child_handle, None);
+                node_type_info.insert(node_handle, None);
                 variable_type_info.insert(variable_name, type_name.clone());
                 stack.pop();
             }
@@ -360,7 +362,7 @@ fn type_check_one_child(
 
 fn add_function_def_children(node: &AstNode, stack: &mut Vec<AstNodeHandle>) {
     // We need to add them to the stack from right to left so that the parameters are evaluated
-    // -- before the 
+    // -- before the expression
     for child in node.children.iter().rev() {
         stack.push(child.clone());
     }
@@ -1045,7 +1047,40 @@ mod tests {
 
     #[test]
     fn function_def_with_params() {
-        todo!()
+        let tokens = tokenize(
+            "
+            fn test(int32 a) returns int32 {
+                a
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => {
+                assert!(false)
+            }
+        }
+    }
+
+    #[test]
+    fn function_def_with_params_error() {
+        let tokens = tokenize(
+            "
+            fn test(float32 a) returns int32 {
+                a
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {
+                assert!(false);
+            }
+            Err(errors) => {
+                assert_eq!(errors.len(), 1);
+            }
+        }
     }
 
     #[test]
