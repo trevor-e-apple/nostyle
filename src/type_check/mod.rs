@@ -12,6 +12,7 @@ use crate::{
     tokenize::tokens::{Token, Tokens},
 };
 
+#[derive(Clone)]
 struct FunctionTypeData {
     argument_types: Vec<String>,
     return_type: Option<String>,
@@ -34,7 +35,19 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
         // TODO: we have to break this up function by function (sets up parallelization)
         let mut errors: Vec<TypeError> = vec![];
 
-        for (_, function_data) in &function_type_map {
+        // For now, we will sort the data based on the node span to resolve the earliest functions first
+        let sorted_function_data = {
+            let mut sorted_function_data: Vec<FunctionTypeData> = vec![];
+            for (_, function_data) in &function_type_map {
+                sorted_function_data.push(function_data.clone());
+            }
+
+            sorted_function_data.sort_by(|a, b| a.root_handle.index.cmp(&b.root_handle.index));
+
+            sorted_function_data
+        };
+
+        for function_data in &sorted_function_data {
             type_check_function(
                 tokens,
                 ast,
@@ -96,6 +109,18 @@ fn type_check_function(
                 node_type_info.insert(node_handle, None);
                 variable_type_info.insert(variable_name, type_name.clone());
                 stack.pop();
+            }
+            Rule::BraceStatements => {
+                match type_check_brace_statements(
+                    tokens,
+                    &node_handle,
+                    node,
+                    &mut node_type_info,
+                    &mut stack,
+                ) {
+                    Ok(_) => {},
+                    Err(e) => errors.push(e)
+                }
             }
             Rule::Statement => {
                 assert!(node.children.len() == 1 || node.children.len() == 2);
@@ -366,6 +391,86 @@ fn add_function_def_children(node: &AstNode, stack: &mut Vec<AstNodeHandle>) {
     for child in node.children.iter().rev() {
         stack.push(child.clone());
     }
+}
+
+fn type_check_brace_statements(
+    tokens: &Tokens,
+    node_handle: &AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), TypeError> {
+    let lhs_handle = node.children[0];
+    let rhs_handle = node.children[1];
+
+    match node_type_info.get(&lhs_handle) {
+        Some(lhs_eval_info) => match node_type_info.get(&rhs_handle) {
+            Some(rhs_eval_info) => {
+                let lhs_type_info = match lhs_eval_info {
+                    Some(type_info) => type_info,
+                    None => {
+                        update_node_type_info(
+                            node_type_info,
+                            *node_handle,
+                            None,
+                            stack,
+                        );
+                        return Ok(());
+                    }
+                };
+                let rhs_type_info = match rhs_eval_info {
+                    Some(type_info) => type_info,
+                    None => {
+                        update_node_type_info(
+                            node_type_info,
+                            *node_handle,
+                            None,
+                            stack,
+                        );
+                        return Ok(());
+                    }
+                };
+
+                if lhs_type_info != rhs_type_info {
+                    update_node_type_info(
+                        node_type_info,
+                        *node_handle,
+                        None,
+                        stack,
+                    );
+                    return Err(TypeError {
+                        start_line: tokens.expect_line_number(node.start),
+                        end_line: tokens
+                            .expect_line_number(node.start + node.len - 1),
+                        info: "LHS type does not match RHS type".to_owned(),
+                    });
+                } else {
+                    update_node_type_info(
+                        node_type_info,
+                        *node_handle,
+                        Some(lhs_type_info.clone()),
+                        stack,
+                    );
+                }
+            }
+            None => panic!("LHS evaluated without RHS evaluation"),
+        },
+        None => {
+            // LHS is not evaluated
+            match node_type_info.get(&rhs_handle) {
+                Some(_) => panic!("RHS evaluated without LHS evaluation"),
+                None => {
+                    // Neither side is evaluated, add to stack for evaluation
+                    // Add to the stack in reverse order to make sure that deeper children are evaluated first
+                    for child in node.children.iter().rev() {
+                        stack.push(*child);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn type_check_function_def_rule_without_returns(
