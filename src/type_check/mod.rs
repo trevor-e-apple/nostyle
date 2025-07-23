@@ -1088,6 +1088,38 @@ mod tests {
     }
 
     #[test]
+    fn function_def_return_literal_error() {
+        let tokens = tokenize(
+            "
+            fn test() returns float32 {
+                15
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => assert!(false),
+            Err(errors) => assert_eq!(errors.len(), 1),
+        }
+    }
+
+    #[test]
+    fn function_def_return_argument_error() {
+        let tokens = tokenize(
+            "
+            fn test(int32 arg) returns float32 {
+                arg
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => assert!(false),
+            Err(errors) => assert_eq!(errors.len(), 1),
+        }
+    }
+
+    #[test]
     fn function_def_returns_argument() {
         let tokens = tokenize(
             "
