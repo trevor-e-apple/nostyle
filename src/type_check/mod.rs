@@ -42,7 +42,8 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                 sorted_function_data.push(function_data.clone());
             }
 
-            sorted_function_data.sort_by(|a, b| a.root_handle.index.cmp(&b.root_handle.index));
+            sorted_function_data
+                .sort_by(|a, b| a.root_handle.index.cmp(&b.root_handle.index));
 
             sorted_function_data
         };
@@ -104,12 +105,21 @@ fn type_check_function(
                     ast.expect_node_name(rhs_child_handle).clone();
 
                 // Node types do not evaluate to a type that can be used in expressions
-                node_type_info
-                    .insert(lhs_child_handle, None);
+                node_type_info.insert(lhs_child_handle, None);
                 node_type_info.insert(node_handle, None);
                 variable_type_info.insert(variable_name, type_name.clone());
                 stack.pop();
             }
+            Rule::BraceExpression => match type_check_brace_expression(
+                tokens,
+                &node_handle,
+                node,
+                &mut node_type_info,
+                &mut stack,
+            ) {
+                Ok(_) => {}
+                Err(e) => errors.push(e),
+            },
             Rule::BraceStatements => {
                 match type_check_brace_statements(
                     tokens,
@@ -118,8 +128,8 @@ fn type_check_function(
                     &mut node_type_info,
                     &mut stack,
                 ) {
-                    Ok(_) => {},
-                    Err(e) => errors.push(e)
+                    Ok(_) => {}
+                    Err(e) => errors.push(e),
                 }
             }
             Rule::Statement => {
@@ -393,6 +403,61 @@ fn add_function_def_children(node: &AstNode, stack: &mut Vec<AstNodeHandle>) {
     }
 }
 
+fn type_check_brace_expression(
+    tokens: &Tokens,
+    node_handle: &AstNodeHandle,
+    node: &AstNode,
+    node_type_info: &mut HashMap<AstNodeHandle, Option<String>>,
+    stack: &mut Vec<AstNodeHandle>,
+) -> Result<(), TypeError> {
+    if node.children.len() == 1 {
+        type_check_one_child(node_handle, node, node_type_info, stack)
+    } else {
+        assert!(node.children.len() == 2);
+
+        let lhs_handle = node.children[0];
+        let rhs_handle = node.children[1];
+
+        match node_type_info.get(&lhs_handle) {
+            Some(_) => match node_type_info.get(&rhs_handle) {
+                Some(rhs_eval_info) => {
+                    // We don't care about BraceStatements type info
+                    let rhs_type_info = match rhs_eval_info {
+                        Some(type_info) => type_info,
+                        None => {
+                            // right-hand branch should have already added error
+                            update_node_type_info(
+                                node_type_info,
+                                *node_handle,
+                                None,
+                                stack,
+                            );
+                            return Ok(());
+                        }
+                    };
+
+                    update_node_type_info(
+                        node_type_info,
+                        *node_handle,
+                        Some(rhs_type_info.clone()),
+                        stack,
+                    );
+                }
+                None => panic!("LHS evaluated without RHS evaluation"),
+            },
+            None => {
+                // LHS is not evaluated
+                // Add in reverse order so trailing expression is evaluated after statements
+                for child in node.children.iter().rev() {
+                    stack.push(*child);
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 fn type_check_brace_statements(
     tokens: &Tokens,
     node_handle: &AstNodeHandle,
@@ -401,71 +466,18 @@ fn type_check_brace_statements(
     stack: &mut Vec<AstNodeHandle>,
 ) -> Result<(), TypeError> {
     let lhs_handle = node.children[0];
-    let rhs_handle = node.children[1];
 
     match node_type_info.get(&lhs_handle) {
-        Some(lhs_eval_info) => match node_type_info.get(&rhs_handle) {
-            Some(rhs_eval_info) => {
-                let lhs_type_info = match lhs_eval_info {
-                    Some(type_info) => type_info,
-                    None => {
-                        update_node_type_info(
-                            node_type_info,
-                            *node_handle,
-                            None,
-                            stack,
-                        );
-                        return Ok(());
-                    }
-                };
-                let rhs_type_info = match rhs_eval_info {
-                    Some(type_info) => type_info,
-                    None => {
-                        update_node_type_info(
-                            node_type_info,
-                            *node_handle,
-                            None,
-                            stack,
-                        );
-                        return Ok(());
-                    }
-                };
-
-                if lhs_type_info != rhs_type_info {
-                    update_node_type_info(
-                        node_type_info,
-                        *node_handle,
-                        None,
-                        stack,
-                    );
-                    return Err(TypeError {
-                        start_line: tokens.expect_line_number(node.start),
-                        end_line: tokens
-                            .expect_line_number(node.start + node.len - 1),
-                        info: "LHS type does not match RHS type".to_owned(),
-                    });
-                } else {
-                    update_node_type_info(
-                        node_type_info,
-                        *node_handle,
-                        Some(lhs_type_info.clone()),
-                        stack,
-                    );
-                }
-            }
-            None => panic!("LHS evaluated without RHS evaluation"),
-        },
+        Some(_) => {
+            // If the children have been evaluated, simply mark yourself as evaluated.
+            // BraceStatements nodes do not have an associated type.
+            update_node_type_info(node_type_info, *node_handle, None, stack);
+        }
         None => {
-            // LHS is not evaluated
-            match node_type_info.get(&rhs_handle) {
-                Some(_) => panic!("RHS evaluated without LHS evaluation"),
-                None => {
-                    // Neither side is evaluated, add to stack for evaluation
-                    // Add to the stack in reverse order to make sure that deeper children are evaluated first
-                    for child in node.children.iter().rev() {
-                        stack.push(*child);
-                    }
-                }
+            // LHS is not evaluated, add to stack for evaluation
+            // Add to the stack in reverse order to make sure that deeper children are evaluated first
+            for child in node.children.iter().rev() {
+                stack.push(*child);
             }
         }
     }
@@ -1031,7 +1043,6 @@ mod tests {
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
-        ast.print();
         match type_check(&tokens, &ast) {
             Ok(_) => {}
             Err(_) => assert!(false),
@@ -1131,7 +1142,7 @@ mod tests {
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
             Ok(_) => {}
-            Err(_) => assert!(false)
+            Err(_) => assert!(false),
         }
     }
 
@@ -1212,6 +1223,26 @@ mod tests {
             }
             Err(errors) => {
                 assert_eq!(errors.len(), 1);
+            }
+        }
+    }
+
+    #[test]
+    fn function_call_multiple_statements() {
+        let tokens = tokenize(
+            "
+            fn test(int32 a) returns int32 {
+                a = a + 1;
+                a = a + 2;
+                a
+            }",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => {}
+            Err(_) => {
+                assert!(false)
             }
         }
     }
@@ -1321,11 +1352,6 @@ mod tests {
     #[test]
     fn function_call_within_function_call() {
         todo!("foo(bar())");
-    }
-
-    #[test]
-    fn bad_return_type() {
-        todo!("Bad return type for function definition")
     }
 
     #[test]
