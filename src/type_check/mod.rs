@@ -1410,11 +1410,6 @@ mod tests {
     }
 
     #[test]
-    fn missing_function_definition() {
-        todo!()
-    }
-
-    #[test]
     fn multiple_type_errors() {
         todo!()
     }
