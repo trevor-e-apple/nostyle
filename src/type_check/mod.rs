@@ -53,6 +53,7 @@ pub fn type_check(tokens: &Tokens, ast: &Ast) -> Result<(), Vec<TypeError>> {
                 tokens,
                 ast,
                 &function_type_map,
+                &struct_type_map,
                 function_data.root_handle,
                 &mut errors,
             );
@@ -71,6 +72,7 @@ fn type_check_function(
     tokens: &Tokens,
     ast: &Ast,
     function_type_map: &HashMap<String, FunctionTypeData>,
+    struct_type_map: &HashMap<String, StructTypeData>,
     root_handle: AstNodeHandle,
     errors: &mut Vec<TypeError>,
 ) {
@@ -172,7 +174,28 @@ fn type_check_function(
                                         );
                                     }
                                     None => {
-                                        // TODO: This should be a struct def or built-in type, but we should check
+                                        // Mark as evaluated
+                                        node_type_info
+                                            .insert(node_handle, None);
+                                        // This should be a struct def, otherwise error
+                                        match struct_type_map.get(data) {
+                                            Some(_) => {}
+                                            None => errors.push(TypeError {
+                                                start_line: tokens
+                                                    .expect_line_number(
+                                                        node.start,
+                                                    ),
+                                                end_line: tokens
+                                                    .expect_line_number(
+                                                        node.get_end_index(),
+                                                    ),
+                                                info: format!(
+                                                    "Undefined terminal {}",
+                                                    data
+                                                ),
+                                            }),
+                                        }
+                                        stack.pop();
                                     }
                                 }
                             }
@@ -651,9 +674,28 @@ fn type_check_function_call(
                     }
                 };
                 // look up the type of this function
-                let function_type_data = function_type_map
+                let function_type_data = match function_type_map
                     .get(&function_name)
-                    .expect("Missing function type info");
+                {
+                    Some(function_type_data) => function_type_data,
+                    None => {
+                        update_node_type_info(
+                            node_type_info,
+                            node_handle,
+                            None,
+                            stack,
+                        );
+                        return Err(TypeError {
+                            start_line: tokens.expect_line_number(node.start),
+                            end_line: tokens
+                                .expect_line_number(node.get_end_index()),
+                            info: format!(
+                                "Call to undefined function {}",
+                                function_name
+                            ),
+                        });
+                    }
+                };
                 update_node_type_info(
                     node_type_info,
                     node_handle,
@@ -1293,20 +1335,33 @@ mod tests {
     fn function_call_one_argument_undeclared() {
         let tokens = tokenize(
             "
-            fn test(int32 a) {
-                a
-            }
-
             fn test2() {
-                test(me);
+                1 + me
             }
         ",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
-            Ok(_) => todo!(),
-            Err(_) => todo!(),
+            Ok(_) => assert!(false),
+            Err(errors) => assert_eq!(errors.len(), 1),
+        }
+    }
+
+    #[test]
+    fn function_call_undefined_function() {
+        let tokens = tokenize(
+            "
+            fn test2() {
+                test();
+            }
+        ",
+        )
+        .expect("Unexpected tokenize error");
+        let ast = parse(&tokens).expect("Unexpected parse error");
+        match type_check(&tokens, &ast) {
+            Ok(_) => assert!(false),
+            Err(errors) => assert_eq!(errors.len(), 1),
         }
     }
 
