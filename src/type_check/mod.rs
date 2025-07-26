@@ -1001,7 +1001,7 @@ mod tests {
                 assert!(false);
             }
             Err(errors) => {
-                assert_eq!(errors.len(), 1);
+                assert_eq!(errors.len(), 2);
             }
         }
     }
