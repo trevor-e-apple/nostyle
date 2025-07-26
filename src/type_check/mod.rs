@@ -1408,19 +1408,4 @@ mod tests {
     fn function_call_within_function_call() {
         todo!("foo(bar())");
     }
-
-    #[test]
-    fn multiple_type_errors() {
-        todo!()
-    }
-
-    #[test]
-    fn scoped_function_accessible() {
-        todo!();
-    }
-
-    #[test]
-    fn out_of_scope_function_inaccessible() {
-        todo!();
-    }
 }
