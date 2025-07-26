@@ -1045,7 +1045,7 @@ mod tests {
     fn returns_none_function_errors() {
         let tokens = tokenize(
             "
-            fn test() returns {
+            fn test() {
                 1 + 2
             }",
         )
@@ -1055,7 +1055,7 @@ mod tests {
             Ok(_) => {
                 assert!(false)
             }
-            Err(errors) => assert_eq!(1, errors.len()),
+            Err(errors) => assert_eq!(errors.len(), 1),
         }
     }
 
@@ -1063,14 +1063,14 @@ mod tests {
     fn returns_none_function() {
         let tokens = tokenize(
             "
-            fn test() returns {
+            fn test() {
                 int32 a = 1 + 2;
             }",
         )
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(_) => assert!(false),
         }
     }
