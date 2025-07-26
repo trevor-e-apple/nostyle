@@ -1382,8 +1382,8 @@ mod tests {
         .expect("Unexpected tokenize error");
         let ast = parse(&tokens).expect("Unexpected parse error");
         match type_check(&tokens, &ast) {
-            Ok(_) => todo!(),
-            Err(_) => todo!(),
+            Ok(_) => assert!(false),
+            Err(errors) => assert_eq!(errors.len(), 1),
         }
     }
 
