@@ -1423,9 +1423,4 @@ mod tests {
     fn out_of_scope_function_inaccessible() {
         todo!();
     }
-
-    #[test]
-    fn unknown_function() {
-        todo!()
-    }
 }
